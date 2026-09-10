@@ -37,10 +37,11 @@ Este documento define las reglas del juego innegociables para todo el proyecto. 
 - **WhoScored:** se utiliza **scraping** para extraer datos detallados de rendimiento de jugadores y equipos (pases, tiros, intercepciones, calificaciones, entre otros). Es una fuente **no oficial** (scraping de una web pública) y, por lo tanto, **intrínsecamente frágil** ante cambios de estructura del sitio.
 - **Football-Data.org:** se utiliza su **API oficial** para obtener resultados de partidos, alineaciones y fixtures.
 - Principios de arquitectura que se derivan de hacer convivir una fuente por scraping y otra por API oficial (ver también sección 2):
-  - Cada fuente externa se aísla detrás de su **propio adapter/puerto** (patrón puerto-adaptador, aplicado puntualmente a estas integraciones). El dominio y los casos de uso de la aplicación nunca dependen del formato de respuesta de WhoScored ni de Football-Data.org; dependen únicamente de una interfaz propia definida por el dominio, que cada adapter implementa traduciendo el formato externo al modelo interno.
+  - Cada fuente externa se aísla detrás de su **propia interfaz de Repository** (mismo patrón interfaz + implementación exigido para toda la capa Repository, sección 2): por ejemplo, una interfaz de repositorio de rendimiento implementada por un `WhoScoredRepositoryImpl`, y una interfaz de repositorio de fixtures implementada por un `FootballDataRepositoryImpl`. El Service nunca depende del formato de respuesta de WhoScored ni de Football-Data.org; depende únicamente de la interfaz de Repository correspondiente, que cada implementación traduce al modelo interno (entidades de `model/`).
   - **Manejo explícito de fallos/indisponibilidad por fuente:** la falla, cambio de estructura o indisponibilidad de una fuente externa (típicamente esperable en WhoScored por ser scraping) no debe afectar la disponibilidad de funcionalidades que dependen de la otra fuente ni del resto del sistema. Cada integración aísla y maneja sus propios errores.
   - El scraping de WhoScored **no** se ejecuta en el flujo síncrono de un request de usuario. Es un **proceso de ingesta propio y desacoplado** (batch/job) que obtiene y persiste los datos para que el resto del sistema los consuma ya almacenados — nunca on-demand disparado por una request HTTP de un usuario esperando respuesta.
 - Esta constitución fija el principio de arquitectura, no el detalle de implementación: no define aquí el algoritmo de scraping, librerías específicas, ni política de reintentos para ninguna de las dos integraciones.
+- **Frecuencia de ingesta (decisión de producto confirmada):** tanto el scraping de WhoScored como la sincronización con Football-Data.org corren con la **misma cadencia semanal** que el job de recotización (sección 2), no diariamente ni bajo ninguna otra frecuencia mayor. No tiene sentido ingerir datos crudos con mayor frecuencia que la que el cálculo de cotización efectivamente consume, dado que este último sólo se dispara por defecto una vez por semana. Ambos procesos de ingesta están pensados para completarse **antes** de que corra el job semanal de recotización dentro del mismo ciclo, de forma que el cálculo siempre disponga de los datos de rendimiento y resultados ya actualizados para esa semana. Esta constitución fija la cadencia (semanal, alineada al job de cotización); el orden exacto de ejecución dentro del ciclo semanal (p. ej. orquestación ingesta → cálculo) y el mecanismo técnico de disparo (scheduler, orden de jobs) quedan para el diseño técnico de implementación.
 
 ### Herramientas transversales
 - **Contenerización:** Docker + docker-compose para levantar Postgres (y toda dependencia externa) en desarrollo y en tests de integración (vía Testcontainers).
@@ -51,13 +52,18 @@ Este documento define las reglas del juego innegociables para todo el proyecto. 
 ## 2. Principios de arquitectura
 
 ### Patrones a seguir
-- **Monolito modular** organizado por *feature* (jugador, token, cotización, portfolio, usuario), no por capa técnica global. Es la arquitectura mandatada para el MVP dado que no hay restricciones de infraestructura que justifiquen microservicios.
-- Dentro de cada feature, separación en capas: **Controller (API) → Service (lógica de negocio) → Repository (persistencia) → Domain model**. El Controller sólo orquesta: recibe request, valida forma, delega al Service, mapea respuesta.
-- **Inyección de dependencias por constructor** en todo el backend. Inyección por campo (`@Autowired` en atributo) está **prohibida**: dificulta testear y oculta dependencias.
-- **DTOs inmutables** (Java `record`) en los bordes de la API, tanto de entrada como de salida. Las entidades de persistencia nunca cruzan ese borde.
-- Un único punto de verdad para cada regla de negocio crítica (en particular, la lógica de cálculo/actualización de cotización vive en un único servicio de dominio; ningún otro componente recalcula o duplica esa lógica).
-- Las entidades de dominio con invariantes financieras (saldo de portfolio, tenencia de tokens) exponen **métodos de dominio** que validan la operación (ej. `acreditarTokens(cantidad)`, `debitarTokens(cantidad)`), no setters públicos que permitan mutación arbitraria del estado.
-- **Invariante de emisión de tokens (no negociable):** todo jugador tiene, al momento de ser creado, un **máximo de 100 tokens** disponibles para que los usuarios compren. Este límite es una invariante de dominio y debe estar protegida en el propio modelo de dominio (entidad/agregado `Jugador`/`Token`), no sólo validada en la capa de servicio o de API — el modelo nunca debe poder alcanzar un estado en el que la emisión total de tokens de un jugador supere 100, bajo ninguna operación (incluidas las administrativas).
+- **Monolito** de una sola aplicación desplegable (no microservicios) organizado por **capa técnica** a nivel de paquete raíz: `controllers/`, `services/`, `repositories/`, `model/` (estructura completa en sección 3). Es la arquitectura mandatada para el MVP y reemplaza cualquier organización por feature/dominio de negocio.
+- **Flujo de capas obligatorio y unidireccional: `Controller → Service → Repository → Model`**, y `Model` se persiste en la base de datos a través del ORM (`Model ↔ DB` es la única relación bidireccional de todo el flujo). Cada capa sólo conoce a la siguiente:
+  - **Controller:** recibe la petición HTTP, valida datos de entrada básicos (Bean Validation), mapea el request a DTOs/parámetros y delega la lógica al Service correspondiente. **No contiene reglas de negocio.**
+  - **Service:** contiene la lógica de negocio — orquesta operaciones, aplica reglas, coordina transacciones (`@Transactional`) y llama a uno o varios Repository. **No conoce nada de HTTP** (ni `HttpServletRequest`, ni códigos de status, ni DTOs de la capa Controller).
+  - **Repository/DAO:** accede a los datos (base de datos vía Spring Data JPA, o una fuente externa como WhoScored/Football-Data.org) y devuelve entidades de `model/`. Nunca contiene lógica de negocio.
+  - **Model/Entity:** objetos de dominio (entidades JPA) que fluyen entre Service y Repository. Se convierten a DTO antes de cruzar el borde del Controller hacia el cliente — **nunca se exponen directamente como respuesta de la API**.
+- **Interfaces + inyección de dependencias para desacoplar:** todo Service y todo Repository se define primero como **interfaz**, con su implementación inyectada por **constructor** (nunca `@Autowired` en atributo, que dificulta testear y oculta dependencias) — permite mockear Service/Repository en tests y sustituir una implementación (p. ej. la de un Repository que integra una fuente externa) sin tocar el Controller ni el Service que lo consume.
+- **DTOs inmutables** (Java `record`) en los bordes de la API, tanto de entrada como de salida, ubicados en `dto/`. El Controller siempre devuelve DTOs/respuestas, nunca entidades de `model/` directamente.
+- **Excepciones de negocio:** se lanzan en el Service (nunca en el Repository ni en el Controller) y se traducen a códigos HTTP en el Controller o, preferentemente, en un manejador global (`@ControllerAdvice`/`@RestControllerAdvice`) — nunca queda a criterio de cada Controller reinventar ese mapeo.
+- Un único punto de verdad para cada regla de negocio crítica (en particular, la lógica de cálculo/actualización de cotización vive en un único Service — `CotizacionService` o equivalente; ningún otro componente recalcula o duplica esa lógica).
+- Las entidades de `model/` con invariantes financieras (saldo de portfolio, tenencia de tokens) exponen **métodos propios de la entidad** que validan la operación (ej. `acreditarTokens(cantidad)`, `debitarTokens(cantidad)`), no setters públicos que permitan mutación arbitraria del estado.
+- **Invariante de emisión de tokens (no negociable):** todo jugador tiene, al momento de ser creado, un **máximo de 100 tokens** disponibles para que los usuarios compren. Este límite es una invariante de dominio y debe estar protegida en la propia entidad `model/Jugador` (o `Token`), no sólo validada en el Service o el Controller — el modelo nunca debe poder alcanzar un estado en el que la emisión total de tokens de un jugador supere 100, bajo ninguna operación (incluidas las administrativas).
 - **Mecanismo de cotización (decisión de producto confirmada):** la cotización de cada jugador se determina mediante un **cálculo algorítmico basado en datos de rendimiento** del jugador luego de sus partidos (resultado/desempeño de cada partido afecta el valor de su token). El precio nunca surge de un mercado de oferta y demanda entre usuarios ni de negociación entre las partes (sin order book de precios distintos, sin subastas), ni de un ajuste manual de administrador como mecanismo de determinación de precio — ni siquiera las operaciones P2P entre usuarios descritas más abajo determinan o negocian precio. Ese cálculo se nutre de los datos de rendimiento ingeridos desde WhoScored y de los resultados/fixtures ingeridos desde Football-Data.org (ver "Integraciones de datos externos" en la sección 1), siempre a través de los adapters propios y nunca acoplado a su formato externo.
 - **Operaciones peer-to-peer (P2P) entre usuarios (decisión de producto confirmada):** además de comprar tokens nuevos al sistema (mientras haya emisión disponible de los 100) y vendérselos de vuelta al sistema, un usuario vendedor puede **publicar/poner a la venta una cantidad determinada de tokens que posee** de un jugador, disponible para que **cualquier otro usuario interesado** con saldo suficiente la compre. Esta vía P2P es **adicional** a la compra/venta contra el sistema y **convive** con ella; no la reemplaza ni la limita. Es una **oferta abierta a cualquier usuario interesado**, no una transferencia dirigida de antemano a un destinatario específico elegido por el vendedor. Principios que rigen esta operación:
   - El precio de toda operación P2P es siempre y exclusivamente la **cotización oficial vigente** del jugador en el momento de la ejecución — nunca un precio distinto, negociado, pactado u ofertado libremente entre las partes. No hay negociación de precio en ningún caso, ni entre usuarios ni contra el sistema. El vendedor publica una **cantidad** de tokens a vender, nunca un precio: el precio lo determina siempre y únicamente el servicio de cotización.
@@ -79,13 +85,14 @@ Este documento define las reglas del juego innegociables para todo el proyecto. 
 
 ### Patrones prohibidos
 - **Prohibido** ubicar lógica de negocio en Controllers.
-- **Prohibido** el patrón "God Service"/"God Class": un servicio o clase que concentra lógica de múltiples features no relacionadas. Cada servicio tiene una responsabilidad acotada a su feature.
-- **Prohibido** el paquete-por-capa a nivel raíz del proyecto (`controllers/`, `services/`, `repositories/` como paquetes top-level que mezclan todas las features). La organización es por feature, no por capa técnica.
+- **Prohibido** el patrón "God Service"/"God Class": un servicio o clase que concentra lógica de múltiples entidades o procesos de negocio no relacionados. Cada Service tiene una responsabilidad acotada a una entidad/proceso concreto (convención de nombre `<Entidad>Service`).
+- **Prohibido** organizar el código por feature/dominio de negocio como paquete top-level (ej. `jugador/`, `usuario/`, `cotizacion/` agrupando su propio controller+service+repository+model). La organización es por **capa técnica** a nivel raíz (`controllers/`, `services/`, `repositories/`, `model/`) — ver sección 3.
+- **Prohibido** el acoplamiento en sentido inverso al flujo de capas: `Model` nunca conoce a `Repository` ni a `Service`; `Repository` nunca conoce a `Service` ni a `Controller`; `Service` nunca conoce a `Controller`. La única relación bidireccional permitida es `Model ↔ DB` a través del ORM.
 - **Prohibido** usar `float`/`double` para representar dinero, cotizaciones, o cualquier valor monetario/valuación. Obligatorio `BigDecimal`, con escala y `RoundingMode` definidos de forma centralizada y consistente en todo el sistema.
 - **Prohibido** construir queries SQL por concatenación de strings. Sólo JPQL, `@Query` con parámetros nombrados/posicionales, o Criteria API.
 - **Prohibido** que el frontend acceda directamente a la base de datos o a cualquier recurso que no sea la API REST propia del backend.
-- **Prohibido** introducir microservicios, colas de mensajería, o cualquier componente de infraestructura adicional sin un ADR (decisión de arquitectura documentada) que justifique por qué el monolito modular dejó de ser suficiente.
-- **Prohibido** el acoplamiento circular entre paquetes de features distintas (ej. que `token` dependa de `portfolio` y `portfolio` dependa de `token` al mismo tiempo). Las dependencias entre features son unidireccionales; si dos features necesitan compartir algo, se extrae a un paquete `common`/`shared`.
+- **Prohibido** introducir microservicios, colas de mensajería, o cualquier componente de infraestructura adicional sin un ADR (decisión de arquitectura documentada) que justifique por qué el monolito dejó de ser suficiente.
+- **Prohibido** el acoplamiento circular entre Services de distintas entidades/procesos de negocio (ej. que `TokenService` dependa de `PortfolioService` y `PortfolioService` dependa de `TokenService` al mismo tiempo). Si dos Services necesitan compartir lógica, se extrae a `common/`.
 - **Prohibido** que la emisión total de tokens de un jugador supere las 100 unidades, en cualquier circunstancia u operación.
 - **Prohibido** cualquier mecanismo de **descubrimiento de precio entre usuarios**: order book con precios distintos entre órdenes, subastas, negociación de precio, o cualquier esquema de oferta/demanda que mueva o determine el valor del token. Un usuario nunca puede comprar ni vender tokens —ni a otro usuario ni al sistema— a un precio distinto de la cotización oficial vigente. Esto **no** prohíbe la operación P2P descrita en "Patrones a seguir": esa oferta P2P, abierta a cualquier usuario interesado (incluso cuando compite por ella más de un comprador), está permitida, pero siempre y únicamente a la cotización oficial vigente, sin negociación de precio.
 - **Prohibido** implementar la operación P2P (o cualquier otra vía de intercambio de tokens entre usuarios) mediante cualquier mecanismo de **descubrimiento o negociación de precio**: order book con precios distintos entre ofertas, subastas, puja, prioridad de ejecución pagada, o cualquier esquema donde distintos compradores puedan pagar valores distintos por la misma oferta o donde el precio se determine por interacción entre usuarios. Esto sigue absolutamente prohibido. En cambio, **no** está prohibido que una oferta P2P esté abierta a múltiples usuarios interesados a la vez, ni que exista un mecanismo simple de resolución de concurrencia sobre la **cantidad** publicada (p. ej. "el primer comprador cuya ejecución se confirma se la lleva", con ajuste o rechazo para el resto según la cantidad remanente) — siempre que ese mecanismo nunca implique una variación de precio entre compradores ni una segunda fuente de precio distinta de la cotización oficial vigente.
@@ -93,7 +100,7 @@ Este documento define las reglas del juego innegociables para todo el proyecto. 
 - **Prohibido** recalcular o persistir un nuevo valor de cotización mediante cualquier vía que no sea el único servicio/algoritmo determinístico de cotización, ya sea invocado por el job semanal automático o por el disparo manual restringido a `ADMIN` descrito en la sección 2 — evita múltiples fuentes de verdad o implementaciones divergentes sobre el precio de un jugador.
 - **Prohibido**, en particular, que el endpoint o mecanismo de disparo manual acepte, reciba o permita como parámetro un valor de cotización: sólo puede iniciar el cálculo, nunca fijarlo.
 - **Prohibido** agregar WebSocket, SSE, long-polling, o cualquier otra infraestructura de comunicación en tiempo real para propagar cotización (o cualquier otro dato) al frontend.
-- **Prohibido** que el dominio o los casos de uso (capas `domain`/`application`) dependan directamente del formato de respuesta de WhoScored o de Football-Data.org; todo acceso a esas fuentes pasa por un adapter/puerto propio que traduce al modelo interno.
+- **Prohibido** que el Service dependa directamente del formato de respuesta de WhoScored o de Football-Data.org; todo acceso a esas fuentes pasa por la interfaz de Repository correspondiente, que traduce al modelo interno (`model/`).
 - **Prohibido** que un fallo, cambio de estructura o indisponibilidad de WhoScored (scraping) o de Football-Data.org (API) se propague y tumbe flujos del sistema no relacionados con esa fuente en particular.
 - **Prohibido** ejecutar el scraping de WhoScored de forma síncrona dentro del ciclo de request/response de un usuario; debe resolverse siempre mediante un proceso de ingesta desacoplado.
 
@@ -101,25 +108,25 @@ Este documento define las reglas del juego innegociables para todo el proyecto. 
 
 ## 3. Convenciones de código y estructura de carpetas
 
-### Backend — estructura de paquetes (package-by-feature)
+### Backend — estructura de paquetes (package-by-layer, decisión firme)
 ```
 src/main/java/<groupId>/valuacion/
-  jugador/
-    api/            (controllers, request/response DTOs)
-    domain/         (entidades, value objects, interfaces de repositorio)
-    application/    (services, casos de uso)
-    infrastructure/ (implementaciones JPA, mappers)
-  token/
-    api/ domain/ application/ infrastructure/
-  cotizacion/
-    api/ domain/ application/ infrastructure/
-  portfolio/
-    api/ domain/ application/ infrastructure/
-  usuario/
-    api/ domain/ application/ infrastructure/
-  common/           (excepciones base, utilidades, configuración de BigDecimal/RoundingMode)
-  config/           (configuración Spring: seguridad, CORS, OpenAPI, etc.)
+  controllers/    (un Controller por entidad/proceso de negocio: JugadorController, UsuarioController,
+                   TokenController, CotizacionController, PortfolioController, OfertaController, ...)
+  services/       (interfaz + implementación por entidad/proceso: JugadorService/JugadorServiceImpl, ...)
+  repositories/   (interfaces de Repository + implementaciones: repositorios Spring Data JPA sobre `model/`,
+                   más las interfaces propias de las fuentes externas y sus implementaciones
+                   WhoScoredRepositoryImpl, FootballDataRepositoryImpl, ...)
+  model/          (entidades JPA: Jugador, Usuario, Token/TenenciaToken, CotizacionHistorica, Movimiento,
+                   OfertaP2P, RegistroAuditoria, ...)
+  dto/
+    request/      (DTOs de entrada, `record`)
+    response/     (DTOs de salida, `record`)
+  common/         (excepciones base, utilidades, configuración de BigDecimal/RoundingMode)
+  config/         (configuración Spring: seguridad, CORS, OpenAPI, scheduling, etc.)
 ```
+
+Esta estructura reemplaza una organización anterior por feature (`jugador/api/domain/application/infrastructure`, etc.) que este documento tuvo en una versión previa. El principio de aislar cada fuente externa detrás de su propia interfaz (sección 1) se mantiene igual — sólo que la interfaz y su implementación ahora viven en `repositories/` en lugar de en paquetes `domain`/`infrastructure` separados. Cualquier `plan.md`/`tasks.md` escrito bajo la organización anterior debe revisarse y alinearse a esta estructura antes de continuar la implementación.
 
 ### Frontend — estructura de carpetas (feature-based)
 ```
@@ -140,6 +147,7 @@ src/
 
 ### Convenciones de nombres
 - **Java:** clases en `PascalCase`, métodos/variables en `camelCase`, constantes en `UPPER_SNAKE_CASE`, paquetes en minúsculas sin guiones bajos. Endpoints REST: sustantivos en plural, versionados (`/api/v1/jugadores`, `/api/v1/portfolios/{id}`).
+- **Convención de sufijos por capa:** `<Entidad>Controller` (ej. `JugadorController`); `<Entidad>Service` (interfaz) / `<Entidad>ServiceImpl` (implementación); `<Entidad>Repository` (interfaz) / `<Entidad>RepositoryImpl` (implementación, incluidas las de fuentes externas); `<Entidad>` a secas para la clase de `model/` (ej. `Jugador`, nunca `JugadorModel`/`JugadorEntity`). DTOs en `dto/request`/`dto/response`, nombrados `<Acción><Entidad>Request`/`<Entidad>Response` (ej. `CrearJugadorRequest`, `JugadorResponse`).
 - **Errores de API:** formato consistente en toda la aplicación (tipo `application/problem+json`, RFC 7807). Prohibido devolver stack traces o mensajes de excepción interna crudos al cliente.
 - **TypeScript/React:** componentes en `PascalCase`, hooks propios prefijados `useX` en `camelCase`, archivos de componente `NombreComponente.tsx`. Prohibido el tipo `any`; si un tipo es genuinamente desconocido, usar `unknown` y angostarlo explícitamente.
 - **Commits/branches:** fuera del alcance de esta constitución salvo lo indicado en la sección de dependencias/testing más abajo; se puede definir en un documento de convenciones de equipo aparte.
@@ -160,8 +168,8 @@ src/
 - **Dinero real: fuera de alcance permanente (decisión de producto confirmada).** El sistema opera exclusivamente con **saldo virtual** asignado dentro de la app; en ningún momento se procesa, mueve, custodia ni referencia dinero real. En consecuencia queda **terminantemente prohibido**: integrar pasarelas de pago externas, procesar datos de tarjetas u otros medios de pago reales, o implementar cualquier flujo de carga/retiro de dinero real. La anterior obligación de cumplimiento PCI-DSS / procesador de pagos externo queda **eliminada** de esta constitución — no aplica al proyecto y no debe reintroducirse sin que el dueño del producto reabra explícitamente este alcance.
 
 ### Testing
-- Backend: JUnit 5 + Mockito para tests unitarios de `application`/`domain`. Tests de integración con Spring Boot Test + **Testcontainers** (PostgreSQL real, nunca H2) para todo lo que toque `infrastructure`/persistencia.
-- Cobertura mínima obligatoria del **80%** en los paquetes `domain` y `application` de cada feature, verificada en build (JaCoCo). El build **falla** si no se alcanza.
+- Backend: JUnit 5 + Mockito para tests unitarios de `services/` (lógica de negocio) y de las entidades de `model/` con invariantes propias. Tests de integración con Spring Boot Test + **Testcontainers** (PostgreSQL real, nunca H2) para todo lo que toque `repositories/`/persistencia.
+- Cobertura mínima obligatoria del **80%** en `services/` (y en la lógica propia de `model/`), verificada en build (JaCoCo). El build **falla** si no se alcanza.
 - Toda lógica que involucre cálculo o mutación de cotización, saldo de portfolio, o tenencia de tokens **debe** tener tests unitarios cubriendo casos límite (cantidades cero, negativas, saldo insuficiente, intento de exceder el máximo de 100 tokens emitidos, concurrencia si aplica). **Prohibido** mergear cambios a esa lógica sin tests nuevos o actualizados. Esto incluye tanto la vía de disparo automático (job semanal) como la vía de disparo manual (ADMIN) descritas en la sección 2, dado que ambas invocan el mismo algoritmo.
 - Frontend: React Testing Library + Jest (o Vitest) para componentes y hooks. **Prohibido** testear implementación interna (usar Enzyme o inspeccionar estado interno); los tests validan comportamiento observable por el usuario.
 - **Prohibido** que un test unitario dependa de red real, servicios externos, o de un estado de base de datos compartido entre tests (cada test de integración levanta/limpia su propio contexto). En particular, los tests que ejercitan los adapters de WhoScored y Football-Data.org no deben depender de la disponibilidad real de esos sitios/APIs.
@@ -179,7 +187,7 @@ src/
 
 Las 4 preguntas originales de esta sección (naturaleza de la tokenización, mecanismo de cotización, dinero real vs. saldo virtual, y frecuencia de actualización de cotización) fueron respondidas por el dueño del producto y quedaron incorporadas como reglas firmes en las secciones 1, 2 y 4 de este documento.
 
-A partir de la incorporación de las fuentes de datos externas (WhoScored y Football-Data.org, sección 1) queda una pregunta abierta nueva:
+La pregunta abierta sobre frecuencia de ingesta de las fuentes externas (WhoScored y Football-Data.org) también fue respondida por el dueño del producto: ingesta semanal, alineada al job de recotización, sin necesidad de mayor frecuencia dado que el cálculo de cotización sólo la consume una vez por semana. Ver "Frecuencia de ingesta" en la sección 1.
 
-1. **Frecuencia de ingesta automática de cada fuente externa:** esta constitución fija que el *recálculo de cotización* corre semanalmente (por defecto) y admite un disparo manual acotado (sección 2), pero no define con qué frecuencia corren los procesos de ingesta que alimentan de datos crudos a ese cálculo — es decir, cada cuánto se ejecuta el scraping de WhoScored y cada cuánto se sincroniza con la API de Football-Data.org (¿diario? ¿ligado al calendario de partidos? ¿bajo demanda antes de cada job semanal de cotización?). Esta definición queda pendiente de decisión del dueño del producto antes de planificar las features de ingesta.
+No quedan preguntas abiertas pendientes en este documento.
 </content>
