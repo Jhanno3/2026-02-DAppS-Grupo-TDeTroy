@@ -1,4 +1,4 @@
-package com.tdetroy.valuacion.common;
+package com.tdetroy.valuacion.common.exceptions;
 
 /**
  * La emisión de tokens de un jugador superaría el máximo de 100 unidades.

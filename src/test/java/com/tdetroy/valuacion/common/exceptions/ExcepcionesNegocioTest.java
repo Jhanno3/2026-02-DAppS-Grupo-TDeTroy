@@ -1,4 +1,4 @@
-package com.tdetroy.valuacion.common;
+package com.tdetroy.valuacion.common.exceptions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

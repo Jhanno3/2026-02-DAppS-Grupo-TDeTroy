@@ -1,4 +1,4 @@
-package com.tdetroy.valuacion.common;
+package com.tdetroy.valuacion.common.exceptions;
 
 /**
  * La cantidad {@code disponible()} de tokens de un usuario para un jugador no alcanza para la

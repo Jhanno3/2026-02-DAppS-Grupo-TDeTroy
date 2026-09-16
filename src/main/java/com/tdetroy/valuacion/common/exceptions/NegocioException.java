@@ -1,4 +1,4 @@
-package com.tdetroy.valuacion.common;
+package com.tdetroy.valuacion.common.exceptions;
 
 /**
  * Raíz de toda excepción de regla de negocio del sistema.
