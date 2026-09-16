@@ -1,0 +1,6 @@
+-- Migración baseline (T0.2, plan.md §1).
+-- No crea esquema todavía: las tablas de dominio se agregan una por una en las
+-- migraciones de las fases siguientes de tasks.md (Fase 1 en adelante), en el orden
+-- Model -> Repository -> Service -> Controller de cada entidad.
+-- Su único propósito es dejar Flyway inicializado y la tabla de historial de
+-- migraciones (flyway_schema_history) creada desde el primer arranque.
