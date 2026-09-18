@@ -26,6 +26,16 @@
 		     (9.0-10.0) por encima. Traduce literalmente constitution.md S4 ("Dependencias"):
 		     "Una vulnerabilidad de severidad alta/critica sin mitigar bloquea el merge". -->
 		<dependency-check.fail-cvss>7</dependency-check.fail-cvss>
+		<!-- T1.4 (tasks.md), plan.md S4 "Spring Security + JWT stateless". jjwt es la libreria
+		     mas usada para emitir/validar JWT auto-firmados en Spring (no aplica aca el modulo
+		     spring-boot-starter-oauth2-resource-server: ese esta pensado para validar tokens
+		     emitidos por un Authorization Server externo via JWK endpoint, y esta app emite y
+		     valida sus propios tokens). 0.13.0 es la ultima estable (verificado en
+		     github.com/jwtk/jjwt/releases). Se usa jjwt-gson en vez de jjwt-jackson como proveedor
+		     JSON interno de la libreria para no traer una segunda major de Jackson (Jackson 2) a
+		     convivir con Jackson 3 (paquete tools.jackson), que ya usa el resto de la app via
+		     spring-boot-starter-jackson (ver ProblemDetailResponseWriter/AuditoriaServiceImpl). -->
+		<jjwt.version>0.13.0</jjwt.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -61,6 +71,24 @@
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>3.1.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>${jjwt.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-gson</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
 		</dependency>
 
 		<dependency>

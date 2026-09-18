@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
@@ -18,11 +19,13 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  *
  * <p>Extiende {@link ResponseEntityExceptionHandler} para heredar, sin reescribirlo, el manejo ya
  * correcto de las excepciones estándar de Spring MVC (validación de forma con {@code @Valid} → 400,
- * JSON malformado → 400, etc. — "400 para validación de forma" de plan.md §3) y sólo agrega los dos
- * casos propios del dominio: violación de una regla de negocio y cualquier error no anticipado. Los
- * errores de autenticación (401) y autorización (403) no pasan por acá: ocurren en el filtro de
- * seguridad, antes de llegar al Controller, y los maneja {@link SecurityConfig} con el mismo
- * formato problem+json (ver {@link ProblemDetailResponseWriter}).
+ * JSON malformado → 400, etc. — "400 para validación de forma" de plan.md §3). El 401 por token
+ * ausente/inválido en un endpoint protegido tampoco pasa por acá: ocurre en el filtro de seguridad,
+ * antes de llegar a cualquier Controller, y lo maneja {@link SecurityConfig} con el mismo formato
+ * problem+json (ver {@link ProblemDetailResponseWriter}). Lo que sí pasa por acá, agregado en T1.5,
+ * es el 401 que dispara explícitamente {@code AuthController} al validar credenciales en {@code
+ * POST /auth/login} (ver {@link #manejarCredencialesInvalidas}) — un caso de negocio distinto, con
+ * el mismo status.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -54,6 +57,26 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail problema =
                 ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problema.setTitle("Recurso no encontrado");
+        return problema;
+    }
+
+    /**
+     * "401, error genérico sin indicar campo" (spec UC-02: "el sistema rechaza el acceso sin
+     * indicar cuál dato específico es incorrecto"). Dispara cuando {@code AuthController} llama a
+     * {@code AuthenticationManager.authenticate(...)} con credenciales inválidas en {@code POST
+     * /auth/login} — distinto del 401 de {@link SecurityConfig} (token ausente/inválido). El
+     * detalle es siempre el mismo texto fijo, nunca {@code ex.getMessage()}: aunque {@code
+     * DaoAuthenticationProvider} ya oculta por defecto si el email no existe o si la contraseña es
+     * incorrecta detrás del mismo tipo de excepción, este handler no debe depender de ese detalle
+     * de Spring Security para cumplir la regla — nunca hay que confiar en el mensaje interno de una
+     * excepción de terceros para exponerlo tal cual al cliente.
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ProblemDetail manejarCredencialesInvalidas(AuthenticationException ex) {
+        ProblemDetail problema =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.UNAUTHORIZED, "Email o contraseña inválidos.");
+        problema.setTitle("Credenciales inválidas");
         return problema;
     }
 
