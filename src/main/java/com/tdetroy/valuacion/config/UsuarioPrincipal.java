@@ -31,10 +31,18 @@ public class UsuarioPrincipal implements UserDetails {
     private final RolUsuario rol;
 
     private UsuarioPrincipal(UUID usuarioId, String email, String passwordHash, RolUsuario rol) {
-        this.usuarioId = Objects.requireNonNull(usuarioId, "usuarioId no puede ser null");
-        this.email = Objects.requireNonNull(email, "email no puede ser null");
+        validarCampos(usuarioId, email, rol);
+
+        this.usuarioId = usuarioId;
+        this.email = email;
         this.passwordHash = passwordHash;
-        this.rol = Objects.requireNonNull(rol, "rol no puede ser null");
+        this.rol = rol;
+    }
+
+    private static void validarCampos(UUID usuarioId, String email, RolUsuario rol) {
+        Objects.requireNonNull(usuarioId, "usuarioId no puede ser null");
+        Objects.requireNonNull(email, "email no puede ser null");
+        Objects.requireNonNull(rol, "rol no puede ser null");
     }
 
     /**

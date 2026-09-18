@@ -49,12 +49,7 @@ public class Usuario {
     private final Instant fechaCreacion;
 
     private Usuario(String email, String passwordHash, RolUsuario rol, Instant fechaCreacion) {
-        Objects.requireNonNull(email, "email no puede ser null");
-        Objects.requireNonNull(passwordHash, "passwordHash no puede ser null");
-        Objects.requireNonNull(rol, "rol no puede ser null");
-        Objects.requireNonNull(fechaCreacion, "fechaCreacion no puede ser null");
-        requireNoBlank(email, "email");
-        requireNoBlank(passwordHash, "passwordHash");
+        validarCampos(email, passwordHash, rol, fechaCreacion);
 
         this.id = UUID.randomUUID();
         this.email = email;
@@ -104,6 +99,16 @@ public class Usuario {
     public void acreditarSaldo(BigDecimal monto) {
         BigDecimal montoEscalado = requireMontoPositivo(monto);
         this.saldoVirtual = saldoVirtual.add(montoEscalado);
+    }
+
+    private static void validarCampos(
+            String email, String passwordHash, RolUsuario rol, Instant fechaCreacion) {
+        Objects.requireNonNull(email, "email no puede ser null");
+        Objects.requireNonNull(passwordHash, "passwordHash no puede ser null");
+        Objects.requireNonNull(rol, "rol no puede ser null");
+        Objects.requireNonNull(fechaCreacion, "fechaCreacion no puede ser null");
+        requireNoBlank(email, "email");
+        requireNoBlank(passwordHash, "passwordHash");
     }
 
     private static BigDecimal requireMontoPositivo(BigDecimal monto) {

@@ -34,7 +34,7 @@ public class AuditoriaServiceImpl implements AuditoriaService {
             UUID entidadId,
             Object valoresAntes,
             Object valoresDespues) {
-        Objects.requireNonNull(valoresDespues, "valoresDespues no puede ser null");
+        validarCampos(valoresDespues);
 
         String jsonAntes =
                 valoresAntes == null ? null : objectMapper.writeValueAsString(valoresAntes);
@@ -44,5 +44,9 @@ public class AuditoriaServiceImpl implements AuditoriaService {
                 RegistroAuditoria.registrar(
                         actorId, accion, entidadAfectada, entidadId, jsonAntes, jsonDespues);
         repository.save(registro);
+    }
+
+    private static void validarCampos(Object valoresDespues) {
+        Objects.requireNonNull(valoresDespues, "valoresDespues no puede ser null");
     }
 }

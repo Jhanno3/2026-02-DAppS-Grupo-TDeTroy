@@ -66,13 +66,7 @@ public class RegistroAuditoria {
             String valoresAntes,
             String valoresDespues,
             Instant fecha) {
-        Objects.requireNonNull(accion, "accion no puede ser null");
-        Objects.requireNonNull(entidadAfectada, "entidadAfectada no puede ser null");
-        Objects.requireNonNull(entidadId, "entidadId no puede ser null");
-        Objects.requireNonNull(valoresDespues, "valoresDespues no puede ser null");
-        Objects.requireNonNull(fecha, "fecha no puede ser null");
-        requireNoBlank(accion, "accion");
-        requireNoBlank(entidadAfectada, "entidadAfectada");
+        validarCampos(accion, entidadAfectada, entidadId, valoresDespues, fecha);
 
         this.id = UUID.randomUUID();
         this.actorId = actorId;
@@ -113,6 +107,21 @@ public class RegistroAuditoria {
             Instant fecha) {
         return new RegistroAuditoria(
                 actorId, accion, entidadAfectada, entidadId, valoresAntes, valoresDespues, fecha);
+    }
+
+    private static void validarCampos(
+            String accion,
+            String entidadAfectada,
+            UUID entidadId,
+            String valoresDespues,
+            Instant fecha) {
+        Objects.requireNonNull(accion, "accion no puede ser null");
+        Objects.requireNonNull(entidadAfectada, "entidadAfectada no puede ser null");
+        Objects.requireNonNull(entidadId, "entidadId no puede ser null");
+        Objects.requireNonNull(valoresDespues, "valoresDespues no puede ser null");
+        Objects.requireNonNull(fecha, "fecha no puede ser null");
+        requireNoBlank(accion, "accion");
+        requireNoBlank(entidadAfectada, "entidadAfectada");
     }
 
     private static void requireNoBlank(String valor, String nombreCampo) {

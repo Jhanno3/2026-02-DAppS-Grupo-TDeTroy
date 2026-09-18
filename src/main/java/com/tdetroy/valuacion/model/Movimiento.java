@@ -81,31 +81,9 @@ public class Movimiento {
             BigDecimal montoTotal,
             UUID contraparteUsuarioId,
             Instant fecha) {
-        Objects.requireNonNull(usuarioId, "usuarioId no puede ser null");
-        Objects.requireNonNull(tipo, "tipo no puede ser null");
-        Objects.requireNonNull(montoTotal, "montoTotal no puede ser null");
-        Objects.requireNonNull(fecha, "fecha no puede ser null");
-        requirePositivo(montoTotal, "montoTotal");
-
-        if (tipo == TipoMovimiento.RECARGA_SALDO) {
-            requireNull(jugadorId, "jugadorId", tipo);
-            requireNull(cantidad, "cantidad", tipo);
-            requireNull(precioUnitario, "precioUnitario", tipo);
-        } else {
-            Objects.requireNonNull(jugadorId, "jugadorId es obligatorio para tipo " + tipo);
-            Objects.requireNonNull(cantidad, "cantidad es obligatoria para tipo " + tipo);
-            Objects.requireNonNull(
-                    precioUnitario, "precioUnitario es obligatorio para tipo " + tipo);
-            requirePositivo(cantidad, "cantidad");
-            requirePositivo(precioUnitario, "precioUnitario");
-        }
-
-        if (tipo == TipoMovimiento.COMPRA_P2P || tipo == TipoMovimiento.VENTA_P2P) {
-            Objects.requireNonNull(
-                    contraparteUsuarioId, "contraparteUsuarioId es obligatorio para tipo " + tipo);
-        } else {
-            requireNull(contraparteUsuarioId, "contraparteUsuarioId", tipo);
-        }
+        validarCamposObligatorios(usuarioId, tipo, montoTotal, fecha);
+        validarCamposJugador(tipo, jugadorId, cantidad, precioUnitario);
+        validarContraparte(tipo, contraparteUsuarioId);
 
         this.id = UUID.randomUUID();
         this.usuarioId = usuarioId;
@@ -160,6 +138,40 @@ public class Movimiento {
                 montoTotal,
                 contraparteUsuarioId,
                 fecha);
+    }
+
+    private static void validarCamposObligatorios(
+            UUID usuarioId, TipoMovimiento tipo, BigDecimal montoTotal, Instant fecha) {
+        Objects.requireNonNull(usuarioId, "usuarioId no puede ser null");
+        Objects.requireNonNull(tipo, "tipo no puede ser null");
+        Objects.requireNonNull(montoTotal, "montoTotal no puede ser null");
+        Objects.requireNonNull(fecha, "fecha no puede ser null");
+        requirePositivo(montoTotal, "montoTotal");
+    }
+
+    private static void validarCamposJugador(
+            TipoMovimiento tipo, UUID jugadorId, Integer cantidad, BigDecimal precioUnitario) {
+        if (tipo == TipoMovimiento.RECARGA_SALDO) {
+            requireNull(jugadorId, "jugadorId", tipo);
+            requireNull(cantidad, "cantidad", tipo);
+            requireNull(precioUnitario, "precioUnitario", tipo);
+        } else {
+            Objects.requireNonNull(jugadorId, "jugadorId es obligatorio para tipo " + tipo);
+            Objects.requireNonNull(cantidad, "cantidad es obligatoria para tipo " + tipo);
+            Objects.requireNonNull(
+                    precioUnitario, "precioUnitario es obligatorio para tipo " + tipo);
+            requirePositivo(cantidad, "cantidad");
+            requirePositivo(precioUnitario, "precioUnitario");
+        }
+    }
+
+    private static void validarContraparte(TipoMovimiento tipo, UUID contraparteUsuarioId) {
+        if (tipo == TipoMovimiento.COMPRA_P2P || tipo == TipoMovimiento.VENTA_P2P) {
+            Objects.requireNonNull(
+                    contraparteUsuarioId, "contraparteUsuarioId es obligatorio para tipo " + tipo);
+        } else {
+            requireNull(contraparteUsuarioId, "contraparteUsuarioId", tipo);
+        }
     }
 
     private static void requireNull(Object valor, String nombreCampo, TipoMovimiento tipo) {
