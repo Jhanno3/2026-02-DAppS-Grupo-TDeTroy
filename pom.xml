@@ -15,6 +15,17 @@
 	<description>App de valuación de jugadores de fútbol profesionales</description>
 	<properties>
 		<java.version>21</java.version>
+		<!-- T0.7 - gates de build (constitution.md S1/S4, tasks.md T0.7) -->
+		<jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
+		<spotless-maven-plugin.version>3.10.2</spotless-maven-plugin.version>
+		<dependency-check-maven.version>13.0.0</dependency-check-maven.version>
+		<!-- Umbral minimo de cobertura de services/ y model/ (constitution.md S4: "Cobertura
+		     minima obligatoria del 80%"). -->
+		<jacoco.cobertura-minima>0.80</jacoco.cobertura-minima>
+		<!-- CVSS v3: 7.0 es el piso de severidad "High" (7.0-8.9) y cubre tambien "Critical"
+		     (9.0-10.0) por encima. Traduce literalmente constitution.md S4 ("Dependencias"):
+		     "Una vulnerabilidad de severidad alta/critica sin mitigar bloquea el merge". -->
+		<dependency-check.fail-cvss>7</dependency-check.fail-cvss>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -87,6 +98,35 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- T0.7 (tasks.md), constitution.md S4 "Testing": tests de integracion de repositories/
+		     contra Postgres real, nunca H2. spring-boot-starter-parent ya importa
+		     org.testcontainers:testcontainers-bom en su dependencyManagement (verificado:
+		     testcontainers.version=2.0.5 en spring-boot-dependencies:4.1.1), asi que la version
+		     queda fija transitivamente por el parent y no se repite aca. En Testcontainers 2.x
+		     los artefactos "junit-jupiter"/"postgresql" de la linea 1.x pasaron a llamarse
+		     "testcontainers-junit-jupiter"/"testcontainers-postgresql". -->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Ya llega transitivamente via spring-boot-starter-webmvc-test; se declara explicito
+		     porque los tests de integracion de RegistroAuditoriaRepository lo usan en forma
+		     directa (JSONAssert) para comparar columnas jsonb semanticamente; Postgres no
+		     preserva el texto original de un jsonb, así que comparar como String exacto es
+		     frágil. Version fijada por dependencyManagement heredado del parent (jsonassert.version
+		     en spring-boot-dependencies:4.1.1). -->
+		<dependency>
+			<groupId>org.skyscreamer</groupId>
+			<artifactId>jsonassert</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -128,6 +168,129 @@
 								</path>
 							</annotationProcessorPaths>
 						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- T0.7 (tasks.md): cobertura minima 80% en services/ y model/ (constitution.md S4),
+			     build-breaking. element=PACKAGE evalua cada paquete que matchea includes por
+			     separado (80% independiente en services/ y en model/, no una mezcla agregada), y
+			     de forma natural NO evalua (no rompe el build por) un paquete que todavia no
+			     tiene ninguna clase analizada; si en el futuro aparece una clase en services/
+			     sin test que la cubra, ese paquete si empieza a evaluarse y puede hacer fallar
+			     jacoco-check. -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${jacoco-maven-plugin.version}</version>
+				<executions>
+					<execution>
+						<id>jacoco-prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>jacoco-report</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>jacoco-check</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<rule>
+									<element>PACKAGE</element>
+									<includes>
+										<include>com.tdetroy.valuacion.services</include>
+										<include>com.tdetroy.valuacion.services.*</include>
+										<include>com.tdetroy.valuacion.model</include>
+										<include>com.tdetroy.valuacion.model.*</include>
+									</includes>
+									<limits>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${jacoco.cobertura-minima}</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- T0.7 (tasks.md), constitution.md S1 "Herramientas transversales": formatter
+			     obligatorio, build falla ante violaciones. Ver justificacion de Spotless vs.
+			     Checkstyle en el reporte de la tarea T0.7; en resumen, el codigo ya escrito en
+			     el repo sigue una indentacion de 4 espacios (estilo AOSP), asi que se usa
+			     google-java-format en modo AOSP para no reescribir la convencion ya establecida
+			     mas de lo necesario, y porque Spotless puede auto-corregir (`spotless:apply`) en
+			     vez de solo reportar. -->
+			<plugin>
+				<groupId>com.diffplug.spotless</groupId>
+				<artifactId>spotless-maven-plugin</artifactId>
+				<version>${spotless-maven-plugin.version}</version>
+				<configuration>
+					<java>
+						<googleJavaFormat>
+							<style>AOSP</style>
+						</googleJavaFormat>
+						<removeUnusedImports/>
+						<importOrder/>
+						<endWithNewline/>
+						<trimTrailingWhitespace/>
+					</java>
+				</configuration>
+				<executions>
+					<execution>
+						<id>spotless-check</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- T0.7 (tasks.md), constitution.md S4 "Dependencias": "Una vulnerabilidad de
+			     severidad alta/critica sin mitigar bloquea el merge". failBuildOnCVSS=7 traduce
+			     eso a build-breaking (CVSS v3 "High" arranca en 7.0, "Critical" en 9.0, ambos
+			     quedan cubiertos). Requiere red para bajar el feed NVD; si no hay conectividad
+			     o tarda demasiado en el entorno donde se corre, el goal falla por eso, no por una
+			     vulnerabilidad real; queda igual configurado correctamente para CI. -->
+			<plugin>
+				<groupId>org.owasp</groupId>
+				<artifactId>dependency-check-maven</artifactId>
+				<version>${dependency-check-maven.version}</version>
+				<configuration>
+					<failBuildOnCVSS>${dependency-check.fail-cvss}</failBuildOnCVSS>
+					<formats>
+						<format>HTML</format>
+						<format>XML</format>
+					</formats>
+					<!-- Desde 2024 la NVD exige API key para actualizar el feed a un ritmo
+					     razonable (constitution.md S4: "prohibido commitear secretos" - nunca la
+					     key en texto plano aca). Se lee de la variable de entorno NVD_API_KEY;
+					     si no esta seteada (ej. entorno local sin la key todavia provisionada en
+					     CI), este goal falla al intentar actualizar el feed NVD, no por una
+					     vulnerabilidad real. -->
+					<nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+				</configuration>
+				<executions>
+					<execution>
+						<id>dependency-check</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
 					</execution>
 				</executions>
 			</plugin>

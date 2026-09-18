@@ -27,8 +27,15 @@ class RegistroAuditoriaTest {
 
     @Test
     void registroValidoConActor_construyeCorrectamenteYGettersDevuelvenLoEsperado() {
-        RegistroAuditoria registro = RegistroAuditoria.registrar(
-                ACTOR_ID, ACCION, ENTIDAD_AFECTADA, ENTIDAD_ID, JSON_ANTES, JSON_DESPUES, FECHA_FIJA);
+        RegistroAuditoria registro =
+                RegistroAuditoria.registrar(
+                        ACTOR_ID,
+                        ACCION,
+                        ENTIDAD_AFECTADA,
+                        ENTIDAD_ID,
+                        JSON_ANTES,
+                        JSON_DESPUES,
+                        FECHA_FIJA);
 
         assertThat(registro.getId()).isNotNull();
         assertThat(registro.getActorId()).isEqualTo(ACTOR_ID);
@@ -42,69 +49,147 @@ class RegistroAuditoriaTest {
 
     @Test
     void actorIdNulo_representaSistemaYEsValido() {
-        RegistroAuditoria registro = RegistroAuditoria.registrar(
-                null, "RECALCULO_AUTOMATICO_COTIZACION", "Jugador", ENTIDAD_ID, null, JSON_DESPUES, FECHA_FIJA);
+        RegistroAuditoria registro =
+                RegistroAuditoria.registrar(
+                        null,
+                        "RECALCULO_AUTOMATICO_COTIZACION",
+                        "Jugador",
+                        ENTIDAD_ID,
+                        null,
+                        JSON_DESPUES,
+                        FECHA_FIJA);
 
         assertThat(registro.getActorId()).isNull();
     }
 
     @Test
     void valoresAntesNulo_esValido_porEjemploUnAltaSinEstadoPrevio() {
-        RegistroAuditoria registro = RegistroAuditoria.registrar(
-                ACTOR_ID, "ALTA_JUGADOR", ENTIDAD_AFECTADA, ENTIDAD_ID, null, JSON_DESPUES, FECHA_FIJA);
+        RegistroAuditoria registro =
+                RegistroAuditoria.registrar(
+                        ACTOR_ID,
+                        "ALTA_JUGADOR",
+                        ENTIDAD_AFECTADA,
+                        ENTIDAD_ID,
+                        null,
+                        JSON_DESPUES,
+                        FECHA_FIJA);
 
         assertThat(registro.getValoresAntes()).isNull();
     }
 
     @Test
     void accionNula_lanzaExcepcion() {
-        assertThatNullPointerException().isThrownBy(() -> RegistroAuditoria.registrar(
-                ACTOR_ID, null, ENTIDAD_AFECTADA, ENTIDAD_ID, JSON_ANTES, JSON_DESPUES, FECHA_FIJA));
+        assertThatNullPointerException()
+                .isThrownBy(
+                        () ->
+                                RegistroAuditoria.registrar(
+                                        ACTOR_ID,
+                                        null,
+                                        ENTIDAD_AFECTADA,
+                                        ENTIDAD_ID,
+                                        JSON_ANTES,
+                                        JSON_DESPUES,
+                                        FECHA_FIJA));
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", " ", "   "})
     void accionVaciaOBlanco_lanzaExcepcion(String accionInvalida) {
-        assertThatIllegalArgumentException().isThrownBy(() -> RegistroAuditoria.registrar(
-                ACTOR_ID, accionInvalida, ENTIDAD_AFECTADA, ENTIDAD_ID, JSON_ANTES, JSON_DESPUES, FECHA_FIJA));
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () ->
+                                RegistroAuditoria.registrar(
+                                        ACTOR_ID,
+                                        accionInvalida,
+                                        ENTIDAD_AFECTADA,
+                                        ENTIDAD_ID,
+                                        JSON_ANTES,
+                                        JSON_DESPUES,
+                                        FECHA_FIJA));
     }
 
     @Test
     void entidadAfectadaNula_lanzaExcepcion() {
-        assertThatNullPointerException().isThrownBy(() -> RegistroAuditoria.registrar(
-                ACTOR_ID, ACCION, null, ENTIDAD_ID, JSON_ANTES, JSON_DESPUES, FECHA_FIJA));
+        assertThatNullPointerException()
+                .isThrownBy(
+                        () ->
+                                RegistroAuditoria.registrar(
+                                        ACTOR_ID,
+                                        ACCION,
+                                        null,
+                                        ENTIDAD_ID,
+                                        JSON_ANTES,
+                                        JSON_DESPUES,
+                                        FECHA_FIJA));
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", " ", "   "})
     void entidadAfectadaVaciaOBlanco_lanzaExcepcion(String entidadInvalida) {
-        assertThatIllegalArgumentException().isThrownBy(() -> RegistroAuditoria.registrar(
-                ACTOR_ID, ACCION, entidadInvalida, ENTIDAD_ID, JSON_ANTES, JSON_DESPUES, FECHA_FIJA));
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () ->
+                                RegistroAuditoria.registrar(
+                                        ACTOR_ID,
+                                        ACCION,
+                                        entidadInvalida,
+                                        ENTIDAD_ID,
+                                        JSON_ANTES,
+                                        JSON_DESPUES,
+                                        FECHA_FIJA));
     }
 
     @Test
     void entidadIdNulo_lanzaExcepcion() {
-        assertThatNullPointerException().isThrownBy(() -> RegistroAuditoria.registrar(
-                ACTOR_ID, ACCION, ENTIDAD_AFECTADA, null, JSON_ANTES, JSON_DESPUES, FECHA_FIJA));
+        assertThatNullPointerException()
+                .isThrownBy(
+                        () ->
+                                RegistroAuditoria.registrar(
+                                        ACTOR_ID,
+                                        ACCION,
+                                        ENTIDAD_AFECTADA,
+                                        null,
+                                        JSON_ANTES,
+                                        JSON_DESPUES,
+                                        FECHA_FIJA));
     }
 
     @Test
     void valoresDespuesNulo_lanzaExcepcion() {
-        assertThatNullPointerException().isThrownBy(() -> RegistroAuditoria.registrar(
-                ACTOR_ID, ACCION, ENTIDAD_AFECTADA, ENTIDAD_ID, JSON_ANTES, null, FECHA_FIJA));
+        assertThatNullPointerException()
+                .isThrownBy(
+                        () ->
+                                RegistroAuditoria.registrar(
+                                        ACTOR_ID,
+                                        ACCION,
+                                        ENTIDAD_AFECTADA,
+                                        ENTIDAD_ID,
+                                        JSON_ANTES,
+                                        null,
+                                        FECHA_FIJA));
     }
 
     @Test
     void fechaNula_lanzaExcepcion() {
-        assertThatNullPointerException().isThrownBy(() -> RegistroAuditoria.registrar(
-                ACTOR_ID, ACCION, ENTIDAD_AFECTADA, ENTIDAD_ID, JSON_ANTES, JSON_DESPUES, null));
+        assertThatNullPointerException()
+                .isThrownBy(
+                        () ->
+                                RegistroAuditoria.registrar(
+                                        ACTOR_ID,
+                                        ACCION,
+                                        ENTIDAD_AFECTADA,
+                                        ENTIDAD_ID,
+                                        JSON_ANTES,
+                                        JSON_DESPUES,
+                                        null));
     }
 
     @Test
     void registrarSinFechaExplicita_usaInstanteActual() {
         Instant antes = Instant.now();
         RegistroAuditoria registro =
-                RegistroAuditoria.registrar(ACTOR_ID, ACCION, ENTIDAD_AFECTADA, ENTIDAD_ID, JSON_ANTES, JSON_DESPUES);
+                RegistroAuditoria.registrar(
+                        ACTOR_ID, ACCION, ENTIDAD_AFECTADA, ENTIDAD_ID, JSON_ANTES, JSON_DESPUES);
         Instant despues = Instant.now();
 
         assertThat(registro.getFecha()).isBetween(antes, despues);
@@ -112,10 +197,24 @@ class RegistroAuditoriaTest {
 
     @Test
     void dosRegistrosRegistradosPorSeparadoTienenIdsDistintos() {
-        RegistroAuditoria uno = RegistroAuditoria.registrar(
-                ACTOR_ID, ACCION, ENTIDAD_AFECTADA, ENTIDAD_ID, JSON_ANTES, JSON_DESPUES, FECHA_FIJA);
-        RegistroAuditoria otro = RegistroAuditoria.registrar(
-                ACTOR_ID, ACCION, ENTIDAD_AFECTADA, ENTIDAD_ID, JSON_ANTES, JSON_DESPUES, FECHA_FIJA);
+        RegistroAuditoria uno =
+                RegistroAuditoria.registrar(
+                        ACTOR_ID,
+                        ACCION,
+                        ENTIDAD_AFECTADA,
+                        ENTIDAD_ID,
+                        JSON_ANTES,
+                        JSON_DESPUES,
+                        FECHA_FIJA);
+        RegistroAuditoria otro =
+                RegistroAuditoria.registrar(
+                        ACTOR_ID,
+                        ACCION,
+                        ENTIDAD_AFECTADA,
+                        ENTIDAD_ID,
+                        JSON_ANTES,
+                        JSON_DESPUES,
+                        FECHA_FIJA);
 
         assertThat(uno.getId()).isNotEqualTo(otro.getId());
     }

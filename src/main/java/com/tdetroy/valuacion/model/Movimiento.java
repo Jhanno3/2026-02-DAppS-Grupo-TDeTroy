@@ -15,27 +15,28 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Registro de un movimiento de cara al usuario (UC-12, plan.md §2.6): recarga de saldo, compra
- * o venta contra el sistema, compra o venta P2P, o compensación por baja de un jugador.
+ * Registro de un movimiento de cara al usuario (UC-12, plan.md §2.6): recarga de saldo, compra o
+ * venta contra el sistema, compra o venta P2P, o compensación por baja de un jugador.
  *
  * <p><b>Append-only:</b> no expone ningún método de mutación ni setter público — se construye
  * completo con {@link #registrar} y queda inmutable desde ese momento (constitution.md §2). Es
- * distinto del log de auditoría interno ({@code RegistroAuditoria}, plan.md §10), que además
- * cubre operaciones administrativas sin usuario final asociado.
+ * distinto del log de auditoría interno ({@code RegistroAuditoria}, plan.md §10), que además cubre
+ * operaciones administrativas sin usuario final asociado.
  *
- * <p>La combinación válida de campos según {@link #tipo} es una invariante propia de esta
- * entidad, protegida en el único punto por el que se puede crear un {@code Movimiento} — el
- * constructor privado invocado desde {@link #registrar} — nunca sólo validada en el Service que
- * lo invoca (constitution.md §2):
+ * <p>La combinación válida de campos según {@link #tipo} es una invariante propia de esta entidad,
+ * protegida en el único punto por el que se puede crear un {@code Movimiento} — el constructor
+ * privado invocado desde {@link #registrar} — nunca sólo validada en el Service que lo invoca
+ * (constitution.md §2):
+ *
  * <ul>
- *   <li>{@link TipoMovimiento#RECARGA_SALDO}: {@code jugadorId}, {@code cantidad},
- *       {@code precioUnitario} y {@code contraparteUsuarioId} deben ser {@code null}.</li>
- *   <li>Cualquier otro tipo: {@code jugadorId}, {@code cantidad} (&gt;0) y
- *       {@code precioUnitario} (&gt;0) son obligatorios.</li>
- *   <li>{@code contraparteUsuarioId} es obligatorio únicamente para
- *       {@link TipoMovimiento#COMPRA_P2P}/{@link TipoMovimiento#VENTA_P2P}, y debe ser
- *       {@code null} para el resto.</li>
- *   <li>{@code montoTotal} siempre es obligatorio y mayor a cero.</li>
+ *   <li>{@link TipoMovimiento#RECARGA_SALDO}: {@code jugadorId}, {@code cantidad}, {@code
+ *       precioUnitario} y {@code contraparteUsuarioId} deben ser {@code null}.
+ *   <li>Cualquier otro tipo: {@code jugadorId}, {@code cantidad} (&gt;0) y {@code precioUnitario}
+ *       (&gt;0) son obligatorios.
+ *   <li>{@code contraparteUsuarioId} es obligatorio únicamente para {@link
+ *       TipoMovimiento#COMPRA_P2P}/{@link TipoMovimiento#VENTA_P2P}, y debe ser {@code null} para
+ *       el resto.
+ *   <li>{@code montoTotal} siempre es obligatorio y mayor a cero.
  * </ul>
  */
 @Entity
@@ -44,8 +45,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 public class Movimiento {
 
-    @Id
-    private final UUID id;
+    @Id private final UUID id;
 
     @Column(nullable = false, updatable = false)
     private final UUID usuarioId;
@@ -94,7 +94,8 @@ public class Movimiento {
         } else {
             Objects.requireNonNull(jugadorId, "jugadorId es obligatorio para tipo " + tipo);
             Objects.requireNonNull(cantidad, "cantidad es obligatoria para tipo " + tipo);
-            Objects.requireNonNull(precioUnitario, "precioUnitario es obligatorio para tipo " + tipo);
+            Objects.requireNonNull(
+                    precioUnitario, "precioUnitario es obligatorio para tipo " + tipo);
             requirePositivo(cantidad, "cantidad");
             requirePositivo(precioUnitario, "precioUnitario");
         }
@@ -130,7 +131,14 @@ public class Movimiento {
             BigDecimal montoTotal,
             UUID contraparteUsuarioId) {
         return registrar(
-                usuarioId, jugadorId, tipo, cantidad, precioUnitario, montoTotal, contraparteUsuarioId, Instant.now());
+                usuarioId,
+                jugadorId,
+                tipo,
+                cantidad,
+                precioUnitario,
+                montoTotal,
+                contraparteUsuarioId,
+                Instant.now());
     }
 
     /** Igual que {@link #registrar}, con {@code fecha} explícita (tests, reproducibilidad). */
@@ -144,7 +152,14 @@ public class Movimiento {
             UUID contraparteUsuarioId,
             Instant fecha) {
         return new Movimiento(
-                usuarioId, jugadorId, tipo, cantidad, precioUnitario, montoTotal, contraparteUsuarioId, fecha);
+                usuarioId,
+                jugadorId,
+                tipo,
+                cantidad,
+                precioUnitario,
+                montoTotal,
+                contraparteUsuarioId,
+                fecha);
     }
 
     private static void requireNull(Object valor, String nombreCampo, TipoMovimiento tipo) {
@@ -155,13 +170,15 @@ public class Movimiento {
 
     private static void requirePositivo(BigDecimal valor, String nombreCampo) {
         if (valor.signum() <= 0) {
-            throw new IllegalArgumentException(nombreCampo + " debe ser mayor a cero, fue " + valor);
+            throw new IllegalArgumentException(
+                    nombreCampo + " debe ser mayor a cero, fue " + valor);
         }
     }
 
     private static void requirePositivo(Integer valor, String nombreCampo) {
         if (valor <= 0) {
-            throw new IllegalArgumentException(nombreCampo + " debe ser mayor a cero, fue " + valor);
+            throw new IllegalArgumentException(
+                    nombreCampo + " debe ser mayor a cero, fue " + valor);
         }
     }
 }

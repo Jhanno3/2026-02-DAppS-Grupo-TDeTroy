@@ -51,7 +51,6 @@ class MonetarioTest {
 
     @Test
     void escalarRechazaNull() {
-        assertThatThrownBy(() -> Monetario.escalar(null))
-                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> Monetario.escalar(null)).isInstanceOf(NullPointerException.class);
     }
 }

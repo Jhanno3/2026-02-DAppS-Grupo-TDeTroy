@@ -5,18 +5,18 @@ import java.math.RoundingMode;
 import java.util.Objects;
 
 /**
- * Configuración centralizada de escala y redondeo para todo valor monetario o de valuación
- * del sistema (saldo virtual, cotización, montos de movimientos).
+ * Configuración centralizada de escala y redondeo para todo valor monetario o de valuación del
+ * sistema (saldo virtual, cotización, montos de movimientos).
  *
- * <p>Constitution.md §1 prohíbe {@code float}/{@code double} para dinero y exige
- * {@link BigDecimal} "con escala y RoundingMode definidos de forma centralizada y consistente
- * en todo el sistema" — este es ese único punto. Ningún Service ni entidad de
- * {@link com.tdetroy.valuacion.model} debe declarar su propia escala o su propio
- * {@link RoundingMode}; todos usan {@link #escalar(BigDecimal)}.
+ * <p>Constitution.md §1 prohíbe {@code float}/{@code double} para dinero y exige {@link BigDecimal}
+ * "con escala y RoundingMode definidos de forma centralizada y consistente en todo el sistema" —
+ * este es ese único punto. Ningún Service ni entidad de {@link com.tdetroy.valuacion.model} debe
+ * declarar su propia escala o su propio {@link RoundingMode}; todos usan {@link
+ * #escalar(BigDecimal)}.
  *
- * <p>Valores fijados por plan.md: escala 2 (ej. {@code saldoVirtual: BigDecimal(19,2)},
- * §2.1; {@code CotizacionHistorica.valor: BigDecimal(19,2)}, §2.4) y
- * {@link RoundingMode#HALF_UP} (fórmula de recotización, plan.md §6.1).
+ * <p>Valores fijados por plan.md: escala 2 (ej. {@code saldoVirtual: BigDecimal(19,2)}, §2.1;
+ * {@code CotizacionHistorica.valor: BigDecimal(19,2)}, §2.4) y {@link RoundingMode#HALF_UP}
+ * (fórmula de recotización, plan.md §6.1).
  */
 public final class Monetario {
 

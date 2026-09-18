@@ -19,19 +19,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * {@link AuditoriaServiceImpl} es responsable de serializar {@code valoresAntes}/
- * {@code valoresDespues} a JSON antes de delegar en {@link RegistroAuditoriaRepository} — se usa
- * un {@link ObjectMapper} real (no mockeado, es una clase simple sin dependencias externas) para
- * verificar el contenido serializado de punta a punta.
+ * {@link AuditoriaServiceImpl} es responsable de serializar {@code valoresAntes}/ {@code
+ * valoresDespues} a JSON antes de delegar en {@link RegistroAuditoriaRepository} — se usa un {@link
+ * ObjectMapper} real (no mockeado, es una clase simple sin dependencias externas) para verificar el
+ * contenido serializado de punta a punta.
  */
 @ExtendWith(MockitoExtension.class)
 class AuditoriaServiceImplTest {
 
-    private record EstadoJugador(String estado) {
-    }
+    private record EstadoJugador(String estado) {}
 
-    @Mock
-    private RegistroAuditoriaRepository repository;
+    @Mock private RegistroAuditoriaRepository repository;
 
     private AuditoriaServiceImpl service;
 
@@ -46,7 +44,11 @@ class AuditoriaServiceImplTest {
     @Test
     void registrarConValoresAntesYDespues_guardaConLosCamposYElJsonEsperado() {
         service.registrar(
-                actorId, "BAJA_JUGADOR", "Jugador", entidadId, new EstadoJugador("ACTIVO"),
+                actorId,
+                "BAJA_JUGADOR",
+                "Jugador",
+                entidadId,
+                new EstadoJugador("ACTIVO"),
                 new EstadoJugador("INACTIVO"));
 
         RegistroAuditoria guardado = capturarGuardado();
@@ -60,7 +62,8 @@ class AuditoriaServiceImplTest {
 
     @Test
     void registrarConValoresAntesNulo_guardaConValoresAntesNulo() {
-        service.registrar(actorId, "ALTA_JUGADOR", "Jugador", entidadId, null, new EstadoJugador("ACTIVO"));
+        service.registrar(
+                actorId, "ALTA_JUGADOR", "Jugador", entidadId, null, new EstadoJugador("ACTIVO"));
 
         RegistroAuditoria guardado = capturarGuardado();
         assertThat(guardado.getValoresAntes()).isNull();
@@ -70,7 +73,11 @@ class AuditoriaServiceImplTest {
     @Test
     void registrarConActorIdNulo_guardaConActorIdNulo_representaSistema() {
         service.registrar(
-                null, "RECALCULO_AUTOMATICO_COTIZACION", "Jugador", entidadId, null,
+                null,
+                "RECALCULO_AUTOMATICO_COTIZACION",
+                "Jugador",
+                entidadId,
+                null,
                 new EstadoJugador("recalculado"));
 
         assertThat(capturarGuardado().getActorId()).isNull();
@@ -78,8 +85,16 @@ class AuditoriaServiceImplTest {
 
     @Test
     void registrarConValoresDespuesNulo_lanzaExcepcionYNoGuardaNada() {
-        assertThatNullPointerException().isThrownBy(() -> service.registrar(
-                actorId, "BAJA_JUGADOR", "Jugador", entidadId, new EstadoJugador("ACTIVO"), null));
+        assertThatNullPointerException()
+                .isThrownBy(
+                        () ->
+                                service.registrar(
+                                        actorId,
+                                        "BAJA_JUGADOR",
+                                        "Jugador",
+                                        entidadId,
+                                        new EstadoJugador("ACTIVO"),
+                                        null));
 
         verify(repository, never()).save(any());
     }

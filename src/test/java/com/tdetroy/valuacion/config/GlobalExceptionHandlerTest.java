@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Prueba {@link GlobalExceptionHandler} contra un controller mínimo propio del test (no hay
- * ningún {@code Controller} real todavía, T0.4 es transversal), verificando exactamente el
- * contrato de plan.md §3: 409 para una {@link com.tdetroy.valuacion.common.exceptions.NegocioException},
- * 500 genérico sin filtrar el mensaje interno para cualquier otro error no anticipado.
+ * Prueba {@link GlobalExceptionHandler} contra un controller mínimo propio del test (no hay ningún
+ * {@code Controller} real todavía, T0.4 es transversal), verificando exactamente el contrato de
+ * plan.md §3: 409 para una {@link com.tdetroy.valuacion.common.exceptions.NegocioException}, 500
+ * genérico sin filtrar el mensaje interno para cualquier otro error no anticipado.
  */
 class GlobalExceptionHandlerTest {
 
@@ -24,23 +24,30 @@ class GlobalExceptionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        mvc = create(MockMvcBuilders
-                .standaloneSetup(new ControllerDePrueba())
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .build());
+        mvc =
+                create(
+                        MockMvcBuilders.standaloneSetup(new ControllerDePrueba())
+                                .setControllerAdvice(new GlobalExceptionHandler())
+                                .build());
     }
 
     @Test
     void negocioExceptionResponde409ConProblemJsonYElMensajeDeNegocio() {
-        mvc.get().uri("/test/negocio").assertThat()
+        mvc.get()
+                .uri("/test/negocio")
+                .assertThat()
                 .hasStatus(409)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
-                .bodyText().contains("Saldo insuficiente").contains("Regla de negocio violada");
+                .bodyText()
+                .contains("Saldo insuficiente")
+                .contains("Regla de negocio violada");
     }
 
     @Test
     void errorInesperadoResponde500SinFiltrarElMensajeInterno() {
-        mvc.get().uri("/test/inesperado").assertThat()
+        mvc.get()
+                .uri("/test/inesperado")
+                .assertThat()
                 .hasStatus(500)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .bodyText()

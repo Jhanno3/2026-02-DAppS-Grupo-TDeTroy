@@ -9,15 +9,15 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Escribe una respuesta {@code application/problem+json} (RFC 7807) directamente sobre un
- * {@link HttpServletResponse}, para los dos puntos de error que ocurren en el filtro de
- * seguridad (401/403, {@link SecurityConfig}) — antes de que la request llegue al
- * {@code DispatcherServlet}, así que no pasan por {@link GlobalExceptionHandler}
- * (constitution.md §3: mismo formato de error en toda la aplicación, sin excepción).
+ * Escribe una respuesta {@code application/problem+json} (RFC 7807) directamente sobre un {@link
+ * HttpServletResponse}, para los dos puntos de error que ocurren en el filtro de seguridad
+ * (401/403, {@link SecurityConfig}) — antes de que la request llegue al {@code DispatcherServlet},
+ * así que no pasan por {@link GlobalExceptionHandler} (constitution.md §3: mismo formato de error
+ * en toda la aplicación, sin excepción).
  *
- * <p>Usa el mismo {@link ObjectMapper} (Jackson 3, paquete {@code tools.jackson}) que
- * autoconfigura {@code spring-boot-starter-jackson} para la conversión HTTP del resto de la
- * API — Spring Boot 4 cambió la implementación por defecto de Jackson 2 a Jackson 3.
+ * <p>Usa el mismo {@link ObjectMapper} (Jackson 3, paquete {@code tools.jackson}) que autoconfigura
+ * {@code spring-boot-starter-jackson} para la conversión HTTP del resto de la API — Spring Boot 4
+ * cambió la implementación por defecto de Jackson 2 a Jackson 3.
  */
 @Component
 class ProblemDetailResponseWriter {
@@ -28,7 +28,8 @@ class ProblemDetailResponseWriter {
         this.objectMapper = objectMapper;
     }
 
-    void escribir(HttpServletResponse response, HttpStatus status, String titulo, String detalle) throws IOException {
+    void escribir(HttpServletResponse response, HttpStatus status, String titulo, String detalle)
+            throws IOException {
         ProblemDetail problema = ProblemDetail.forStatusAndDetail(status, detalle);
         problema.setTitle(titulo);
 

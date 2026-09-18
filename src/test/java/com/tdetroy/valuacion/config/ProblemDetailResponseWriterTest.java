@@ -9,19 +9,24 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * {@link ProblemDetailResponseWriter} es la única pieza de lógica propia detrás de los 401/403
- * que emite {@link SecurityConfig} — se prueba en aislamiento acá para no depender de levantar
- * el filtro de seguridad completo con un usuario autenticado (eso llega recién con JWT en T1.4).
+ * {@link ProblemDetailResponseWriter} es la única pieza de lógica propia detrás de los 401/403 que
+ * emite {@link SecurityConfig} — se prueba en aislamiento acá para no depender de levantar el
+ * filtro de seguridad completo con un usuario autenticado (eso llega recién con JWT en T1.4).
  */
 class ProblemDetailResponseWriterTest {
 
-    private final ProblemDetailResponseWriter writer = new ProblemDetailResponseWriter(new ObjectMapper());
+    private final ProblemDetailResponseWriter writer =
+            new ProblemDetailResponseWriter(new ObjectMapper());
 
     @Test
     void escribeStatusYContentTypeProblemJson() throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        writer.escribir(response, HttpStatus.UNAUTHORIZED, "No autenticado", "Se requiere un token válido.");
+        writer.escribir(
+                response,
+                HttpStatus.UNAUTHORIZED,
+                "No autenticado",
+                "Se requiere un token válido.");
 
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(response.getContentType()).startsWith(MediaType.APPLICATION_PROBLEM_JSON_VALUE);

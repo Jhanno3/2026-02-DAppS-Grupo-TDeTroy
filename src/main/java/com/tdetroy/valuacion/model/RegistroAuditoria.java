@@ -18,13 +18,13 @@ import org.hibernate.type.SqlTypes;
  *
  * <p>Distinto de {@link Movimiento} (de cara al usuario, UC-12): cubre además operaciones
  * administrativas sin usuario final directo (alta/edición/baja de jugador, disparo manual de
- * recálculo). No tiene endpoint público en el MVP — se escribe siempre a través de
- * {@code AuditoriaService} y se consulta directamente en base.
+ * recálculo). No tiene endpoint público en el MVP — se escribe siempre a través de {@code
+ * AuditoriaService} y se consulta directamente en base.
  *
  * <p>{@code valoresAntes}/{@code valoresDespues} guardan JSON ya serializado como texto plano,
- * mapeado a una columna {@code jsonb} vía {@link JdbcTypeCode}. La entidad nunca serializa: eso
- * es trabajo de {@code AuditoriaService} (capa de negocio), para no acoplar {@code model/} a
- * ninguna librería JSON concreta.
+ * mapeado a una columna {@code jsonb} vía {@link JdbcTypeCode}. La entidad nunca serializa: eso es
+ * trabajo de {@code AuditoriaService} (capa de negocio), para no acoplar {@code model/} a ninguna
+ * librería JSON concreta.
  */
 @Entity
 @Table(name = "registros_auditoria")
@@ -32,8 +32,7 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 public class RegistroAuditoria {
 
-    @Id
-    private final UUID id;
+    @Id private final UUID id;
 
     /** {@code null} = SISTEMA (ej. job semanal de recotización, plan.md §2.8). */
     @Column(updatable = false)
@@ -87,9 +86,20 @@ public class RegistroAuditoria {
 
     /** Registra una entrada con {@code fecha = Instant.now()}. */
     public static RegistroAuditoria registrar(
-            UUID actorId, String accion, String entidadAfectada, UUID entidadId, String valoresAntes,
+            UUID actorId,
+            String accion,
+            String entidadAfectada,
+            UUID entidadId,
+            String valoresAntes,
             String valoresDespues) {
-        return registrar(actorId, accion, entidadAfectada, entidadId, valoresAntes, valoresDespues, Instant.now());
+        return registrar(
+                actorId,
+                accion,
+                entidadAfectada,
+                entidadId,
+                valoresAntes,
+                valoresDespues,
+                Instant.now());
     }
 
     /** Igual que {@link #registrar}, con {@code fecha} explícita (tests, reproducibilidad). */
@@ -101,7 +111,8 @@ public class RegistroAuditoria {
             String valoresAntes,
             String valoresDespues,
             Instant fecha) {
-        return new RegistroAuditoria(actorId, accion, entidadAfectada, entidadId, valoresAntes, valoresDespues, fecha);
+        return new RegistroAuditoria(
+                actorId, accion, entidadAfectada, entidadId, valoresAntes, valoresDespues, fecha);
     }
 
     private static void requireNoBlank(String valor, String nombreCampo) {
