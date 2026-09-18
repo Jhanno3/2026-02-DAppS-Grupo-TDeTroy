@@ -1,6 +1,7 @@
 package com.tdetroy.valuacion.config;
 
 import com.tdetroy.valuacion.common.exceptions.NegocioException;
+import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail problema =
                 ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
         problema.setTitle("Regla de negocio violada");
+        return problema;
+    }
+
+    /**
+     * "404 para entidad inexistente" (plan.md §3). El mensaje, igual que en {@link
+     * #manejarNegocio}, es información pensada para el cliente (qué entidad no existe), no un
+     * detalle interno.
+     */
+    @ExceptionHandler(RecursoNoEncontradoException.class)
+    public ProblemDetail manejarRecursoNoEncontrado(RecursoNoEncontradoException ex) {
+        ProblemDetail problema =
+                ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problema.setTitle("Recurso no encontrado");
         return problema;
     }
 

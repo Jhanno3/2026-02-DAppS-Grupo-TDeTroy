@@ -35,4 +35,12 @@ class ExcepcionesNegocioTest {
         assertThat(ex).isInstanceOf(NegocioException.class);
         assertThat(ex.getMessage()).contains("95").contains("10").contains("100");
     }
+
+    @Test
+    void emailYaRegistradoEsNegocioExceptionYArmaElMensaje() {
+        var ex = new EmailYaRegistradoException("persona@example.com");
+
+        assertThat(ex).isInstanceOf(NegocioException.class);
+        assertThat(ex.getMessage()).contains("persona@example.com");
+    }
 }
