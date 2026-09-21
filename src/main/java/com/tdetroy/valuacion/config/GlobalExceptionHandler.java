@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -77,6 +78,26 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 ProblemDetail.forStatusAndDetail(
                         HttpStatus.UNAUTHORIZED, "Email o contraseña inválidos.");
         problema.setTitle("Credenciales inválidas");
+        return problema;
+    }
+
+    /**
+     * "403 para ADMIN requerido" (plan.md §4/§3): dispara cuando {@code @PreAuthorize} rechaza una
+     * invocación (ej. {@code JugadorController.darAlta}, T2.5). Spring Security lanza acá {@code
+     * AuthorizationDeniedException}, subtipo de {@link AccessDeniedException} desde el método
+     * protegido, que ya corre dentro del propio despacho de {@code DispatcherServlet} — nunca llega
+     * al {@code ExceptionTranslationFilter}/{@code accessDeniedHandler} de {@code SecurityConfig}
+     * (eso sólo resuelve denegaciones a nivel de URL, antes de invocar el Controller), así que hace
+     * falta este handler explícito para no caer en {@link #manejarErrorInesperado} y responder 500
+     * en su lugar. Mismo mensaje que el {@code accessDeniedHandler} de {@code SecurityConfig}, para
+     * que ambos mecanismos de denegación respondan igual al cliente.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail manejarAccesoDenegado(AccessDeniedException ex) {
+        ProblemDetail problema =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.FORBIDDEN, "No tenés permisos para acceder a este recurso.");
+        problema.setTitle("Acceso denegado");
         return problema;
     }
 

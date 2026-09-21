@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -70,6 +71,18 @@ public class SecurityConfig {
         "/api/v1/auth/registro", "/api/v1/auth/login"
     };
 
+    /**
+     * {@code JugadorController} (T2.5, UC-07): todo {@code GET} bajo {@code /api/v1/jugadores/**}
+     * es público, incluido el propio {@code /api/v1/jugadores} — esto también cubre de antemano las
+     * lecturas públicas que sumarán T4.7 ({@code GET .../cotizaciones}) y T7.4 ({@code GET
+     * .../ranking}), todas bajo el mismo prefijo y públicas según plan.md §3. {@code POST}/{@code
+     * PUT} quedan fuera de esta whitelist a propósito: los protege {@code @PreAuthorize} en el
+     * propio Controller, restringido por método HTTP acá para no abrirlos por error.
+     */
+    private static final String[] RUTAS_PUBLICAS_JUGADORES_GET = {
+        "/api/v1/jugadores", "/api/v1/jugadores/**"
+    };
+
     private final ProblemDetailResponseWriter problemDetailResponseWriter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
@@ -131,6 +144,9 @@ public class SecurityConfig {
                                 auth.requestMatchers(RUTAS_PUBLICAS_INFRAESTRUCTURA)
                                         .permitAll()
                                         .requestMatchers(RUTAS_PUBLICAS_AUTH)
+                                        .permitAll()
+                                        .requestMatchers(
+                                                HttpMethod.GET, RUTAS_PUBLICAS_JUGADORES_GET)
                                         .permitAll()
                                         .anyRequest()
                                         .authenticated())
