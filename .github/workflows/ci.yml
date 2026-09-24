@@ -1,0 +1,74 @@
+name: CI
+
+# Sólo CI (build + tests + gates de calidad) para la primera entrega — sin deploy todavía.
+# El check completo en CI, incluido OWASP Dependency-Check, es tasks.md T9.2 (Fase 9, cierre);
+# acá se cubre lo que exige el MVP: que cada push/PR a main compile, pase los tests (incluidos
+# los de integración contra Postgres real, constitution.md §1: nunca H2) y respete los gates de
+# JaCoCo/Spotless ya configurados en pom.xml.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    # Postgres real para los tests que arrancan el contexto Spring completo contra el datasource
+    # "normal" (ValuacionJugadoresApplicationTests, AuthControllerTest, JugadorControllerTest) —
+    # mismas credenciales/puerto que el servicio `db` de docker-compose.yml para desarrollo local.
+    # Los tests de repositories/ (PostgresIntegrationTest) no dependen de esto: levantan su propio
+    # contenedor efímero vía Testcontainers, que el runner de GitHub soporta nativamente (Docker
+    # ya viene instalado y corriendo en ubuntu-latest).
+    services:
+      db:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: valuacion_dev
+          POSTGRES_USER: valuacion
+          POSTGRES_PASSWORD: valuacion
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U valuacion -d valuacion_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Compilar, testear y validar gates de calidad (JaCoCo, Spotless)
+        run: |
+          chmod +x mvnw
+          ./mvnw verify -Ddependency-check.skip=true
+        # dependency-check.skip=true: OWASP Dependency-Check necesita una NVD_API_KEY
+        # (nvd.nist.gov) para no fallar por rate-limit contra el feed público — se habilita en
+        # T9.2 agregando ese secret acá y sacando este flag, no antes.
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run build
+        # Sin `npm test` todavía: T8.x (componentes/hooks del frontend) no arrancó, no hay tests
+        # que correr. Se suma acá en cuanto exista el primer test de React Testing Library/Jest.
