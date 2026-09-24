@@ -2,4 +2,6 @@ dist
 node_modules
 
 # Skills de terceros instaladas via `npx skills add` (vendoreadas, no las mantenemos nosotros).
+# El instalador las escribe en ambas carpetas (compatibilidad cross-tool), asi que se ignoran las dos.
 .agents
+.claude
