@@ -1,2 +1,5 @@
 dist
 node_modules
+
+# Skills de terceros instaladas via `npx skills add` (vendoreadas, no las mantenemos nosotros).
+.agents
