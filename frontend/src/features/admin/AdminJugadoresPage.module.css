@@ -1,0 +1,43 @@
+.container {
+  padding: 1.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.title {
+  margin: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid light-dark(#e2e2e2, #2f2f2f);
+}
+
+.badge {
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.badgeActivo {
+  background: light-dark(#e8f4ea, #1e3324);
+  color: light-dark(#1e5c2c, #8fd9a0);
+}
+
+.badgeInactivo {
+  background: light-dark(#f1f1f1, #2a2a2a);
+  color: light-dark(#666, #999);
+}

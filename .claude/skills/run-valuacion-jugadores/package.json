@@ -1,0 +1,9 @@
+{
+  "name": "run-valuacion-jugadores-driver",
+  "private": true,
+  "type": "module",
+  "description": "Playwright driver for the run-valuacion-jugadores skill. Not part of the app's own dependency tree (frontend/package.json) on purpose — this is agent tooling, not product code.",
+  "dependencies": {
+    "playwright": "1.63.0"
+  }
+}
