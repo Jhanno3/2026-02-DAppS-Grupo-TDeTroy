@@ -73,6 +73,12 @@
       "skillPath": "skills/review-animations/SKILL.md",
       "computedHash": "8c2befeb28bb484bf2de7b2fc228774857e266d32a65d76895e78651a536d8cf"
     },
+    "scroll-craft": {
+      "source": "nateherkai/scroll-craft",
+      "sourceType": "github",
+      "skillPath": "plugins/nateherk-design/skills/scroll-craft/SKILL.md",
+      "computedHash": "014880543c843c3b8838fd7480f613b348b7089700472647dbc2d5b2caaa33dd"
+    },
     "write-swift": {
       "source": "emilkowalski/skills",
       "sourceType": "github",
