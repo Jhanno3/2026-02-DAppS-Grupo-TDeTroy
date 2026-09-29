@@ -8,7 +8,25 @@ on:
 jobs:
   build:
     name: Build and analyze
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
+    # Mismo servicio Postgres que ci.yml: los @SpringBootTest (ValuacionJugadoresApplicationTests,
+    # AuthControllerTest, JugadorControllerTest) necesitan una base real corriendo, y los
+    # *RepositoryTest levantan su propio contenedor via Testcontainers, que requiere Docker Linux
+    # (windows-latest no lo soporta, de ahi "Could not initialize class ...PostgresIntegrationTest").
+    services:
+      db:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: valuacion_dev
+          POSTGRES_USER: valuacion
+          POSTGRES_PASSWORD: valuacion
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U valuacion -d valuacion_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -33,4 +51,6 @@ jobs:
       - name: Build and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Jhanno3_2026-02-DAppS-Grupo-TDeTroy
+        # dependency-check.skip=true: mismo motivo que ci.yml (OWASP Dependency-Check necesita
+        # NVD_API_KEY, no configurada todavia).
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Ddependency-check.skip=true -Dsonar.projectKey=Jhanno3_2026-02-DAppS-Grupo-TDeTroy
