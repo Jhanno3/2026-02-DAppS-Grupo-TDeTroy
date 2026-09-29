@@ -58,6 +58,15 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
+		<!-- T3.4 (tasks.md), plan.md S8.1: FootballDataRepositoryImpl consume la API oficial de
+		     Football-Data.org via RestClient. En Boot 4 la autoconfiguracion que expone el bean
+		     RestClient.Builder vive en un starter aparte (spring-boot-starter-webmvc ya no lo trae
+		     transitivamente, a diferencia de Boot 3.x): sin esto, la app falla al arrancar con
+		     "No qualifying bean of type 'RestClient$Builder'" (verificado localmente). -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-restclient</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
