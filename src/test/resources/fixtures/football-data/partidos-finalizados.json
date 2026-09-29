@@ -1,0 +1,29 @@
+{
+  "count": 2,
+  "matches": [
+    {
+      "id": 12345,
+      "utcDate": "2026-02-15T15:00:00Z",
+      "status": "FINISHED",
+      "matchday": 24,
+      "homeTeam": { "id": 1, "name": "Club A", "shortName": "A" },
+      "awayTeam": { "id": 2, "name": "Club B", "shortName": "B" },
+      "score": {
+        "winner": "HOME_TEAM",
+        "duration": "REGULAR",
+        "fullTime": { "home": 2, "away": 1 },
+        "halfTime": { "home": 1, "away": 0 }
+      }
+    },
+    {
+      "id": 67890,
+      "utcDate": "2026-02-14T18:30:00Z",
+      "status": "FINISHED",
+      "homeTeam": { "id": 3, "name": "Club C" },
+      "awayTeam": { "id": 4, "name": "Club D" },
+      "score": {
+        "fullTime": { "home": 0, "away": 0 }
+      }
+    }
+  ]
+}

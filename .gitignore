@@ -1,4 +1,5 @@
 .env
+.env.properties
 
 # .claude/ se versiona (agents/, skills/) — sólo se ignoran sus artefactos
 # generados: deps de un driver de skill y las capturas que produce.
