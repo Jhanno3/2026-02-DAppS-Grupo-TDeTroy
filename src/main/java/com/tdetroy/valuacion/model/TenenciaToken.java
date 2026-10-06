@@ -1,15 +1,9 @@
 package com.tdetroy.valuacion.model;
 
 import com.tdetroy.valuacion.common.exceptions.TenenciaInsuficienteException;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import java.util.Objects;
 import java.util.UUID;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 /**
  * Tenencia de tokens de un {@link Jugador} en poder de un {@link Usuario} (plan.md §2.5) — base de
@@ -21,24 +15,13 @@ import lombok.NoArgsConstructor;
  * cantidad} en la propia entidad (constitution.md §2) — mismo criterio que la invariante de 100
  * tokens en {@link Jugador}, nunca sólo validada en el Service que las invoca.
  */
-@Entity
-@Table(name = "tenencias_token")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 public class TenenciaToken {
 
-    @Id private final UUID id;
-
-    @Column(nullable = false, updatable = false)
+    private final UUID id;
     private final UUID usuarioId;
-
-    @Column(nullable = false, updatable = false)
     private final UUID jugadorId;
-
-    @Column(nullable = false)
     private int cantidad;
-
-    @Column(nullable = false)
     private int cantidadReservada;
 
     private TenenciaToken(UUID usuarioId, UUID jugadorId) {
@@ -58,6 +41,25 @@ public class TenenciaToken {
      */
     public static TenenciaToken abrir(UUID usuarioId, UUID jugadorId) {
         return new TenenciaToken(usuarioId, jugadorId);
+    }
+
+    private TenenciaToken(
+            UUID id, UUID usuarioId, UUID jugadorId, int cantidad, int cantidadReservada) {
+        this.id = id;
+        this.usuarioId = usuarioId;
+        this.jugadorId = jugadorId;
+        this.cantidad = cantidad;
+        this.cantidadReservada = cantidadReservada;
+    }
+
+    /**
+     * Reconstruye una {@code TenenciaToken} ya persistida a partir de sus datos crudos (usado por
+     * {@code entity/TenenciaTokenEntity#aModelo()} en el límite con {@code repositories/}) — a
+     * diferencia de {@link #abrir}, no valida las invariantes de alta.
+     */
+    public static TenenciaToken reconstruir(
+            UUID id, UUID usuarioId, UUID jugadorId, int cantidad, int cantidadReservada) {
+        return new TenenciaToken(id, usuarioId, jugadorId, cantidad, cantidadReservada);
     }
 
     /** Cantidad disponible para venta al sistema o para publicar en una nueva oferta P2P. */

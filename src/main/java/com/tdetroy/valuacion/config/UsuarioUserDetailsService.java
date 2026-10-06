@@ -1,5 +1,6 @@
 package com.tdetroy.valuacion.config;
 
+import com.tdetroy.valuacion.entity.UsuarioEntity;
 import com.tdetroy.valuacion.model.Usuario;
 import com.tdetroy.valuacion.repositories.UsuarioRepository;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -30,6 +31,7 @@ public class UsuarioUserDetailsService implements UserDetailsService {
         Usuario usuario =
                 usuarioRepository
                         .findByEmail(email)
+                        .map(UsuarioEntity::aModelo)
                         .orElseThrow(
                                 () ->
                                         new UsernameNotFoundException(

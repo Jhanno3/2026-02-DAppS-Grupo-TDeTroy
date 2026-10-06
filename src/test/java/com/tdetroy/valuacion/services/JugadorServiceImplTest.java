@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
+import com.tdetroy.valuacion.entity.JugadorEntity;
 import com.tdetroy.valuacion.model.EstadoJugador;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.repositories.JugadorRepository;
@@ -53,18 +54,19 @@ class JugadorServiceImplTest {
     @Test
     void listar_delegaEnElRepositorioYDevuelveElCatalogoCompleto() {
         Jugador jugador = Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD);
-        when(jugadorRepository.findAll()).thenReturn(List.of(jugador));
+        when(jugadorRepository.findAll()).thenReturn(List.of(JugadorEntity.desde(jugador)));
 
-        assertThat(service.listar()).containsExactly(jugador);
+        assertThat(service.listar()).extracting(Jugador::getId).containsExactly(jugador.getId());
     }
 
     @Test
     void obtenerPorId_conJugadorExistente_loDevuelve() {
         UUID jugadorId = UUID.randomUUID();
         Jugador jugador = Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD);
-        when(jugadorRepository.findById(jugadorId)).thenReturn(Optional.of(jugador));
+        when(jugadorRepository.findById(jugadorId))
+                .thenReturn(Optional.of(JugadorEntity.desde(jugador)));
 
-        assertThat(service.obtenerPorId(jugadorId)).isEqualTo(jugador);
+        assertThat(service.obtenerPorId(jugadorId).getId()).isEqualTo(jugador.getId());
     }
 
     @Test
@@ -82,7 +84,8 @@ class JugadorServiceImplTest {
     @Test
     void darAlta_conDatosValidos_guardaAuditaYRetornaElJugadorActivo() {
         UUID actorId = UUID.randomUUID();
-        when(jugadorRepository.save(any(Jugador.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(jugadorRepository.save(any(JugadorEntity.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
 
         Jugador creado =
                 service.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD, actorId);
@@ -90,7 +93,7 @@ class JugadorServiceImplTest {
         assertThat(creado.getNombre()).isEqualTo(NOMBRE);
         assertThat(creado.getEstado()).isEqualTo(EstadoJugador.ACTIVO);
         assertThat(creado.getTokensEmitidos()).isZero();
-        verify(jugadorRepository).save(any(Jugador.class));
+        verify(jugadorRepository).save(any(JugadorEntity.class));
         verify(auditoriaService)
                 .registrar(
                         eq(actorId),
@@ -127,7 +130,8 @@ class JugadorServiceImplTest {
                 Jugador.darAlta(
                         "Nombre Viejo", "Club Viejo", "Arquero", FECHA_NACIMIENTO, "Brasil");
         jugador.emitirTokens(40);
-        when(jugadorRepository.findById(jugadorId)).thenReturn(Optional.of(jugador));
+        when(jugadorRepository.findById(jugadorId))
+                .thenReturn(Optional.of(JugadorEntity.desde(jugador)));
 
         Jugador editado =
                 service.editar(
@@ -141,6 +145,7 @@ class JugadorServiceImplTest {
         assertThat(editado.getTokensEmitidos()).isEqualTo(40);
         assertThat(editado.getCotizacionVigenteId()).isNull();
 
+        verify(jugadorRepository).save(any(JugadorEntity.class));
         verify(auditoriaService)
                 .registrar(
                         eq(actorId),
@@ -176,7 +181,8 @@ class JugadorServiceImplTest {
     void editar_conClubBlanco_lanzaExcepcionYNoAuditaNiMutaElJugador() {
         UUID jugadorId = UUID.randomUUID();
         Jugador jugador = Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD);
-        when(jugadorRepository.findById(jugadorId)).thenReturn(Optional.of(jugador));
+        when(jugadorRepository.findById(jugadorId))
+                .thenReturn(Optional.of(JugadorEntity.desde(jugador)));
 
         assertThatIllegalArgumentException()
                 .isThrownBy(

@@ -2,19 +2,11 @@ package com.tdetroy.valuacion.model;
 
 import com.tdetroy.valuacion.common.Monetario;
 import com.tdetroy.valuacion.common.exceptions.SaldoInsuficienteException;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 /**
  * Cuenta de usuario con saldo virtual interno (plan.md §2.1, UC-01/UC-02).
@@ -24,28 +16,14 @@ import lombok.NoArgsConstructor;
  * (constitution.md §2) — nunca queda a criterio del Service que las invoca validar saldo suficiente
  * o monto positivo por su cuenta.
  */
-@Entity
-@Table(name = "usuarios")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 public class Usuario {
 
-    @Id private final UUID id;
-
-    @Column(nullable = false, updatable = false)
+    private final UUID id;
     private final String email;
-
-    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10, updatable = false)
     private final RolUsuario rol;
-
-    @Column(name = "saldo_virtual", nullable = false, precision = 19, scale = 2)
     private BigDecimal saldoVirtual;
-
-    @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private final Instant fechaCreacion;
 
     private Usuario(String email, String passwordHash, RolUsuario rol, Instant fechaCreacion) {
@@ -74,6 +52,36 @@ public class Usuario {
      */
     public static Usuario registrar(String email, String passwordHash, Instant fechaCreacion) {
         return new Usuario(email, passwordHash, RolUsuario.USER, fechaCreacion);
+    }
+
+    private Usuario(
+            UUID id,
+            String email,
+            String passwordHash,
+            RolUsuario rol,
+            BigDecimal saldoVirtual,
+            Instant fechaCreacion) {
+        this.id = id;
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.rol = rol;
+        this.saldoVirtual = saldoVirtual;
+        this.fechaCreacion = fechaCreacion;
+    }
+
+    /**
+     * Reconstruye un {@code Usuario} ya persistido a partir de sus datos crudos (usado por {@code
+     * entity/UsuarioEntity#aModelo()} en el límite con {@code repositories/}) — a diferencia de
+     * {@link #registrar}, no valida ni aplica defaults de alta.
+     */
+    public static Usuario reconstruir(
+            UUID id,
+            String email,
+            String passwordHash,
+            RolUsuario rol,
+            BigDecimal saldoVirtual,
+            Instant fechaCreacion) {
+        return new Usuario(id, email, passwordHash, rol, saldoVirtual, fechaCreacion);
     }
 
     /**

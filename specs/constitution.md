@@ -53,11 +53,17 @@ Este documento define las reglas del juego innegociables para todo el proyecto. 
 
 ### Patrones a seguir
 - **Monolito** de una sola aplicación desplegable (no microservicios) organizado por **capa técnica** a nivel de paquete raíz: `controllers/`, `services/`, `repositories/`, `model/` (estructura completa en sección 3). Es la arquitectura mandatada para el MVP y reemplaza cualquier organización por feature/dominio de negocio.
-- **Flujo de capas obligatorio y unidireccional: `Controller → Service → Repository → Model`**, y `Model` se persiste en la base de datos a través del ORM (`Model ↔ DB` es la única relación bidireccional de todo el flujo). Cada capa sólo conoce a la siguiente:
+- **Flujo de capas obligatorio y unidireccional: `Controller → Service → Repository → Entity`**, y `Entity` se persiste en la base de datos a través del ORM (`Entity ↔ DB` es la única relación bidireccional de todo el flujo). `Service` traduce entre `Model` (dominio) y `Entity` (persistencia) en el límite con `Repository` — ver "Separación Model/Entity" más abajo. Cada capa sólo conoce a la siguiente:
   - **Controller:** recibe la petición HTTP, valida datos de entrada básicos (Bean Validation), mapea el request a DTOs/parámetros y delega la lógica al Service correspondiente. **No contiene reglas de negocio.**
-  - **Service:** contiene la lógica de negocio — orquesta operaciones, aplica reglas, coordina transacciones (`@Transactional`) y llama a uno o varios Repository. **No conoce nada de HTTP** (ni `HttpServletRequest`, ni códigos de status, ni DTOs de la capa Controller).
-  - **Repository/DAO:** accede a los datos (base de datos vía Spring Data JPA, o una fuente externa como WhoScored/Football-Data.org) y devuelve entidades de `model/`. Nunca contiene lógica de negocio.
-  - **Model/Entity:** objetos de dominio (entidades JPA) que fluyen entre Service y Repository. Se convierten a DTO antes de cruzar el borde del Controller hacia el cliente — **nunca se exponen directamente como respuesta de la API**.
+  - **Service:** contiene la lógica de negocio — orquesta operaciones, aplica reglas, coordina transacciones (`@Transactional`), llama a uno o varios Repository, y traduce entre `model/` y `entity/` en ese límite. **No conoce nada de HTTP** (ni `HttpServletRequest`, ni códigos de status, ni DTOs de la capa Controller).
+  - **Repository/DAO:** accede a los datos (base de datos vía Spring Data JPA, o una fuente externa como WhoScored/Football-Data.org) y devuelve entidades de `entity/`. Nunca contiene lógica de negocio.
+  - **Model:** objetos de dominio puros, sin ninguna anotación de persistencia, con la lógica/invariantes de negocio (`darAlta`, `emitirTokens`, `acreditarSaldo`, etc.). Nunca conoce a `entity/` ni a `repositories/`. Se convierten a DTO antes de cruzar el borde del Controller hacia el cliente — **nunca se exponen directamente como respuesta de la API**.
+  - **Entity (JPA):** refleja el esquema de base de datos 1:1 (`@Entity`/`@Table`/`@Column`/...), sin lógica de negocio ni invariantes propias. Conoce su `model/` equivalente (mapea hacia/desde él) — nunca al revés.
+
+### Separación Model/Entity
+- `model/` y `entity/` son paquetes distintos para la misma noción de dominio (ej. `Jugador`/`JugadorEntity`): `model/` contiene la lógica de negocio e invariantes, sin ninguna dependencia de persistencia (JPA/Hibernate); `entity/` es exclusivamente el mapeo objeto-relacional, anémico, sin métodos de negocio.
+- `entity/` conoce a `model/` (expone `desde(Model)`/`aModelo()` para mapear) — es la única dirección permitida; `model/` **nunca** importa ni conoce `entity/`.
+- `Service` es quien invoca ese mapeo en el límite con `Repository`: cualquier mutación sobre el objeto de `model/` requiere guardar explícitamente la `Entity` actualizada (`repository.save(Entity.desde(model))`) — no hay dirty checking de Hibernate sobre `model/`, porque `model/` no es una entidad gestionada por el ORM.
 - **Interfaces + inyección de dependencias para desacoplar:** todo Service y todo Repository se define primero como **interfaz**, con su implementación inyectada por **constructor** (nunca `@Autowired` en atributo, que dificulta testear y oculta dependencias) — permite mockear Service/Repository en tests y sustituir una implementación (p. ej. la de un Repository que integra una fuente externa) sin tocar el Controller ni el Service que lo consume.
 - **DTOs inmutables** (Java `record`) en los bordes de la API, tanto de entrada como de salida, ubicados en `dto/`. El Controller siempre devuelve DTOs/respuestas, nunca entidades de `model/` directamente.
 - **Excepciones de negocio:** se lanzan en el Service (nunca en el Repository ni en el Controller) y se traducen a códigos HTTP en el Controller o, preferentemente, en un manejador global (`@ControllerAdvice`/`@RestControllerAdvice`) — nunca queda a criterio de cada Controller reinventar ese mapeo.
@@ -87,7 +93,7 @@ Este documento define las reglas del juego innegociables para todo el proyecto. 
 - **Prohibido** ubicar lógica de negocio en Controllers.
 - **Prohibido** el patrón "God Service"/"God Class": un servicio o clase que concentra lógica de múltiples entidades o procesos de negocio no relacionados. Cada Service tiene una responsabilidad acotada a una entidad/proceso concreto (convención de nombre `<Entidad>Service`).
 - **Prohibido** organizar el código por feature/dominio de negocio como paquete top-level (ej. `jugador/`, `usuario/`, `cotizacion/` agrupando su propio controller+service+repository+model). La organización es por **capa técnica** a nivel raíz (`controllers/`, `services/`, `repositories/`, `model/`) — ver sección 3.
-- **Prohibido** el acoplamiento en sentido inverso al flujo de capas: `Model` nunca conoce a `Repository` ni a `Service`; `Repository` nunca conoce a `Service` ni a `Controller`; `Service` nunca conoce a `Controller`. La única relación bidireccional permitida es `Model ↔ DB` a través del ORM.
+- **Prohibido** el acoplamiento en sentido inverso al flujo de capas: `Model` nunca conoce a `Entity`, a `Repository` ni a `Service`; `Entity` nunca conoce a `Repository` (más allá de ser su tipo gestionado) ni a `Service`; `Repository` nunca conoce a `Service` ni a `Controller`; `Service` nunca conoce a `Controller`. La única relación bidireccional permitida es `Entity ↔ DB` a través del ORM.
 - **Prohibido** usar `float`/`double` para representar dinero, cotizaciones, o cualquier valor monetario/valuación. Obligatorio `BigDecimal`, con escala y `RoundingMode` definidos de forma centralizada y consistente en todo el sistema.
 - **Prohibido** construir queries SQL por concatenación de strings. Sólo JPQL, `@Query` con parámetros nombrados/posicionales, o Criteria API.
 - **Prohibido** que el frontend acceda directamente a la base de datos o a cualquier recurso que no sea la API REST propia del backend.
@@ -114,11 +120,14 @@ src/main/java/<groupId>/valuacion/
   controllers/    (un Controller por entidad/proceso de negocio: JugadorController, UsuarioController,
                    TokenController, CotizacionController, PortfolioController, OfertaController, ...)
   services/       (interfaz + implementación por entidad/proceso: JugadorService/JugadorServiceImpl, ...)
-  repositories/   (interfaces de Repository + implementaciones: repositorios Spring Data JPA sobre `model/`,
+  repositories/   (interfaces de Repository + implementaciones: repositorios Spring Data JPA sobre `entity/`,
                    más las interfaces propias de las fuentes externas y sus implementaciones
                    WhoScoredRepositoryImpl, FootballDataRepositoryImpl, ...)
-  model/          (entidades JPA: Jugador, Usuario, Token/TenenciaToken, CotizacionHistorica, Movimiento,
-                   OfertaP2P, RegistroAuditoria, ...)
+  model/          (objetos de dominio puros, sin JPA: Jugador, Usuario, Token/TenenciaToken,
+                   CotizacionHistorica, Movimiento, OfertaP2P, RegistroAuditoria, ...)
+  entity/         (entidades JPA que reflejan el esquema 1:1, sin lógica de negocio: JugadorEntity,
+                   UsuarioEntity, TenenciaTokenEntity, CotizacionHistoricaEntity, MovimientoEntity,
+                   OfertaP2PEntity, RegistroAuditoriaEntity, ...)
   dto/
     request/      (DTOs de entrada, `record`)
     response/     (DTOs de salida, `record`)
@@ -147,7 +156,7 @@ src/
 
 ### Convenciones de nombres
 - **Java:** clases en `PascalCase`, métodos/variables en `camelCase`, constantes en `UPPER_SNAKE_CASE`, paquetes en minúsculas sin guiones bajos. Endpoints REST: sustantivos en plural, versionados (`/api/v1/jugadores`, `/api/v1/portfolios/{id}`).
-- **Convención de sufijos por capa:** `<Entidad>Controller` (ej. `JugadorController`); `<Entidad>Service` (interfaz) / `<Entidad>ServiceImpl` (implementación); `<Entidad>Repository` (interfaz) / `<Entidad>RepositoryImpl` (implementación, incluidas las de fuentes externas); `<Entidad>` a secas para la clase de `model/` (ej. `Jugador`, nunca `JugadorModel`/`JugadorEntity`). DTOs en `dto/request`/`dto/response`, nombrados `<Acción><Entidad>Request`/`<Entidad>Response` (ej. `CrearJugadorRequest`, `JugadorResponse`).
+- **Convención de sufijos por capa:** `<Entidad>Controller` (ej. `JugadorController`); `<Entidad>Service` (interfaz) / `<Entidad>ServiceImpl` (implementación); `<Entidad>Repository` (interfaz) / `<Entidad>RepositoryImpl` (implementación, incluidas las de fuentes externas); `<Entidad>` a secas para la clase de `model/` (ej. `Jugador`, nunca `JugadorModel`); `<Entidad>Entity` obligatorio para la clase de `entity/` (ej. `JugadorEntity`) — es la única capa que lleva ese sufijo. DTOs en `dto/request`/`dto/response`, nombrados `<Acción><Entidad>Request`/`<Entidad>Response` (ej. `CrearJugadorRequest`, `JugadorResponse`).
 - **Errores de API:** formato consistente en toda la aplicación (tipo `application/problem+json`, RFC 7807). Prohibido devolver stack traces o mensajes de excepción interna crudos al cliente.
 - **TypeScript/React:** componentes en `PascalCase`, hooks propios prefijados `useX` en `camelCase`, archivos de componente `NombreComponente.tsx`. Prohibido el tipo `any`; si un tipo es genuinamente desconocido, usar `unknown` y angostarlo explícitamente.
 - **Commits/branches:** fuera del alcance de esta constitución salvo lo indicado en la sección de dependencias/testing más abajo; se puede definir en un documento de convenciones de equipo aparte.

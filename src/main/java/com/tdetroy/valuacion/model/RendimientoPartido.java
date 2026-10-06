@@ -1,21 +1,11 @@
 package com.tdetroy.valuacion.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 /**
  * Rendimiento crudo de un {@link Jugador} en un partido puntual (UC-05, plan.md §2.3) — insumo de
@@ -31,41 +21,22 @@ import org.hibernate.type.SqlTypes;
  * frente a una reingesta del mismo ciclo semanal.
  *
  * <p>{@code metricas} guarda JSON ya serializado como texto plano, mapeado a una columna {@code
- * jsonb} vía {@link JdbcTypeCode} — la entidad nunca serializa, eso es trabajo del Service que la
- * construya (mismo patrón que {@code RegistroAuditoria.valoresDespues}), para no acoplar {@code
- * model/} a ninguna librería JSON concreta.
+ * jsonb} por {@code entity/RendimientoPartidoEntity} — la entidad nunca serializa, eso es trabajo
+ * del Service que la construya (mismo patrón que {@code RegistroAuditoria.valoresDespues}), para no
+ * acoplar {@code model/} a ninguna librería JSON concreta.
  */
-@Entity
-@Table(name = "rendimientos_partido")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 public class RendimientoPartido {
 
     private static final Pattern SEMANA_ISO_PATTERN = Pattern.compile("^\\d{4}-W\\d{2}$");
 
-    @Id private final UUID id;
-
-    @Column(nullable = false, updatable = false)
+    private final UUID id;
     private final UUID jugadorId;
-
-    @Column(nullable = false, updatable = false)
     private final String partidoExternoId;
-
-    @Column(nullable = false, updatable = false)
     private final LocalDate fechaPartido;
-
-    @Column(nullable = false, updatable = false, length = 8)
     private final String semanaCalculo;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(nullable = false, updatable = false)
     private final String metricas;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, updatable = false, length = 20)
     private final FuenteResultado fuenteResultado;
-
-    @Column(nullable = false, updatable = false)
     private final Instant fechaIngesta;
 
     private RendimientoPartido(
@@ -126,6 +97,50 @@ public class RendimientoPartido {
             FuenteResultado fuenteResultado,
             Instant fechaIngesta) {
         return new RendimientoPartido(
+                jugadorId,
+                partidoExternoId,
+                fechaPartido,
+                semanaCalculo,
+                metricas,
+                fuenteResultado,
+                fechaIngesta);
+    }
+
+    private RendimientoPartido(
+            UUID id,
+            UUID jugadorId,
+            String partidoExternoId,
+            LocalDate fechaPartido,
+            String semanaCalculo,
+            String metricas,
+            FuenteResultado fuenteResultado,
+            Instant fechaIngesta) {
+        this.id = id;
+        this.jugadorId = jugadorId;
+        this.partidoExternoId = partidoExternoId;
+        this.fechaPartido = fechaPartido;
+        this.semanaCalculo = semanaCalculo;
+        this.metricas = metricas;
+        this.fuenteResultado = fuenteResultado;
+        this.fechaIngesta = fechaIngesta;
+    }
+
+    /**
+     * Reconstruye un {@code RendimientoPartido} ya persistido a partir de sus datos crudos (usado
+     * por {@code entity/RendimientoPartidoEntity#aModelo()} en el límite con {@code repositories/})
+     * — a diferencia de {@link #ingestar}, no valida las invariantes de alta.
+     */
+    public static RendimientoPartido reconstruir(
+            UUID id,
+            UUID jugadorId,
+            String partidoExternoId,
+            LocalDate fechaPartido,
+            String semanaCalculo,
+            String metricas,
+            FuenteResultado fuenteResultado,
+            Instant fechaIngesta) {
+        return new RendimientoPartido(
+                id,
                 jugadorId,
                 partidoExternoId,
                 fechaPartido,

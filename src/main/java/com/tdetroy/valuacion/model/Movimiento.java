@@ -1,18 +1,10 @@
 package com.tdetroy.valuacion.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 /**
  * Registro de un movimiento de cara al usuario (UC-12, plan.md §2.6): recarga de saldo, compra o
@@ -39,37 +31,17 @@ import lombok.NoArgsConstructor;
  *   <li>{@code montoTotal} siempre es obligatorio y mayor a cero.
  * </ul>
  */
-@Entity
-@Table(name = "movimientos")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 public class Movimiento {
 
-    @Id private final UUID id;
-
-    @Column(nullable = false, updatable = false)
+    private final UUID id;
     private final UUID usuarioId;
-
-    @Column(updatable = false)
     private final UUID jugadorId;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, updatable = false, length = 30)
     private final TipoMovimiento tipo;
-
-    @Column(updatable = false)
     private final Integer cantidad;
-
-    @Column(updatable = false, precision = 19, scale = 2)
     private final BigDecimal precioUnitario;
-
-    @Column(nullable = false, updatable = false, precision = 19, scale = 2)
     private final BigDecimal montoTotal;
-
-    @Column(updatable = false)
     private final UUID contraparteUsuarioId;
-
-    @Column(nullable = false, updatable = false)
     private final Instant fecha;
 
     private Movimiento(
@@ -130,6 +102,54 @@ public class Movimiento {
             UUID contraparteUsuarioId,
             Instant fecha) {
         return new Movimiento(
+                usuarioId,
+                jugadorId,
+                tipo,
+                cantidad,
+                precioUnitario,
+                montoTotal,
+                contraparteUsuarioId,
+                fecha);
+    }
+
+    private Movimiento(
+            UUID id,
+            UUID usuarioId,
+            UUID jugadorId,
+            TipoMovimiento tipo,
+            Integer cantidad,
+            BigDecimal precioUnitario,
+            BigDecimal montoTotal,
+            UUID contraparteUsuarioId,
+            Instant fecha) {
+        this.id = id;
+        this.usuarioId = usuarioId;
+        this.jugadorId = jugadorId;
+        this.tipo = tipo;
+        this.cantidad = cantidad;
+        this.precioUnitario = precioUnitario;
+        this.montoTotal = montoTotal;
+        this.contraparteUsuarioId = contraparteUsuarioId;
+        this.fecha = fecha;
+    }
+
+    /**
+     * Reconstruye un {@code Movimiento} ya persistido a partir de sus datos crudos (usado por
+     * {@code entity/MovimientoEntity#aModelo()} en el límite con {@code repositories/}) — a
+     * diferencia de {@link #registrar}, no valida las invariantes de alta.
+     */
+    public static Movimiento reconstruir(
+            UUID id,
+            UUID usuarioId,
+            UUID jugadorId,
+            TipoMovimiento tipo,
+            Integer cantidad,
+            BigDecimal precioUnitario,
+            BigDecimal montoTotal,
+            UUID contraparteUsuarioId,
+            Instant fecha) {
+        return new Movimiento(
+                id,
                 usuarioId,
                 jugadorId,
                 tipo,

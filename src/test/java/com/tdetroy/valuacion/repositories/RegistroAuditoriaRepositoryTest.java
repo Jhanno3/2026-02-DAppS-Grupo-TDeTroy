@@ -3,6 +3,7 @@ package com.tdetroy.valuacion.repositories;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
+import com.tdetroy.valuacion.entity.RegistroAuditoriaEntity;
 import com.tdetroy.valuacion.model.RegistroAuditoria;
 import com.tdetroy.valuacion.repositories.support.PostgresIntegrationTest;
 import java.time.Instant;
@@ -49,11 +50,12 @@ class RegistroAuditoriaRepositoryTest extends PostgresIntegrationTest {
                         "{\"tokensEmitidos\":0}",
                         fecha);
 
-        RegistroAuditoria guardado = registroAuditoriaRepository.saveAndFlush(registro);
+        RegistroAuditoriaEntity guardado =
+                registroAuditoriaRepository.saveAndFlush(RegistroAuditoriaEntity.desde(registro));
         entityManager.clear();
 
         RegistroAuditoria leido =
-                registroAuditoriaRepository.findById(guardado.getId()).orElseThrow();
+                registroAuditoriaRepository.findById(guardado.getId()).orElseThrow().aModelo();
 
         assertThat(leido.getId()).isEqualTo(registro.getId());
         assertThat(leido.getActorId()).isEqualTo(actorId);
@@ -86,16 +88,16 @@ class RegistroAuditoriaRepositoryTest extends PostgresIntegrationTest {
                         "{\"valor\":105.00}",
                         "{\"valor\":110.00}");
 
-        registroAuditoriaRepository.saveAndFlush(primero);
-        registroAuditoriaRepository.saveAndFlush(segundo);
+        registroAuditoriaRepository.saveAndFlush(RegistroAuditoriaEntity.desde(primero));
+        registroAuditoriaRepository.saveAndFlush(RegistroAuditoriaEntity.desde(segundo));
         entityManager.clear();
 
         assertThat(registroAuditoriaRepository.count()).isEqualTo(2);
 
         RegistroAuditoria primeroLeido =
-                registroAuditoriaRepository.findById(primero.getId()).orElseThrow();
+                registroAuditoriaRepository.findById(primero.getId()).orElseThrow().aModelo();
         RegistroAuditoria segundoLeido =
-                registroAuditoriaRepository.findById(segundo.getId()).orElseThrow();
+                registroAuditoriaRepository.findById(segundo.getId()).orElseThrow().aModelo();
 
         assertThat(primeroLeido.getId()).isNotEqualTo(segundoLeido.getId());
         assertEquals(

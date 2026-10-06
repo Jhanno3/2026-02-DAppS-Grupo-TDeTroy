@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.tdetroy.valuacion.entity.UsuarioEntity;
 import com.tdetroy.valuacion.model.Usuario;
 import com.tdetroy.valuacion.repositories.UsuarioRepository;
 import java.util.Optional;
@@ -35,7 +36,8 @@ class UsuarioUserDetailsServiceTest {
     @Test
     void loadUserByUsername_conEmailExistente_devuelveUsuarioPrincipal() {
         Usuario usuario = Usuario.registrar("persona@example.com", "hash-bcrypt");
-        when(usuarioRepository.findByEmail("persona@example.com")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("persona@example.com"))
+                .thenReturn(Optional.of(UsuarioEntity.desde(usuario)));
 
         UserDetails resultado = service.loadUserByUsername("persona@example.com");
 

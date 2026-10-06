@@ -48,9 +48,27 @@ jobs:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
       - name: Build and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         # dependency-check.skip=true: mismo motivo que ci.yml (OWASP Dependency-Check necesita
         # NVD_API_KEY, no configurada todavia).
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Ddependency-check.skip=true -Dsonar.projectKey=Jhanno3_2026-02-DAppS-Grupo-TDeTroy
+        # Un solo analisis cubriendo back y front bajo el mismo projectKey: Sonar trata cada
+        # analisis como una foto completa del proyecto, asi que un segundo job/scan separado con
+        # el mismo key pisaria por completo los resultados de este (no se combinan).
+        run: >-
+          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -Ddependency-check.skip=true
+          -Dsonar.projectKey=Jhanno3_2026-02-DAppS-Grupo-TDeTroy
+          -Dsonar.sources=src/main/java,frontend/src
+          -Dsonar.tests=src/test/java,frontend/e2e
+          -Dsonar.exclusions=frontend/node_modules/**,frontend/dist/**,frontend/test-results/**,frontend/playwright-report/**

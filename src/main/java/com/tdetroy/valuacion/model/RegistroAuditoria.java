@@ -1,17 +1,9 @@
 package com.tdetroy.valuacion.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 /**
  * Log de auditoría interno, append-only e inmutable (plan.md §2.8, §10; constitution.md §4).
@@ -22,40 +14,23 @@ import org.hibernate.type.SqlTypes;
  * AuditoriaService} y se consulta directamente en base.
  *
  * <p>{@code valoresAntes}/{@code valoresDespues} guardan JSON ya serializado como texto plano,
- * mapeado a una columna {@code jsonb} vía {@link JdbcTypeCode}. La entidad nunca serializa: eso es
- * trabajo de {@code AuditoriaService} (capa de negocio), para no acoplar {@code model/} a ninguna
- * librería JSON concreta.
+ * mapeado a una columna {@code jsonb} por {@code entity/RegistroAuditoriaEntity}. La entidad nunca
+ * serializa: eso es trabajo de {@code AuditoriaService} (capa de negocio), para no acoplar {@code
+ * model/} a ninguna librería JSON concreta.
  */
-@Entity
-@Table(name = "registros_auditoria")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 public class RegistroAuditoria {
 
-    @Id private final UUID id;
+    private final UUID id;
 
     /** {@code null} = SISTEMA (ej. job semanal de recotización, plan.md §2.8). */
-    @Column(updatable = false)
     private final UUID actorId;
 
-    @Column(nullable = false, updatable = false)
     private final String accion;
-
-    @Column(nullable = false, updatable = false)
     private final String entidadAfectada;
-
-    @Column(nullable = false, updatable = false)
     private final UUID entidadId;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(updatable = false)
     private final String valoresAntes;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(nullable = false, updatable = false)
     private final String valoresDespues;
-
-    @Column(nullable = false, updatable = false)
     private final Instant fecha;
 
     private RegistroAuditoria(
@@ -107,6 +82,50 @@ public class RegistroAuditoria {
             Instant fecha) {
         return new RegistroAuditoria(
                 actorId, accion, entidadAfectada, entidadId, valoresAntes, valoresDespues, fecha);
+    }
+
+    private RegistroAuditoria(
+            UUID id,
+            UUID actorId,
+            String accion,
+            String entidadAfectada,
+            UUID entidadId,
+            String valoresAntes,
+            String valoresDespues,
+            Instant fecha) {
+        this.id = id;
+        this.actorId = actorId;
+        this.accion = accion;
+        this.entidadAfectada = entidadAfectada;
+        this.entidadId = entidadId;
+        this.valoresAntes = valoresAntes;
+        this.valoresDespues = valoresDespues;
+        this.fecha = fecha;
+    }
+
+    /**
+     * Reconstruye un {@code RegistroAuditoria} ya persistido a partir de sus datos crudos (usado
+     * por {@code entity/RegistroAuditoriaEntity#aModelo()} en el límite con {@code repositories/})
+     * — a diferencia de {@link #registrar}, no valida las invariantes de alta.
+     */
+    public static RegistroAuditoria reconstruir(
+            UUID id,
+            UUID actorId,
+            String accion,
+            String entidadAfectada,
+            UUID entidadId,
+            String valoresAntes,
+            String valoresDespues,
+            Instant fecha) {
+        return new RegistroAuditoria(
+                id,
+                actorId,
+                accion,
+                entidadAfectada,
+                entidadId,
+                valoresAntes,
+                valoresDespues,
+                fecha);
     }
 
     private static void validarCampos(
