@@ -3,6 +3,8 @@ package com.tdetroy.valuacion.services;
 import com.tdetroy.valuacion.common.Monetario;
 import com.tdetroy.valuacion.common.exceptions.EmailYaRegistradoException;
 import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
+import com.tdetroy.valuacion.entity.MovimientoEntity;
+import com.tdetroy.valuacion.entity.UsuarioEntity;
 import com.tdetroy.valuacion.model.Movimiento;
 import com.tdetroy.valuacion.model.TipoMovimiento;
 import com.tdetroy.valuacion.model.Usuario;
@@ -38,7 +40,9 @@ public class UsuarioServiceImpl implements UsuarioService {
         if (usuarioRepository.existsByEmail(email)) {
             throw new EmailYaRegistradoException(email);
         }
-        return usuarioRepository.save(Usuario.registrar(email, passwordHash));
+        return usuarioRepository
+                .save(UsuarioEntity.desde(Usuario.registrar(email, passwordHash)))
+                .aModelo();
     }
 
     @Override
@@ -47,6 +51,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         Usuario usuario =
                 usuarioRepository
                         .findById(usuarioId)
+                        .map(UsuarioEntity::aModelo)
                         .orElseThrow(
                                 () ->
                                         new RecursoNoEncontradoException(
@@ -54,17 +59,19 @@ public class UsuarioServiceImpl implements UsuarioService {
 
         BigDecimal saldoAntes = usuario.getSaldoVirtual();
         usuario.acreditarSaldo(monto);
+        usuarioRepository.save(UsuarioEntity.desde(usuario));
         BigDecimal montoEscalado = Monetario.escalar(monto);
 
         movimientoRepository.save(
-                Movimiento.registrar(
-                        usuarioId,
-                        null,
-                        TipoMovimiento.RECARGA_SALDO,
-                        null,
-                        null,
-                        montoEscalado,
-                        null));
+                MovimientoEntity.desde(
+                        Movimiento.registrar(
+                                usuarioId,
+                                null,
+                                TipoMovimiento.RECARGA_SALDO,
+                                null,
+                                null,
+                                montoEscalado,
+                                null)));
 
         auditoriaService.registrar(
                 actorId,

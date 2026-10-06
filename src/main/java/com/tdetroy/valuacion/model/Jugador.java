@@ -1,19 +1,11 @@
 package com.tdetroy.valuacion.model;
 
 import com.tdetroy.valuacion.common.exceptions.EmisionMaximaSuperadaException;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 /**
  * Jugador tokenizable del catálogo (plan.md §2.2, UC-03/UC-04/UC-15).
@@ -28,40 +20,20 @@ import lombok.NoArgsConstructor;
  * EstadoJugador#INACTIVO}, {@code tokensEmitidos} queda congelado como registro histórico y deja de
  * aceptar operaciones — eso lo valida el Service que orquesta la baja (T6.6), no esta entidad.
  */
-@Entity
-@Table(name = "jugadores")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 public class Jugador {
 
     private static final int MAXIMO_TOKENS_EMITIDOS = 100;
 
-    @Id private final UUID id;
-
-    @Column(nullable = false)
+    private final UUID id;
     private String nombre;
-
-    @Column(nullable = false)
     private String club;
-
-    @Column(nullable = false)
     private String posicion;
-
-    @Column(nullable = false)
     private LocalDate fechaNacimiento;
-
-    @Column(nullable = false)
     private String nacionalidad;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
     private EstadoJugador estado;
-
-    @Column(nullable = false)
     private int tokensEmitidos;
-
     private UUID cotizacionVigenteId;
-
     private Instant fechaUltimaActualizacionRendimiento;
 
     private Jugador(
@@ -95,6 +67,59 @@ public class Jugador {
             LocalDate fechaNacimiento,
             String nacionalidad) {
         return new Jugador(nombre, club, posicion, fechaNacimiento, nacionalidad);
+    }
+
+    private Jugador(
+            UUID id,
+            String nombre,
+            String club,
+            String posicion,
+            LocalDate fechaNacimiento,
+            String nacionalidad,
+            EstadoJugador estado,
+            int tokensEmitidos,
+            UUID cotizacionVigenteId,
+            Instant fechaUltimaActualizacionRendimiento) {
+        this.id = id;
+        this.nombre = nombre;
+        this.club = club;
+        this.posicion = posicion;
+        this.fechaNacimiento = fechaNacimiento;
+        this.nacionalidad = nacionalidad;
+        this.estado = estado;
+        this.tokensEmitidos = tokensEmitidos;
+        this.cotizacionVigenteId = cotizacionVigenteId;
+        this.fechaUltimaActualizacionRendimiento = fechaUltimaActualizacionRendimiento;
+    }
+
+    /**
+     * Reconstruye un {@code Jugador} ya persistido a partir de sus datos crudos (usado por {@code
+     * entity/JugadorEntity#aModelo()} en el límite con {@code repositories/}) — a diferencia de
+     * {@link #darAlta}, no valida ni aplica defaults de alta: el estado ya fue validado cuando se
+     * creó originalmente.
+     */
+    public static Jugador reconstruir(
+            UUID id,
+            String nombre,
+            String club,
+            String posicion,
+            LocalDate fechaNacimiento,
+            String nacionalidad,
+            EstadoJugador estado,
+            int tokensEmitidos,
+            UUID cotizacionVigenteId,
+            Instant fechaUltimaActualizacionRendimiento) {
+        return new Jugador(
+                id,
+                nombre,
+                club,
+                posicion,
+                fechaNacimiento,
+                nacionalidad,
+                estado,
+                tokensEmitidos,
+                cotizacionVigenteId,
+                fechaUltimaActualizacionRendimiento);
     }
 
     /**

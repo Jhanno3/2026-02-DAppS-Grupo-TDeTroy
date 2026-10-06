@@ -12,6 +12,8 @@ import static org.mockito.Mockito.when;
 
 import com.tdetroy.valuacion.common.exceptions.EmailYaRegistradoException;
 import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
+import com.tdetroy.valuacion.entity.MovimientoEntity;
+import com.tdetroy.valuacion.entity.UsuarioEntity;
 import com.tdetroy.valuacion.model.Movimiento;
 import com.tdetroy.valuacion.model.TipoMovimiento;
 import com.tdetroy.valuacion.model.Usuario;
@@ -55,14 +57,15 @@ class UsuarioServiceImplTest {
     @Test
     void registrar_conEmailNoRegistrado_guardaYRetornaElUsuario() {
         when(usuarioRepository.existsByEmail(EMAIL)).thenReturn(false);
-        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(usuarioRepository.save(any(UsuarioEntity.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
 
         Usuario creado = service.registrar(EMAIL, PASSWORD_HASH);
 
         assertThat(creado.getEmail()).isEqualTo(EMAIL);
         assertThat(creado.getPasswordHash()).isEqualTo(PASSWORD_HASH);
         assertThat(creado.getSaldoVirtual()).isEqualByComparingTo(BigDecimal.ZERO);
-        verify(usuarioRepository).save(any(Usuario.class));
+        verify(usuarioRepository).save(any(UsuarioEntity.class));
     }
 
     @Test
@@ -83,15 +86,18 @@ class UsuarioServiceImplTest {
         UUID usuarioId = UUID.randomUUID();
         UUID actorId = UUID.randomUUID();
         Usuario usuario = Usuario.registrar(EMAIL, PASSWORD_HASH);
-        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findById(usuarioId))
+                .thenReturn(Optional.of(UsuarioEntity.desde(usuario)));
 
         Usuario resultado = service.recargarSaldo(usuarioId, new BigDecimal("100.00"), actorId);
 
         assertThat(resultado.getSaldoVirtual()).isEqualByComparingTo("100.00");
+        verify(usuarioRepository).save(any(UsuarioEntity.class));
 
-        ArgumentCaptor<Movimiento> movimientoCaptor = ArgumentCaptor.forClass(Movimiento.class);
+        ArgumentCaptor<MovimientoEntity> movimientoCaptor =
+                ArgumentCaptor.forClass(MovimientoEntity.class);
         verify(movimientoRepository).save(movimientoCaptor.capture());
-        Movimiento movimiento = movimientoCaptor.getValue();
+        Movimiento movimiento = movimientoCaptor.getValue().aModelo();
         assertThat(movimiento.getUsuarioId()).isEqualTo(usuarioId);
         assertThat(movimiento.getTipo()).isEqualTo(TipoMovimiento.RECARGA_SALDO);
         assertThat(movimiento.getMontoTotal()).isEqualByComparingTo("100.00");
@@ -127,7 +133,8 @@ class UsuarioServiceImplTest {
     void recargarSaldo_montoCero_lanzaExcepcionYNoTocaNiMovimientoNiAuditoria() {
         UUID usuarioId = UUID.randomUUID();
         Usuario usuario = Usuario.registrar(EMAIL, PASSWORD_HASH);
-        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findById(usuarioId))
+                .thenReturn(Optional.of(UsuarioEntity.desde(usuario)));
 
         assertThatIllegalArgumentException()
                 .isThrownBy(
@@ -141,7 +148,8 @@ class UsuarioServiceImplTest {
     void recargarSaldo_montoNegativo_lanzaExcepcionYNoTocaNiMovimientoNiAuditoria() {
         UUID usuarioId = UUID.randomUUID();
         Usuario usuario = Usuario.registrar(EMAIL, PASSWORD_HASH);
-        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findById(usuarioId))
+                .thenReturn(Optional.of(UsuarioEntity.desde(usuario)));
 
         assertThatIllegalArgumentException()
                 .isThrownBy(

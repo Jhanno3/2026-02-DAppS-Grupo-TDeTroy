@@ -1,6 +1,7 @@
 package com.tdetroy.valuacion.services;
 
 import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
+import com.tdetroy.valuacion.entity.JugadorEntity;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.repositories.JugadorRepository;
 import java.time.LocalDate;
@@ -26,13 +27,14 @@ public class JugadorServiceImpl implements JugadorService {
 
     @Override
     public List<Jugador> listar() {
-        return jugadorRepository.findAll();
+        return jugadorRepository.findAll().stream().map(JugadorEntity::aModelo).toList();
     }
 
     @Override
     public Jugador obtenerPorId(UUID jugadorId) {
         return jugadorRepository
                 .findById(jugadorId)
+                .map(JugadorEntity::aModelo)
                 .orElseThrow(() -> new RecursoNoEncontradoException(ENTIDAD_AUDITADA, jugadorId));
     }
 
@@ -46,8 +48,16 @@ public class JugadorServiceImpl implements JugadorService {
             String nacionalidad,
             UUID actorId) {
         Jugador jugador =
-                jugadorRepository.save(
-                        Jugador.darAlta(nombre, club, posicion, fechaNacimiento, nacionalidad));
+                jugadorRepository
+                        .save(
+                                JugadorEntity.desde(
+                                        Jugador.darAlta(
+                                                nombre,
+                                                club,
+                                                posicion,
+                                                fechaNacimiento,
+                                                nacionalidad)))
+                        .aModelo();
 
         auditoriaService.registrar(
                 actorId,
@@ -73,6 +83,7 @@ public class JugadorServiceImpl implements JugadorService {
         Jugador jugador =
                 jugadorRepository
                         .findById(jugadorId)
+                        .map(JugadorEntity::aModelo)
                         .orElseThrow(
                                 () ->
                                         new RecursoNoEncontradoException(
@@ -81,6 +92,7 @@ public class JugadorServiceImpl implements JugadorService {
         DatosIdentificatoriosAuditoria antes = datosIdentificatoriosDe(jugador);
         jugador.actualizarDatosIdentificatorios(
                 nombre, club, posicion, fechaNacimiento, nacionalidad);
+        jugadorRepository.save(JugadorEntity.desde(jugador));
 
         auditoriaService.registrar(
                 actorId,

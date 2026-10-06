@@ -2,6 +2,7 @@ package com.tdetroy.valuacion.repositories;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tdetroy.valuacion.entity.JugadorEntity;
 import com.tdetroy.valuacion.model.EstadoJugador;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.repositories.support.PostgresIntegrationTest;
@@ -12,10 +13,9 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 
 /**
  * Test de integración de {@link JugadorRepository} contra Postgres real (tasks.md T0.7,
- * constitution.md §1/§4). Igual que {@code UsuarioRepository}, {@link Jugador} es mutable después
- * de creado — {@code emitirTokens}/{@code liberarTokens}/{@code darDeBaja} cambian su estado vía
- * dirty checking de JPA, no reinsertando una fila — así que este test cubre además que esas
- * actualizaciones persisten.
+ * constitution.md §1/§4). {@link JugadorEntity} es mutable después de creada — cambiar sus setters
+ * (ej. {@code tokensEmitidos}, {@code estado}) persiste vía dirty checking de JPA, no reinsertando
+ * una fila — así que este test cubre además que esas actualizaciones persisten.
  */
 class JugadorRepositoryTest extends PostgresIntegrationTest {
 
@@ -34,10 +34,10 @@ class JugadorRepositoryTest extends PostgresIntegrationTest {
                         fechaNacimiento,
                         "Argentina");
 
-        Jugador guardado = jugadorRepository.saveAndFlush(jugador);
+        JugadorEntity guardado = jugadorRepository.saveAndFlush(JugadorEntity.desde(jugador));
         entityManager.clear();
 
-        Jugador leido = jugadorRepository.findById(guardado.getId()).orElseThrow();
+        Jugador leido = jugadorRepository.findById(guardado.getId()).orElseThrow().aModelo();
 
         assertThat(leido.getId()).isEqualTo(jugador.getId());
         assertThat(leido.getNombre()).isEqualTo("Leonel Messi");
@@ -52,45 +52,30 @@ class JugadorRepositoryTest extends PostgresIntegrationTest {
     }
 
     @Test
-    void emitirYLiberarTokensTrasGuardar_persistenElNuevoValorPorDirtyChecking() {
-        Jugador jugador =
+    void actualizarCamposMutablesTrasGuardar_persistenElNuevoValorPorDirtyChecking() {
+        JugadorEntity jugador =
                 jugadorRepository.saveAndFlush(
-                        Jugador.darAlta(
-                                "Kylian Mbappé",
-                                "Real Madrid CF",
-                                "Delantero",
-                                LocalDate.of(1998, 12, 20),
-                                "Francia"));
-        jugador.emitirTokens(80);
+                        JugadorEntity.desde(
+                                Jugador.darAlta(
+                                        "Kylian Mbappé",
+                                        "Real Madrid CF",
+                                        "Delantero",
+                                        LocalDate.of(1998, 12, 20),
+                                        "Francia")));
+        jugador.setTokensEmitidos(80);
         jugadorRepository.saveAndFlush(jugador);
         entityManager.clear();
 
-        Jugador trasEmitir = jugadorRepository.findById(jugador.getId()).orElseThrow();
+        JugadorEntity trasEmitir = jugadorRepository.findById(jugador.getId()).orElseThrow();
         assertThat(trasEmitir.getTokensEmitidos()).isEqualTo(80);
 
-        trasEmitir.liberarTokens(30);
+        trasEmitir.setTokensEmitidos(50);
+        trasEmitir.setEstado(EstadoJugador.INACTIVO);
         jugadorRepository.saveAndFlush(trasEmitir);
         entityManager.clear();
 
-        Jugador trasLiberar = jugadorRepository.findById(jugador.getId()).orElseThrow();
-        assertThat(trasLiberar.getTokensEmitidos()).isEqualTo(50);
-    }
-
-    @Test
-    void darDeBajaTrasGuardar_persisteEstadoInactivo() {
-        Jugador jugador =
-                jugadorRepository.saveAndFlush(
-                        Jugador.darAlta(
-                                "Jugador Retirado",
-                                "Sin Club",
-                                "Mediocampista",
-                                LocalDate.of(1990, 1, 1),
-                                "Uruguay"));
-        jugador.darDeBaja();
-        jugadorRepository.saveAndFlush(jugador);
-        entityManager.clear();
-
-        Jugador leido = jugadorRepository.findById(jugador.getId()).orElseThrow();
-        assertThat(leido.getEstado()).isEqualTo(EstadoJugador.INACTIVO);
+        JugadorEntity trasActualizar = jugadorRepository.findById(jugador.getId()).orElseThrow();
+        assertThat(trasActualizar.getTokensEmitidos()).isEqualTo(50);
+        assertThat(trasActualizar.getEstado()).isEqualTo(EstadoJugador.INACTIVO);
     }
 }

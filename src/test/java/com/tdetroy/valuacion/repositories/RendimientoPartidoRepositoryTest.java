@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
+import com.tdetroy.valuacion.entity.RendimientoPartidoEntity;
 import com.tdetroy.valuacion.model.FuenteResultado;
 import com.tdetroy.valuacion.model.RendimientoPartido;
 import com.tdetroy.valuacion.repositories.support.PostgresIntegrationTest;
@@ -47,11 +48,13 @@ class RendimientoPartidoRepositoryTest extends PostgresIntegrationTest {
                         FuenteResultado.FOOTBALL_DATA,
                         fechaIngesta);
 
-        RendimientoPartido guardado = rendimientoPartidoRepository.saveAndFlush(rendimiento);
+        RendimientoPartidoEntity guardado =
+                rendimientoPartidoRepository.saveAndFlush(
+                        RendimientoPartidoEntity.desde(rendimiento));
         entityManager.clear();
 
         RendimientoPartido leido =
-                rendimientoPartidoRepository.findById(guardado.getId()).orElseThrow();
+                rendimientoPartidoRepository.findById(guardado.getId()).orElseThrow().aModelo();
 
         assertThat(leido.getId()).isEqualTo(rendimiento.getId());
         assertThat(leido.getJugadorId()).isEqualTo(jugadorId);
@@ -83,8 +86,8 @@ class RendimientoPartidoRepositoryTest extends PostgresIntegrationTest {
                         "{\"goles\":0}",
                         FuenteResultado.FOOTBALL_DATA);
 
-        rendimientoPartidoRepository.saveAndFlush(primero);
-        rendimientoPartidoRepository.saveAndFlush(segundo);
+        rendimientoPartidoRepository.saveAndFlush(RendimientoPartidoEntity.desde(primero));
+        rendimientoPartidoRepository.saveAndFlush(RendimientoPartidoEntity.desde(segundo));
         entityManager.clear();
 
         assertThat(rendimientoPartidoRepository.count()).isEqualTo(2);
@@ -111,9 +114,12 @@ class RendimientoPartidoRepositoryTest extends PostgresIntegrationTest {
                         "{\"goles\":1}",
                         FuenteResultado.FOOTBALL_DATA);
 
-        rendimientoPartidoRepository.saveAndFlush(primero);
+        rendimientoPartidoRepository.saveAndFlush(RendimientoPartidoEntity.desde(primero));
 
-        assertThatThrownBy(() -> rendimientoPartidoRepository.saveAndFlush(duplicado))
+        assertThatThrownBy(
+                        () ->
+                                rendimientoPartidoRepository.saveAndFlush(
+                                        RendimientoPartidoEntity.desde(duplicado)))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

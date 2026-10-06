@@ -2,6 +2,7 @@ package com.tdetroy.valuacion.repositories;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tdetroy.valuacion.entity.MovimientoEntity;
 import com.tdetroy.valuacion.model.Movimiento;
 import com.tdetroy.valuacion.model.TipoMovimiento;
 import com.tdetroy.valuacion.repositories.support.PostgresIntegrationTest;
@@ -43,10 +44,11 @@ class MovimientoRepositoryTest extends PostgresIntegrationTest {
                         null,
                         fecha);
 
-        Movimiento guardado = movimientoRepository.saveAndFlush(movimiento);
+        MovimientoEntity guardado =
+                movimientoRepository.saveAndFlush(MovimientoEntity.desde(movimiento));
         entityManager.clear();
 
-        Movimiento leido = movimientoRepository.findById(guardado.getId()).orElseThrow();
+        Movimiento leido = movimientoRepository.findById(guardado.getId()).orElseThrow().aModelo();
 
         assertThat(leido.getId()).isEqualTo(movimiento.getId());
         assertThat(leido.getUsuarioId()).isEqualTo(usuarioId);
@@ -81,14 +83,16 @@ class MovimientoRepositoryTest extends PostgresIntegrationTest {
                         new BigDecimal("200.00"),
                         null);
 
-        movimientoRepository.saveAndFlush(primero);
-        movimientoRepository.saveAndFlush(segundo);
+        movimientoRepository.saveAndFlush(MovimientoEntity.desde(primero));
+        movimientoRepository.saveAndFlush(MovimientoEntity.desde(segundo));
         entityManager.clear();
 
         assertThat(movimientoRepository.count()).isEqualTo(2);
 
-        Movimiento primeroLeido = movimientoRepository.findById(primero.getId()).orElseThrow();
-        Movimiento segundoLeido = movimientoRepository.findById(segundo.getId()).orElseThrow();
+        Movimiento primeroLeido =
+                movimientoRepository.findById(primero.getId()).orElseThrow().aModelo();
+        Movimiento segundoLeido =
+                movimientoRepository.findById(segundo.getId()).orElseThrow().aModelo();
 
         assertThat(primeroLeido.getId()).isNotEqualTo(segundoLeido.getId());
         assertThat(primeroLeido.getMontoTotal()).isEqualByComparingTo("100.00");

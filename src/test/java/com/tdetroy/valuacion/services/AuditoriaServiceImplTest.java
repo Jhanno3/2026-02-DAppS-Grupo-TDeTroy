@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.tdetroy.valuacion.entity.RegistroAuditoriaEntity;
 import com.tdetroy.valuacion.model.RegistroAuditoria;
 import com.tdetroy.valuacion.repositories.RegistroAuditoriaRepository;
 import java.util.UUID;
@@ -105,8 +106,9 @@ class AuditoriaServiceImplTest {
     }
 
     private RegistroAuditoria capturarGuardado() {
-        ArgumentCaptor<RegistroAuditoria> captor = ArgumentCaptor.forClass(RegistroAuditoria.class);
+        ArgumentCaptor<RegistroAuditoriaEntity> captor =
+                ArgumentCaptor.forClass(RegistroAuditoriaEntity.class);
         verify(repository).save(captor.capture());
-        return captor.getValue();
+        return captor.getValue().aModelo();
     }
 }

@@ -3,6 +3,7 @@ package com.tdetroy.valuacion.repositories;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.tdetroy.valuacion.entity.TenenciaTokenEntity;
 import com.tdetroy.valuacion.model.TenenciaToken;
 import com.tdetroy.valuacion.repositories.support.PostgresIntegrationTest;
 import java.util.UUID;
@@ -13,12 +14,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 /**
  * Test de integración de {@link TenenciaTokenRepository} contra Postgres real (tasks.md T0.7,
- * constitution.md §1/§4). Igual que {@code UsuarioRepository}, {@link TenenciaToken} es mutable
- * después de creado — {@code acreditar}/{@code reservar}/etc. cambian {@code cantidad}/{@code
- * cantidadReservada} vía dirty checking de JPA — así que este test cubre además que esas
- * actualizaciones persisten, y que la constraint {@code uk_tenencias_token_usuario_jugador}
- * (V6__tenencias_token.sql, plan.md §2.5: "UNIQUE(usuarioId, jugadorId)") se cumple contra la base
- * real.
+ * constitution.md §1/§4). Igual que {@code UsuarioRepository}, {@link TenenciaTokenEntity} es
+ * mutable después de creada — cambiar {@code cantidad}/{@code cantidadReservada} persiste vía dirty
+ * checking de JPA — así que este test cubre además que esas actualizaciones persisten, y que la
+ * constraint {@code uk_tenencias_token_usuario_jugador} (V6__tenencias_token.sql, plan.md §2.5:
+ * "UNIQUE(usuarioId, jugadorId)") se cumple contra la base real.
  */
 class TenenciaTokenRepositoryTest extends PostgresIntegrationTest {
 
@@ -32,10 +32,12 @@ class TenenciaTokenRepositoryTest extends PostgresIntegrationTest {
         UUID jugadorId = UUID.randomUUID();
         TenenciaToken tenencia = TenenciaToken.abrir(usuarioId, jugadorId);
 
-        TenenciaToken guardada = tenenciaTokenRepository.saveAndFlush(tenencia);
+        TenenciaTokenEntity guardada =
+                tenenciaTokenRepository.saveAndFlush(TenenciaTokenEntity.desde(tenencia));
         entityManager.clear();
 
-        TenenciaToken leida = tenenciaTokenRepository.findById(guardada.getId()).orElseThrow();
+        TenenciaToken leida =
+                tenenciaTokenRepository.findById(guardada.getId()).orElseThrow().aModelo();
 
         assertThat(leida.getId()).isEqualTo(tenencia.getId());
         assertThat(leida.getUsuarioId()).isEqualTo(usuarioId);
@@ -45,23 +47,24 @@ class TenenciaTokenRepositoryTest extends PostgresIntegrationTest {
     }
 
     @Test
-    void acreditarYReservarTrasGuardar_persistenElNuevoValorPorDirtyChecking() {
-        TenenciaToken tenencia =
+    void actualizarCantidadesTrasGuardar_persistenElNuevoValorPorDirtyChecking() {
+        TenenciaTokenEntity tenencia =
                 tenenciaTokenRepository.saveAndFlush(
-                        TenenciaToken.abrir(UUID.randomUUID(), UUID.randomUUID()));
-        tenencia.acreditar(10);
+                        TenenciaTokenEntity.desde(
+                                TenenciaToken.abrir(UUID.randomUUID(), UUID.randomUUID())));
+        tenencia.setCantidad(10);
         tenenciaTokenRepository.saveAndFlush(tenencia);
         entityManager.clear();
 
-        TenenciaToken trasAcreditar =
+        TenenciaTokenEntity trasAcreditar =
                 tenenciaTokenRepository.findById(tenencia.getId()).orElseThrow();
         assertThat(trasAcreditar.getCantidad()).isEqualTo(10);
 
-        trasAcreditar.reservar(4);
+        trasAcreditar.setCantidadReservada(4);
         tenenciaTokenRepository.saveAndFlush(trasAcreditar);
         entityManager.clear();
 
-        TenenciaToken trasReservar =
+        TenenciaTokenEntity trasReservar =
                 tenenciaTokenRepository.findById(tenencia.getId()).orElseThrow();
         assertThat(trasReservar.getCantidad()).isEqualTo(10);
         assertThat(trasReservar.getCantidadReservada()).isEqualTo(4);
@@ -71,12 +74,14 @@ class TenenciaTokenRepositoryTest extends PostgresIntegrationTest {
     void usuarioYJugadorDuplicados_violaConstraintUniqueDeLaBase() {
         UUID usuarioId = UUID.randomUUID();
         UUID jugadorId = UUID.randomUUID();
-        tenenciaTokenRepository.saveAndFlush(TenenciaToken.abrir(usuarioId, jugadorId));
+        tenenciaTokenRepository.saveAndFlush(
+                TenenciaTokenEntity.desde(TenenciaToken.abrir(usuarioId, jugadorId)));
 
         assertThatThrownBy(
                         () ->
                                 tenenciaTokenRepository.saveAndFlush(
-                                        TenenciaToken.abrir(usuarioId, jugadorId)))
+                                        TenenciaTokenEntity.desde(
+                                                TenenciaToken.abrir(usuarioId, jugadorId))))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

@@ -1,5 +1,6 @@
 package com.tdetroy.valuacion.services;
 
+import com.tdetroy.valuacion.entity.RegistroAuditoriaEntity;
 import com.tdetroy.valuacion.model.RegistroAuditoria;
 import com.tdetroy.valuacion.repositories.RegistroAuditoriaRepository;
 import java.util.Objects;
@@ -43,7 +44,7 @@ public class AuditoriaServiceImpl implements AuditoriaService {
         RegistroAuditoria registro =
                 RegistroAuditoria.registrar(
                         actorId, accion, entidadAfectada, entidadId, jsonAntes, jsonDespues);
-        repository.save(registro);
+        repository.save(RegistroAuditoriaEntity.desde(registro));
     }
 
     private static void validarCampos(Object valoresDespues) {
