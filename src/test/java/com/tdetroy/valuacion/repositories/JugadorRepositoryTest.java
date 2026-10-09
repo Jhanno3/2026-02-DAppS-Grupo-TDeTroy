@@ -7,6 +7,7 @@ import com.tdetroy.valuacion.model.EstadoJugador;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.repositories.support.PostgresIntegrationTest;
 import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
@@ -77,5 +78,33 @@ class JugadorRepositoryTest extends PostgresIntegrationTest {
         JugadorEntity trasActualizar = jugadorRepository.findById(jugador.getId()).orElseThrow();
         assertThat(trasActualizar.getTokensEmitidos()).isEqualTo(50);
         assertThat(trasActualizar.getEstado()).isEqualTo(EstadoJugador.INACTIVO);
+    }
+
+    @Test
+    void findByEstado_devuelveSoloLosJugadoresEnEseEstado() {
+        JugadorEntity activo =
+                jugadorRepository.saveAndFlush(
+                        JugadorEntity.desde(
+                                Jugador.darAlta(
+                                        "Jugador Activo",
+                                        "Club A",
+                                        "Delantero",
+                                        LocalDate.of(2000, 1, 1),
+                                        "Argentina")));
+        JugadorEntity inactivo =
+                JugadorEntity.desde(
+                        Jugador.darAlta(
+                                "Jugador Inactivo",
+                                "Club B",
+                                "Arquero",
+                                LocalDate.of(1995, 5, 5),
+                                "Brasil"));
+        inactivo.setEstado(EstadoJugador.INACTIVO);
+        jugadorRepository.saveAndFlush(inactivo);
+        entityManager.clear();
+
+        List<JugadorEntity> activos = jugadorRepository.findByEstado(EstadoJugador.ACTIVO);
+
+        assertThat(activos).extracting(JugadorEntity::getId).containsExactly(activo.getId());
     }
 }

@@ -10,8 +10,7 @@ import java.util.UUID;
  * conoce el formato de respuesta de WhoScored, sólo esta interfaz y {@link RendimientoCrudo}, el
  * modelo de transporte que cada implementación traduce desde su propio formato externo.
  *
- * <p>Deliberadamente sin implementación todavía ({@code WhoScoredRepositoryImpl}, T3.3, fuera de
- * alcance de esta tarea).
+ * <p>Implementada por {@link WhoScoredRepositoryImpl} (tasks.md T3.3).
  */
 public interface RendimientoExternoRepository {
 

@@ -193,6 +193,17 @@ public class Jugador {
         this.estado = EstadoJugador.INACTIVO;
     }
 
+    /**
+     * Registra {@code fecha} como el momento de la ingesta de rendimiento más reciente para este
+     * jugador (UC-05, plan.md §8.1) — {@code RendimientoServiceImpl} (tasks.md T3.5) la invoca cada
+     * vez que persiste un nuevo {@code RendimientoPartido} con datos de WhoScored para este
+     * jugador.
+     */
+    public void registrarActualizacionRendimiento(Instant fecha) {
+        Objects.requireNonNull(fecha, "fecha no puede ser null");
+        this.fechaUltimaActualizacionRendimiento = fecha;
+    }
+
     private static void validarCampos(
             String nombre,
             String club,

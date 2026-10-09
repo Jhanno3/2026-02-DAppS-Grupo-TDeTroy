@@ -20,12 +20,13 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 /**
  * Test de integración de {@link RendimientoPartidoRepository} contra Postgres real (tasks.md T0.7,
- * constitution.md §1/§4). Sin métodos de consulta propios todavía (T3.5+ los agrega cuando {@code
- * RendimientoService}/{@code CotizacionService} los necesiten), así que este test cubre lo que hoy
- * expone: persistir un {@link RendimientoPartido} válido vía {@link RendimientoPartido#ingestar} y
- * leerlo de vuelta con los mismos valores (incluida la columna {@code jsonb}), que es append-only
- * también a nivel de persistencia, y la restricción {@code UNIQUE(partido_externo_id, jugador_id)}
- * que sostiene la deduplicación frente a una reingesta del mismo ciclo semanal (plan.md §2.3).
+ * constitution.md §1/§4): persistir un {@link RendimientoPartido} válido vía {@link
+ * RendimientoPartido#ingestar} y leerlo de vuelta con los mismos valores (incluida la columna
+ * {@code jsonb}), que es append-only también a nivel de persistencia, la restricción {@code
+ * UNIQUE(partido_externo_id, jugador_id)} que sostiene la deduplicación frente a una reingesta del
+ * mismo ciclo semanal (plan.md §2.3), y {@link
+ * RendimientoPartidoRepository#existsByJugadorIdAndPartidoExternoId} (T3.5), que {@code
+ * RendimientoServiceImpl} usa para aplicar esa misma clave de deduplicación antes de insertar.
  */
 class RendimientoPartidoRepositoryTest extends PostgresIntegrationTest {
 
@@ -121,5 +122,33 @@ class RendimientoPartidoRepositoryTest extends PostgresIntegrationTest {
                                 rendimientoPartidoRepository.saveAndFlush(
                                         RendimientoPartidoEntity.desde(duplicado)))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void existsByJugadorIdAndPartidoExternoId_conFilaYaIngerida_devuelveTrue() {
+        UUID jugadorId = UUID.randomUUID();
+        RendimientoPartido rendimiento =
+                RendimientoPartido.ingestar(
+                        jugadorId,
+                        "555",
+                        LocalDate.of(2026, 2, 15),
+                        "2026-W07",
+                        "{\"goles\":1}",
+                        FuenteResultado.FOOTBALL_DATA);
+        rendimientoPartidoRepository.saveAndFlush(RendimientoPartidoEntity.desde(rendimiento));
+        entityManager.clear();
+
+        assertThat(
+                        rendimientoPartidoRepository.existsByJugadorIdAndPartidoExternoId(
+                                jugadorId, "555"))
+                .isTrue();
+        assertThat(
+                        rendimientoPartidoRepository.existsByJugadorIdAndPartidoExternoId(
+                                jugadorId, "otro-partido"))
+                .isFalse();
+        assertThat(
+                        rendimientoPartidoRepository.existsByJugadorIdAndPartidoExternoId(
+                                UUID.randomUUID(), "555"))
+                .isFalse();
     }
 }
