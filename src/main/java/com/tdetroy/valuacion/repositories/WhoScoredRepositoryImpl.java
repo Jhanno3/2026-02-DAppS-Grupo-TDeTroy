@@ -12,6 +12,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
@@ -46,6 +47,7 @@ public class WhoScoredRepositoryImpl implements RendimientoExternoRepository {
     private final String baseUrl;
     private final DocumentoFetcher documentoFetcher;
 
+    @Autowired
     public WhoScoredRepositoryImpl(@Value("${app.whoscored.base-url}") String baseUrl) {
         this(baseUrl, url -> Jsoup.connect(url).userAgent(USER_AGENT).timeout(TIMEOUT_MS).get());
     }
