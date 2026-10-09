@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.tdetroy.valuacion.common.exceptions.EmisionMaximaSuperadaException;
+import java.time.Instant;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 
@@ -206,5 +207,25 @@ class JugadorTest {
         jugador.darDeBaja();
 
         assertThat(jugador.tokensDisponibles()).isZero();
+    }
+
+    // ---- registrarActualizacionRendimiento (UC-05) ----
+
+    @Test
+    void registrarActualizacionRendimiento_actualizaLaFecha() {
+        Jugador jugador = jugadorValido();
+        Instant fecha = Instant.parse("2026-02-15T02:00:00Z");
+
+        jugador.registrarActualizacionRendimiento(fecha);
+
+        assertThat(jugador.getFechaUltimaActualizacionRendimiento()).isEqualTo(fecha);
+    }
+
+    @Test
+    void registrarActualizacionRendimiento_conFechaNula_lanzaExcepcion() {
+        Jugador jugador = jugadorValido();
+
+        assertThatNullPointerException()
+                .isThrownBy(() -> jugador.registrarActualizacionRendimiento(null));
     }
 }
