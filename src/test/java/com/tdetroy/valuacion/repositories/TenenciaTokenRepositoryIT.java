@@ -20,7 +20,7 @@ import org.springframework.dao.DataIntegrityViolationException;
  * constraint {@code uk_tenencias_token_usuario_jugador} (V6__tenencias_token.sql, plan.md §2.5:
  * "UNIQUE(usuarioId, jugadorId)") se cumple contra la base real.
  */
-class TenenciaTokenRepositoryTest extends PostgresIntegrationTest {
+class TenenciaTokenRepositoryIT extends PostgresIntegrationTest {
 
     @Autowired private TenenciaTokenRepository tenenciaTokenRepository;
 

@@ -3,9 +3,10 @@ package com.tdetroy.valuacion.common.exceptions;
 /**
  * La emisión de tokens de un jugador superaría el máximo de 100 unidades.
  *
- * <p>Lanzada por {@code Jugador.emitirTokens} (plan.md §2.2, constitution.md §2: invariante de
- * emisión no negociable, protegida en la propia entidad y no sólo en {@code JugadorService}/ {@code
- * TokenService}, bajo ninguna operación incluidas las administrativas).
+ * <p>Lanzada por {@code Token.emitir} (invocado desde {@code Jugador.emitirTokens}; plan.md §2.2,
+ * constitution.md §2: invariante de emisión no negociable, protegida en el propio objeto de dominio
+ * y no sólo en {@code JugadorService}/{@code TokenService}, bajo ninguna operación incluidas las
+ * administrativas).
  */
 public final class EmisionMaximaSuperadaException extends NegocioException {
 

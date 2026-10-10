@@ -22,7 +22,7 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
  * (dos movimientos guardados por separado quedan como dos filas independientes, sin que uno
  * sobrescriba al otro).
  */
-class MovimientoRepositoryTest extends PostgresIntegrationTest {
+class MovimientoRepositoryIT extends PostgresIntegrationTest {
 
     @Autowired private MovimientoRepository movimientoRepository;
 

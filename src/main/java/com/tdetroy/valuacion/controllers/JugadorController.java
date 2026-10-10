@@ -3,8 +3,10 @@ package com.tdetroy.valuacion.controllers;
 import com.tdetroy.valuacion.config.UsuarioPrincipal;
 import com.tdetroy.valuacion.dto.request.CrearJugadorRequest;
 import com.tdetroy.valuacion.dto.request.EditarJugadorRequest;
+import com.tdetroy.valuacion.dto.response.CotizacionResponse;
 import com.tdetroy.valuacion.dto.response.JugadorResponse;
 import com.tdetroy.valuacion.model.Jugador;
+import com.tdetroy.valuacion.services.CotizacionService;
 import com.tdetroy.valuacion.services.JugadorService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -31,9 +33,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class JugadorController {
 
     private final JugadorService jugadorService;
+    private final CotizacionService cotizacionService;
 
-    public JugadorController(JugadorService jugadorService) {
+    public JugadorController(JugadorService jugadorService, CotizacionService cotizacionService) {
         this.jugadorService = jugadorService;
+        this.cotizacionService = cotizacionService;
     }
 
     /** UC-07: catálogo completo, incluidos los jugadores dados de baja (spec.md UC-07). */
@@ -46,6 +50,18 @@ public class JugadorController {
     @GetMapping("/{id}")
     public JugadorResponse obtenerPorId(@PathVariable UUID id) {
         return JugadorResponse.desde(jugadorService.obtenerPorId(id));
+    }
+
+    /**
+     * UC-08: historial cronológico de cotizaciones de un jugador puntual, incluidos los dados de
+     * baja (su cotización queda congelada en el último registro, UC-15). 404 vía {@code
+     * RecursoNoEncontradoException} si el jugador no existe.
+     */
+    @GetMapping("/{id}/cotizaciones")
+    public List<CotizacionResponse> obtenerCotizaciones(@PathVariable UUID id) {
+        return cotizacionService.obtenerHistorial(id).stream()
+                .map(CotizacionResponse::desde)
+                .toList();
     }
 
     /** UC-03. {@code actorId} sale del JWT ya validado, nunca del body de la request. */

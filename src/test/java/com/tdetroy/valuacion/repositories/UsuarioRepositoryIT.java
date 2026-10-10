@@ -23,7 +23,7 @@ import org.springframework.dao.DataIntegrityViolationException;
  * uk_usuarios_email} (V4__usuarios.sql, plan.md §2.1: "email: String (único)") se cumple contra la
  * base real.
  */
-class UsuarioRepositoryTest extends PostgresIntegrationTest {
+class UsuarioRepositoryIT extends PostgresIntegrationTest {
 
     @Autowired private UsuarioRepository usuarioRepository;
 

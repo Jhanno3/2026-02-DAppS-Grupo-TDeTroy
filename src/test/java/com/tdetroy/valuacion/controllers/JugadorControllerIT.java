@@ -18,9 +18,9 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * Test de integración de {@link JugadorController} (tasks.md T2.5) contra el contexto Spring
- * completo — igual criterio que {@code AuthControllerTest} (T1.5): prueba de punta a punta que
- * {@code SecurityConfig} (whitelist de {@code GET}, {@code @PreAuthorize("hasRole('ADMIN')")} en
- * {@code POST}/{@code PUT}), {@code JugadorService} y {@code GlobalExceptionHandler} quedan bien
+ * completo — igual criterio que {@code AuthControllerIT} (T1.5): prueba de punta a punta que {@code
+ * SecurityConfig} (whitelist de {@code GET}, {@code @PreAuthorize("hasRole('ADMIN')")} en {@code
+ * POST}/{@code PUT}), {@code JugadorService} y {@code GlobalExceptionHandler} quedan bien
  * enganchados entre sí.
  *
  * <p>Los tokens ADMIN/USER se generan directamente vía {@link JwtService#generarToken(UUID, String,
@@ -32,7 +32,7 @@ import tools.jackson.databind.ObjectMapper;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class JugadorControllerTest {
+class JugadorControllerIT {
 
     @Autowired private JwtService jwtService;
 
@@ -113,6 +113,29 @@ class JugadorControllerTest {
     void obtenerPorId_conJugadorInexistente_responde404() {
         mvc.get()
                 .uri("/api/v1/jugadores/{id}", UUID.randomUUID())
+                .assertThat()
+                .hasStatus(404)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+    }
+
+    // ---- GET /jugadores/{id}/cotizaciones (UC-08, público) ----
+
+    @Test
+    void obtenerCotizaciones_sinAutenticacion_devuelveListaVaciaParaUnJugadorSinCalculoPrevio() {
+        String id = crearYObtenerId("Jugador Sin Cotizaciones " + UUID.randomUUID());
+
+        mvc.get()
+                .uri("/api/v1/jugadores/{id}/cotizaciones", id)
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .isEqualTo("[]");
+    }
+
+    @Test
+    void obtenerCotizaciones_conJugadorInexistente_responde404() {
+        mvc.get()
+                .uri("/api/v1/jugadores/{id}/cotizaciones", UUID.randomUUID())
                 .assertThat()
                 .hasStatus(404)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
