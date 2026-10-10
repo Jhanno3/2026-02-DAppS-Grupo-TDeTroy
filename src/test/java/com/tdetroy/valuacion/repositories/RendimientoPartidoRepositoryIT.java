@@ -28,7 +28,7 @@ import org.springframework.dao.DataIntegrityViolationException;
  * RendimientoPartidoRepository#existsByJugadorIdAndPartidoExternoId} (T3.5), que {@code
  * RendimientoServiceImpl} usa para aplicar esa misma clave de deduplicación antes de insertar.
  */
-class RendimientoPartidoRepositoryTest extends PostgresIntegrationTest {
+class RendimientoPartidoRepositoryIT extends PostgresIntegrationTest {
 
     @Autowired private RendimientoPartidoRepository rendimientoPartidoRepository;
 

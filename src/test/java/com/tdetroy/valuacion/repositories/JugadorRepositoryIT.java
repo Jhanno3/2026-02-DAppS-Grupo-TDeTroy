@@ -18,7 +18,7 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
  * (ej. {@code tokensEmitidos}, {@code estado}) persiste vía dirty checking de JPA, no reinsertando
  * una fila — así que este test cubre además que esas actualizaciones persisten.
  */
-class JugadorRepositoryTest extends PostgresIntegrationTest {
+class JugadorRepositoryIT extends PostgresIntegrationTest {
 
     @Autowired private JugadorRepository jugadorRepository;
 

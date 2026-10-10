@@ -29,7 +29,7 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
  * org.skyscreamer.jsonassert.JSONAssert}, que compara semánticamente el JSON — esto es justamente
  * lo que un test contra Postgres real (y no H2) detecta y que un mock nunca hubiera mostrado.
  */
-class RegistroAuditoriaRepositoryTest extends PostgresIntegrationTest {
+class RegistroAuditoriaRepositoryIT extends PostgresIntegrationTest {
 
     @Autowired private RegistroAuditoriaRepository registroAuditoriaRepository;
 

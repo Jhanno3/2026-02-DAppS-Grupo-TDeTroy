@@ -5,25 +5,26 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
 import lombok.Getter;
 
 /**
  * Jugador tokenizable del catálogo (plan.md §2.2, UC-03/UC-04/UC-15).
  *
- * <p>{@code tokensEmitidos} nunca se expone con un setter público: sólo se mueve a través de {@link
- * #emitirTokens} y {@link #liberarTokens}, que validan la invariante de emisión máxima en la propia
- * entidad (constitution.md §2) — nunca queda a criterio del Service que las invoca validar ese
- * máximo por su cuenta. Representa tokens en circulación (comprados y no devueltos); "tokens
- * disponibles para compra" = {@code 100 - tokensEmitidos}.
+ * <p>La emisión de tokens en circulación vive en {@link Token} (objeto de valor compuesto, nunca
+ * persistido por su cuenta — ver su javadoc), no como un {@code int} suelto acá: {@link
+ * #emitirTokens}/{@link #liberarTokens}/{@link #tokensDisponibles()} delegan en ella, que es quien
+ * valida la invariante de emisión máxima (constitution.md §2) — nunca queda a criterio del Service
+ * que las invoca validar ese máximo por su cuenta. {@code Jugador} sigue siendo el único punto de
+ * entrada público para tocar esa emisión: {@link Token} no se expone directamente fuera de este
+ * paquete.
  *
  * <p>{@code estado} sólo se muta a través de {@link #darDeBaja()} (UC-15): al pasar a {@link
- * EstadoJugador#INACTIVO}, {@code tokensEmitidos} queda congelado como registro histórico y deja de
- * aceptar operaciones — eso lo valida el Service que orquesta la baja (T6.6), no esta entidad.
+ * EstadoJugador#INACTIVO}, la emisión queda congelada como registro histórico y deja de aceptar
+ * operaciones — eso lo valida el Service que orquesta la baja (T6.6), no esta entidad.
  */
 @Getter
 public class Jugador {
-
-    private static final int MAXIMO_TOKENS_EMITIDOS = 100;
 
     private final UUID id;
     private String nombre;
@@ -32,7 +33,10 @@ public class Jugador {
     private LocalDate fechaNacimiento;
     private String nacionalidad;
     private EstadoJugador estado;
-    private int tokensEmitidos;
+
+    @Getter(AccessLevel.NONE)
+    private Token token;
+
     private UUID cotizacionVigenteId;
     private Instant fechaUltimaActualizacionRendimiento;
 
@@ -51,7 +55,7 @@ public class Jugador {
         this.fechaNacimiento = fechaNacimiento;
         this.nacionalidad = nacionalidad;
         this.estado = EstadoJugador.ACTIVO;
-        this.tokensEmitidos = 0;
+        this.token = Token.nueva();
         this.cotizacionVigenteId = null;
         this.fechaUltimaActualizacionRendimiento = null;
     }
@@ -87,7 +91,7 @@ public class Jugador {
         this.fechaNacimiento = fechaNacimiento;
         this.nacionalidad = nacionalidad;
         this.estado = estado;
-        this.tokensEmitidos = tokensEmitidos;
+        this.token = Token.reconstruir(tokensEmitidos);
         this.cotizacionVigenteId = cotizacionVigenteId;
         this.fechaUltimaActualizacionRendimiento = fechaUltimaActualizacionRendimiento;
     }
@@ -123,45 +127,41 @@ public class Jugador {
     }
 
     /**
-     * Emite {@code cantidad} tokens nuevos hacia circulación (compra al sistema, UC-09).
+     * Emite {@code cantidad} tokens nuevos hacia circulación (compra al sistema, UC-09). Delega la
+     * validación de la invariante de emisión máxima en {@link Token#emitir}.
      *
      * @throws IllegalArgumentException si {@code cantidad} no es mayor a cero
-     * @throws EmisionMaximaSuperadaException si {@code tokensEmitidos + cantidad} supera 100
+     * @throws EmisionMaximaSuperadaException si se supera el máximo de 100 tokens emitidos
      */
     public void emitirTokens(int cantidad) {
-        requirePositivo(cantidad, "cantidad");
-        if (tokensEmitidos + cantidad > MAXIMO_TOKENS_EMITIDOS) {
-            throw new EmisionMaximaSuperadaException(
-                    tokensEmitidos, cantidad, MAXIMO_TOKENS_EMITIDOS);
-        }
-        this.tokensEmitidos += cantidad;
+        token.emitir(cantidad);
     }
 
     /**
      * Libera {@code cantidad} tokens de circulación, devolviéndolos a la emisión disponible (venta
-     * al sistema, UC-10; constitution.md §2, regla 8 de spec.md §5).
+     * al sistema, UC-10; constitution.md §2, regla 8 de spec.md §5). Delega en {@link
+     * Token#liberar}.
      *
-     * @throws IllegalArgumentException si {@code cantidad} no es mayor a cero, o si supera {@code
-     *     tokensEmitidos}
+     * @throws IllegalArgumentException si {@code cantidad} no es mayor a cero, o si supera la
+     *     cantidad emitida actual
      */
     public void liberarTokens(int cantidad) {
-        requirePositivo(cantidad, "cantidad");
-        if (cantidad > tokensEmitidos) {
-            throw new IllegalArgumentException(
-                    "cantidad a liberar (%d) no puede superar tokensEmitidos actual (%d)"
-                            .formatted(cantidad, tokensEmitidos));
-        }
-        this.tokensEmitidos -= cantidad;
+        token.liberar(cantidad);
+    }
+
+    /** Cantidad de tokens emitidos hacia circulación (comprados y no devueltos). */
+    public int getTokensEmitidos() {
+        return token.getCantidadEmitida();
     }
 
     /**
      * Tokens disponibles para compra sobre el máximo de 100 (UC-07). Un jugador {@link
-     * EstadoJugador#INACTIVO} siempre devuelve 0, aunque {@code tokensEmitidos} haya quedado
-     * congelado en un valor menor a 100 (spec.md UC-07: sus tokens salieron de circulación de forma
-     * permanente en la baja, UC-15).
+     * EstadoJugador#INACTIVO} siempre devuelve 0, aunque la emisión haya quedado congelada en un
+     * valor menor a 100 (spec.md UC-07: sus tokens salieron de circulación de forma permanente en
+     * la baja, UC-15).
      */
     public int tokensDisponibles() {
-        return estado == EstadoJugador.INACTIVO ? 0 : MAXIMO_TOKENS_EMITIDOS - tokensEmitidos;
+        return estado == EstadoJugador.INACTIVO ? 0 : token.disponibles();
     }
 
     /**
@@ -204,6 +204,18 @@ public class Jugador {
         this.fechaUltimaActualizacionRendimiento = fecha;
     }
 
+    /**
+     * Actualiza el puntero a la {@code CotizacionHistorica} vigente de este jugador (plan.md §6.1,
+     * paso 7) — {@code CotizacionServiceImpl} (tasks.md T4.3) la invoca inmediatamente después de
+     * persistir cada nuevo cálculo. Nunca recalcula ni valida el valor en sí: ese es el único punto
+     * de verdad de {@code CotizacionService} (constitution.md §2), acá sólo se actualiza la
+     * referencia.
+     */
+    public void actualizarCotizacionVigente(UUID cotizacionId) {
+        Objects.requireNonNull(cotizacionId, "cotizacionId no puede ser null");
+        this.cotizacionVigenteId = cotizacionId;
+    }
+
     private static void validarCampos(
             String nombre,
             String club,
@@ -224,13 +236,6 @@ public class Jugador {
     private static void requireNoBlank(String valor, String nombreCampo) {
         if (valor.isBlank()) {
             throw new IllegalArgumentException(nombreCampo + " no puede estar vacío ni ser blanco");
-        }
-    }
-
-    private static void requirePositivo(int valor, String nombreCampo) {
-        if (valor <= 0) {
-            throw new IllegalArgumentException(
-                    nombreCampo + " debe ser mayor a cero, fue " + valor);
         }
     }
 }
