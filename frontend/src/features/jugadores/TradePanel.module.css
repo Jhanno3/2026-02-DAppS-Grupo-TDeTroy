@@ -1,0 +1,135 @@
+.panel {
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.panel a {
+  color: var(--accent);
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.375rem;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  background: var(--bg);
+}
+
+.tabs button {
+  height: 2.75rem;
+  border-radius: 0.5rem;
+  border: none;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-2);
+}
+
+.tabs button[aria-selected='true'] {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stepper button {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--line-strong);
+  background: var(--chip);
+  color: var(--text);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.stepper input {
+  flex: 1;
+  min-width: 0;
+  height: 2.75rem;
+  text-align: center;
+  border-radius: 0.625rem;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.total strong {
+  font-size: 1.3rem;
+}
+
+.error {
+  margin: 0;
+  padding: 0.625rem;
+  border-radius: 0.5rem;
+  background: var(--chip);
+  color: var(--down);
+  font-size: 0.9rem;
+}
+
+.success {
+  margin: 0;
+  padding: 0.625rem;
+  border-radius: 0.5rem;
+  background: var(--chip);
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.btnPrimary {
+  height: 3rem;
+  border-radius: 0.75rem;
+  border: none;
+  background: var(--accent);
+  color: var(--bg);
+  font: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

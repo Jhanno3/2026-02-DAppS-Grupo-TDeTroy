@@ -16,17 +16,15 @@ export function RootLayout() {
   return (
     <>
       <header className={styles.header}>
-        <h1 className={styles.brand}>
-          <LinkButton to="/" variant="ghost">
-            Valuación de Jugadores
-          </LinkButton>
-        </h1>
         <nav className={styles.nav}>
-          <LinkButton to="/jugadores" variant="ghost" small>
-            Catálogo
+          <LinkButton to="/mercado" variant="ghost" small>
+            Mercado
           </LinkButton>
           {isAuthenticated && user ? (
             <>
+              <LinkButton to="/cartera" variant="ghost" small>
+                Mi cartera
+              </LinkButton>
               {user.rol === 'ADMIN' && (
                 <LinkButton to="/admin/jugadores" variant="ghost" small>
                   Admin

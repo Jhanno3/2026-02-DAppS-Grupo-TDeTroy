@@ -61,6 +61,7 @@ Sin esto no puede arrancar ninguna entidad de negocio.
 | T3.4 | `FootballDataRepositoryImpl implements FixtureRepository`: consumo de API oficial, traducción a modelo interno, aislamiento de errores; tests contra fixtures propios, nunca red real | T3.2 | plan §8.1, constitution §1/§4 |
 | T3.5 | `RendimientoService`/`RendimientoServiceImpl`: `ingestarFixtures()`/`ingestarRendimiento()`, orquesta las dos interfaces y persiste `RendimientoPartido` asociado a jugador y semana ISO | T3.3, T3.4, T3.1 | plan §1, §8.1 |
 | T3.6 | Scheduling en `config/` (domingo 01:00 fixtures, domingo 02:00 rendimiento) invocando `RendimientoServiceImpl` directamente — sin Controller de por medio, el trigger no es HTTP | T3.5 | plan §8.2 |
+| T3.7 | `Jugador.fotoUrl` (+ `actualizarFoto`) y `RendimientoExternoRepository#obtenerFotoUrl`; `WhoScoredRepositoryImpl` lo implementa scrapeando la página de perfil; `RendimientoServiceImpl.ingestarRendimiento()` la aplica por jugador, aislando errores igual que el resto de la ingesta; expuesto en `JugadorResponse` (UC-07) | T3.5, T2.5 | plan §2.2, §8.1 |
 
 ---
 

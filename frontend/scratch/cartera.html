@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mi cartera · Valuación</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b0f0d;
+        --bg-header: #0e1411;
+        --surface: #151b18;
+        --chip: #1c2420;
+        --line: #26302b;
+        --line-strong: #3a4640;
+        --silhouette: #2e3a34;
+        --text: #eef2ee;
+        --text-2: #b4beb8;
+        --muted: #9aa59f;
+        --accent: #c8f25a;
+        --accent-hover: #e2ff9a;
+        --down: #ff9a6b;
+        --oro: #e5b94e;
+        --plata: #b9c2c8;
+        --bronce: #c98652;
+        --display: 'Barlow Condensed', sans-serif;
+        --sans: 'IBM Plex Sans', system-ui, sans-serif;
+        --mono: 'IBM Plex Mono', monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 15px;
+      }
+      a {
+        color: var(--accent);
+      }
+      a:hover {
+        color: var(--accent-hover);
+      }
+      .wrap {
+        max-width: 1360px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .header {
+        border-bottom: 1px solid var(--line);
+        background: var(--bg-header);
+      }
+      .header .wrap {
+        padding-top: 14px;
+        padding-bottom: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 24px;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        color: var(--text);
+      }
+      .logo span {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 26px;
+        letter-spacing: 0.04em;
+      }
+      .nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        flex: 1 1 auto;
+      }
+      .nav a {
+        padding: 10px 14px;
+        border-radius: 8px;
+        color: var(--text-2);
+        text-decoration: none;
+      }
+      .nav a[aria-current='page'] {
+        background: var(--chip);
+        color: var(--text);
+        font-weight: 600;
+      }
+      .balance {
+        text-align: right;
+      }
+      .balance small {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .balance strong {
+        font-family: var(--mono);
+        font-size: 17px;
+        font-weight: 500;
+      }
+      main {
+        padding-top: 32px;
+        padding-bottom: 64px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+      h1 {
+        margin: 0;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 52px;
+        line-height: 1;
+      }
+      .kpis {
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+      .kpis div {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 20px;
+      }
+      .kpis dt {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .kpis dd {
+        margin: 6px 0 0;
+        font-family: var(--mono);
+        font-size: 30px;
+      }
+      .up {
+        color: var(--accent);
+      }
+      .down {
+        color: var(--down);
+      }
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 20px;
+      }
+      .panel h2 {
+        margin: 0 0 12px;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 26px;
+      }
+      .table-scroll {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        min-width: 820px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+        text-align: left;
+        padding: 10px 0;
+      }
+      td {
+        padding: 12px 0;
+        border-top: 1px solid var(--line);
+      }
+      .num {
+        text-align: right;
+        font-family: var(--mono);
+      }
+      th.num {
+        font-family: var(--sans);
+      }
+      .player {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .initials {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--silhouette);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 600;
+        color: #d5dcd7;
+        flex-shrink: 0;
+      }
+      .player b {
+        display: block;
+        font-weight: 600;
+      }
+      .player small {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .tier {
+        padding: 3px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--bg);
+      }
+      .btn-outline {
+        display: inline-flex;
+        align-items: center;
+        height: 44px;
+        padding: 0 14px;
+        border-radius: 8px;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="wrap">
+        <a class="logo" href="mercado.html">
+          <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+            <rect
+              x="5"
+              y="2"
+              width="20"
+              height="26"
+              rx="4"
+              fill="none"
+              stroke="#C8F25A"
+              stroke-width="2.5"
+            />
+            <circle cx="15" cy="13" r="4" fill="#C8F25A" />
+          </svg>
+          <span>VALUACIÓN</span>
+        </a>
+        <nav class="nav" aria-label="Principal">
+          <a href="mercado.html">Mercado</a>
+          <a href="cartera.html" aria-current="page">Mi cartera</a>
+          <a href="#">Mis ofertas</a>
+          <a href="#">Historial</a>
+        </nav>
+        <div class="balance">
+          <small>Saldo simulado</small><strong>$ 12.480,00</strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <h1>Mi cartera</h1>
+
+      <dl class="kpis">
+        <div>
+          <dt>Valor de la cartera</dt>
+          <dd id="kpi-valor">—</dd>
+        </div>
+        <div>
+          <dt>Ganancia / pérdida</dt>
+          <dd id="kpi-resultado">—</dd>
+        </div>
+        <div>
+          <dt>Cartas distintas</dt>
+          <dd id="kpi-cartas">—</dd>
+        </div>
+        <div>
+          <dt>Copias en venta</dt>
+          <dd id="kpi-en-venta">4</dd>
+        </div>
+      </dl>
+
+      <section class="panel" aria-label="Mis cartas">
+        <h2>Mis cartas</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Jugador</th>
+                <th scope="col">Rareza</th>
+                <th scope="col" class="num">Copias</th>
+                <th scope="col" class="num">Precio compra</th>
+                <th scope="col" class="num">Precio actual</th>
+                <th scope="col" class="num">Resultado</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody id="cartas"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      // Datos de ejemplo — reemplazar por la cartera del usuario autenticado
+      const CARTAS = [
+        {
+          id: 1,
+          nombre: 'Nahuel Benítez',
+          club: 'CA Ribera',
+          pos: 'MED',
+          tier: 'Oro',
+          copias: 3,
+          compra: 1890,
+          actual: 2150,
+        },
+        {
+          id: 2,
+          nombre: 'Tomás Aguirre',
+          club: 'CA Ribera',
+          pos: 'DEL',
+          tier: 'Oro',
+          copias: 2,
+          compra: 1300,
+          actual: 1240,
+        },
+        {
+          id: 4,
+          nombre: 'Mateo Ledesma',
+          club: 'Deportivo Sur',
+          pos: 'MED',
+          tier: 'Plata',
+          copias: 6,
+          compra: 780,
+          actual: 860,
+        },
+        {
+          id: 6,
+          nombre: 'Iker Salvatierra',
+          club: 'Unión Costera',
+          pos: 'DEF',
+          tier: 'Bronce',
+          copias: 10,
+          compra: 395,
+          actual: 410,
+        },
+        {
+          id: 8,
+          nombre: 'Gael Montiel',
+          club: 'Unión Costera',
+          pos: 'ARQ',
+          tier: 'Bronce',
+          copias: 12,
+          compra: 170,
+          actual: 180,
+        },
+      ]
+      const TIER_COLORS = {
+        Oro: 'var(--oro)',
+        Plata: 'var(--plata)',
+        Bronce: 'var(--bronce)',
+      }
+      const money = (n) =>
+        n.toLocaleString('es-AR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      const signed = (n) => `${n >= 0 ? '▲' : '▼'} $ ${money(Math.abs(n))}`
+      const iniciales = (s) =>
+        s
+          .split(' ')
+          .map((w) => w[0])
+          .join('')
+
+      document.getElementById('cartas').innerHTML = CARTAS.map((c) => {
+        const r = (c.actual - c.compra) * c.copias
+        return `
+  <tr>
+    <td><div class="player"><span class="initials">${iniciales(c.nombre)}</span><div><b>${c.nombre}</b><small>${c.club} · ${c.pos}</small></div></div></td>
+    <td><span class="tier" style="background:${TIER_COLORS[c.tier]}">${c.tier}</span></td>
+    <td class="num">${c.copias}</td>
+    <td class="num">$ ${money(c.compra)}</td>
+    <td class="num">$ ${money(c.actual)}</td>
+    <td class="num ${r >= 0 ? 'up' : 'down'}">${signed(r)}</td>
+    <td style="text-align:right;padding-left:16px;white-space:nowrap"><a class="btn-outline" href="detalle.html?id=${c.id}">Vender</a></td>
+  </tr>`
+      }).join('')
+
+      const valor = CARTAS.reduce((s, c) => s + c.actual * c.copias, 0)
+      const resultado = CARTAS.reduce(
+        (s, c) => s + (c.actual - c.compra) * c.copias,
+        0,
+      )
+      document.getElementById('kpi-valor').textContent = '$ ' + money(valor)
+      const kr = document.getElementById('kpi-resultado')
+      kr.textContent = signed(resultado)
+      kr.className = resultado >= 0 ? 'up' : 'down'
+      document.getElementById('kpi-cartas').textContent = CARTAS.length
+    </script>
+  </body>
+</html>

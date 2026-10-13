@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mercado de cartas · Valuación</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b0f0d;
+        --bg-header: #0e1411;
+        --surface: #151b18;
+        --surface-2: #1a221e;
+        --chip: #1c2420;
+        --line: #26302b;
+        --line-strong: #3a4640;
+        --silhouette: #2e3a34;
+        --text: #eef2ee;
+        --text-2: #b4beb8;
+        --muted: #9aa59f;
+        --accent: #c8f25a;
+        --accent-hover: #e2ff9a;
+        --down: #ff9a6b;
+        --oro: #e5b94e;
+        --plata: #b9c2c8;
+        --bronce: #c98652;
+        --display: 'Barlow Condensed', sans-serif;
+        --sans: 'IBM Plex Sans', system-ui, sans-serif;
+        --mono: 'IBM Plex Mono', monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 15px;
+      }
+      a {
+        color: var(--accent);
+      }
+      a:hover {
+        color: var(--accent-hover);
+      }
+      .wrap {
+        max-width: 1360px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      /* header */
+      .header {
+        border-bottom: 1px solid var(--line);
+        background: var(--bg-header);
+      }
+      .header .wrap {
+        padding-top: 14px;
+        padding-bottom: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 24px;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        color: var(--text);
+      }
+      .logo span {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 26px;
+        letter-spacing: 0.04em;
+      }
+      .nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        flex: 1 1 auto;
+      }
+      .nav a {
+        padding: 10px 14px;
+        border-radius: 8px;
+        color: var(--text-2);
+        text-decoration: none;
+      }
+      .nav a[aria-current='page'] {
+        background: var(--chip);
+        color: var(--text);
+        font-weight: 600;
+      }
+      .balance {
+        text-align: right;
+      }
+      .balance small {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .balance strong {
+        font-family: var(--mono);
+        font-size: 17px;
+        font-weight: 500;
+      }
+      .avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 1px solid var(--line-strong);
+        background: var(--chip);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .user {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      /* page */
+      main {
+        padding-top: 32px;
+        padding-bottom: 64px;
+      }
+      h1 {
+        margin: 0;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 52px;
+        line-height: 1;
+      }
+      .lead {
+        margin: 8px 0 0;
+        color: var(--muted);
+        max-width: 560px;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .field input,
+      .field select {
+        height: 44px;
+        padding: 0 14px;
+        border-radius: 10px;
+        border: 1px solid var(--line-strong);
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        font-size: 15px;
+      }
+      .field input {
+        width: 240px;
+      }
+      .pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 28px;
+      }
+      .pill {
+        height: 44px;
+        padding: 0 18px;
+        border-radius: 999px;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 600;
+        background: transparent;
+        color: #d5dcd7;
+        border: 1px solid var(--line-strong);
+      }
+      .pill[aria-pressed='true'] {
+        background: var(--accent);
+        color: var(--bg);
+        border-color: var(--accent);
+      }
+      .layout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 32px;
+        align-items: flex-start;
+      }
+      .grid {
+        flex: 999 1 720px;
+        min-width: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 20px;
+      }
+      /* card */
+      .card {
+        display: flex;
+        flex-direction: column;
+        text-decoration: none;
+        color: var(--text);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        overflow: hidden;
+      }
+      .card:hover {
+        border-color: var(--line-strong);
+        color: var(--text);
+      }
+      .card__tier-bar {
+        height: 5px;
+      }
+      .card__photo {
+        position: relative;
+        height: 190px;
+        background: var(--surface-2);
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+      }
+      .card__photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .card__rating {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 1;
+        font-family: var(--display);
+      }
+      .card__rating b {
+        font-weight: 700;
+        font-size: 34px;
+      }
+      .card__rating span {
+        font-weight: 600;
+        font-size: 15px;
+        color: var(--text-2);
+        letter-spacing: 0.06em;
+      }
+      .tier {
+        position: absolute;
+        top: 14px;
+        right: 12px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--bg);
+      }
+      .card__body {
+        padding: 14px 16px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .card__name {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 24px;
+        line-height: 1.05;
+      }
+      .card__club {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 4px;
+        color: var(--text-2);
+        font-size: 14px;
+      }
+      .crest {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        flex-shrink: 0;
+      }
+      .card__price {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-family: var(--mono);
+      }
+      .card__price strong {
+        font-size: 20px;
+        font-weight: 500;
+      }
+      .card__price span {
+        font-size: 14px;
+      }
+      .up {
+        color: var(--accent);
+      }
+      .down {
+        color: var(--down);
+      }
+      .supply__labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .supply__bar {
+        height: 6px;
+        border-radius: 3px;
+        background: var(--line);
+        overflow: hidden;
+      }
+      .supply__bar div {
+        height: 6px;
+        background: var(--accent);
+      }
+      .card__cta {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 44px;
+        border-radius: 10px;
+        background: var(--accent);
+        color: var(--bg);
+        font-weight: 600;
+      }
+      /* activity */
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 20px;
+      }
+      .activity {
+        flex: 1 1 300px;
+        min-width: 0;
+      }
+      .panel h2 {
+        margin: 0 0 4px;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 26px;
+      }
+      .panel .sub {
+        margin: 0 0 16px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .feed {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .feed li {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 0;
+        border-top: 1px solid var(--line);
+      }
+      .feed b {
+        display: block;
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .feed small {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .feed .right {
+        text-align: right;
+        flex-shrink: 0;
+      }
+      .feed .right span {
+        font-family: var(--mono);
+        font-size: 14px;
+      }
+      .empty {
+        grid-column: 1/-1;
+        color: var(--muted);
+        padding: 40px 0;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="wrap">
+        <a class="logo" href="mercado.html">
+          <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+            <rect
+              x="5"
+              y="2"
+              width="20"
+              height="26"
+              rx="4"
+              fill="none"
+              stroke="#C8F25A"
+              stroke-width="2.5"
+            />
+            <circle cx="15" cy="13" r="4" fill="#C8F25A" />
+          </svg>
+          <span>VALUACIÓN</span>
+        </a>
+        <nav class="nav" aria-label="Principal">
+          <a href="mercado.html" aria-current="page">Mercado</a>
+          <a href="cartera.html">Mi cartera</a>
+          <a href="#">Mis ofertas</a>
+          <a href="#">Historial</a>
+        </nav>
+        <div class="user">
+          <div class="balance">
+            <small>Saldo simulado</small><strong>$ 12.480,00</strong>
+          </div>
+          <button class="avatar" type="button" aria-label="Cuenta de usuario">
+            FC
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="toolbar">
+        <div>
+          <h1>Mercado de cartas</h1>
+          <p class="lead">
+            Comprá y vendé tokens de jugadores directamente con otros usuarios.
+            Cada carta tiene una cantidad fija de copias emitidas.
+          </p>
+        </div>
+        <div class="controls">
+          <label class="field"
+            >Buscar
+            <input
+              type="search"
+              name="buscar"
+              id="buscar"
+              placeholder="Jugador o club"
+            />
+          </label>
+          <label class="field"
+            >Ordenar por
+            <select name="orden" id="orden">
+              <option value="operados">Más operados</option>
+              <option value="precio-desc">Precio: mayor a menor</option>
+              <option value="precio-asc">Precio: menor a mayor</option>
+              <option value="suba">Mayor suba 24h</option>
+              <option value="copias">Menos copias</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div
+        class="pills"
+        role="group"
+        aria-label="Filtrar por posición"
+        id="pills"
+      ></div>
+
+      <div class="layout">
+        <section class="grid" aria-label="Cartas en venta" id="grid"></section>
+
+        <aside class="panel activity" aria-label="Actividad reciente">
+          <h2>Actividad reciente</h2>
+          <p class="sub">Últimas operaciones entre usuarios</p>
+          <ul class="feed" id="feed"></ul>
+          <a
+            href="#"
+            style="display: inline-block; margin-top: 12px; font-size: 14px"
+            >Ver todo el historial</a
+          >
+        </aside>
+      </div>
+    </main>
+
+    <script>
+      // Datos de ejemplo — reemplazar por GET /api/v1/jugadores
+      const JUGADORES = [
+        {
+          id: 1,
+          nombre: 'Nahuel Benítez',
+          club: 'CA Ribera',
+          clubColor: '#D94A3A',
+          pos: 'MED',
+          rating: 90,
+          precio: 2150,
+          var24h: 7.1,
+          emitidos: 100,
+          enVenta: 6,
+          foto: null,
+        },
+        {
+          id: 2,
+          nombre: 'Tomás Aguirre',
+          club: 'CA Ribera',
+          clubColor: '#D94A3A',
+          pos: 'DEL',
+          rating: 88,
+          precio: 1240,
+          var24h: 4.2,
+          emitidos: 250,
+          enVenta: 18,
+          foto: null,
+        },
+        {
+          id: 3,
+          nombre: 'Bruno Ferraro',
+          club: 'Racing del Plata',
+          clubColor: '#4A8FE0',
+          pos: 'ARQ',
+          rating: 86,
+          precio: 975,
+          var24h: 2.9,
+          emitidos: 400,
+          enVenta: 41,
+          foto: null,
+        },
+        {
+          id: 4,
+          nombre: 'Mateo Ledesma',
+          club: 'Deportivo Sur',
+          clubColor: '#E8E8E8',
+          pos: 'MED',
+          rating: 84,
+          precio: 860,
+          var24h: -1.8,
+          emitidos: 800,
+          enVenta: 132,
+          foto: null,
+        },
+        {
+          id: 5,
+          nombre: 'Santino Rojas',
+          club: 'Deportivo Sur',
+          clubColor: '#E8E8E8',
+          pos: 'DEL',
+          rating: 83,
+          precio: 720,
+          var24h: 1.1,
+          emitidos: 1000,
+          enVenta: 205,
+          foto: null,
+        },
+        {
+          id: 6,
+          nombre: 'Iker Salvatierra',
+          club: 'Unión Costera',
+          clubColor: '#2FA36B',
+          pos: 'DEF',
+          rating: 81,
+          precio: 410,
+          var24h: 0.6,
+          emitidos: 2000,
+          enVenta: 540,
+          foto: null,
+        },
+        {
+          id: 7,
+          nombre: 'Lucas Pereyra',
+          club: 'Sportivo Norte',
+          clubColor: '#F2C230',
+          pos: 'DEF',
+          rating: 79,
+          precio: 295,
+          var24h: -3.4,
+          emitidos: 3000,
+          enVenta: 910,
+          foto: null,
+        },
+        {
+          id: 8,
+          nombre: 'Gael Montiel',
+          club: 'Unión Costera',
+          clubColor: '#2FA36B',
+          pos: 'ARQ',
+          rating: 77,
+          precio: 180,
+          var24h: -0.9,
+          emitidos: 2500,
+          enVenta: 1200,
+          foto: null,
+        },
+      ]
+      const ACTIVIDAD = [
+        {
+          jugador: 'Nahuel Benítez',
+          detalle: '2 copias · @lucia_m → @facu',
+          precio: 2150,
+          hace: 'hace 2 min',
+        },
+        {
+          jugador: 'Mateo Ledesma',
+          detalle: '5 copias · @tincho → @rober',
+          precio: 858.5,
+          hace: 'hace 6 min',
+        },
+        {
+          jugador: 'Tomás Aguirre',
+          detalle: '1 copia · @juli99 → @sofi',
+          precio: 1235,
+          hace: 'hace 11 min',
+        },
+        {
+          jugador: 'Gael Montiel',
+          detalle: '20 copias · @pablo → @dani_r',
+          precio: 181.2,
+          hace: 'hace 18 min',
+        },
+        {
+          jugador: 'Bruno Ferraro',
+          detalle: '3 copias · @meli → @nico',
+          precio: 970,
+          hace: 'hace 25 min',
+        },
+        {
+          jugador: 'Lucas Pereyra',
+          detalle: '10 copias · @agus → @fede',
+          precio: 297,
+          hace: 'hace 31 min',
+        },
+        {
+          jugador: 'Santino Rojas',
+          detalle: '4 copias · @cami → @leo',
+          precio: 719,
+          hace: 'hace 40 min',
+        },
+      ]
+
+      const TIER_COLORS = {
+        Oro: 'var(--oro)',
+        Plata: 'var(--plata)',
+        Bronce: 'var(--bronce)',
+      }
+      const tierDe = (emitidos) =>
+        emitidos <= 250 ? 'Oro' : emitidos <= 1000 ? 'Plata' : 'Bronce'
+      const money = (n) =>
+        n.toLocaleString('es-AR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      const int = (n) => n.toLocaleString('es-AR')
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              '"': '&quot;',
+              "'": '&#39;',
+            })[c],
+        )
+      const SILUETA =
+        '<svg width="150" height="168" viewBox="0 0 150 168" aria-hidden="true"><circle cx="75" cy="62" r="36" fill="#2E3A34"/><path d="M12 168c4-40 30-62 63-62s59 22 63 62z" fill="#2E3A34"/></svg>'
+
+      const estado = { pos: 'Todos', q: '', orden: 'operados' }
+
+      function renderPills() {
+        document.getElementById('pills').innerHTML = [
+          'Todos',
+          'ARQ',
+          'DEF',
+          'MED',
+          'DEL',
+        ]
+          .map(
+            (p) =>
+              `<button type="button" class="pill" data-pos="${p}" aria-pressed="${p === estado.pos}">${p}</button>`,
+          )
+          .join('')
+      }
+
+      function cardHTML(j) {
+        const tier = tierDe(j.emitidos)
+        const pct = Math.max(4, Math.round((j.enVenta / j.emitidos) * 100))
+        const up = j.var24h > 0
+        return `
+  <a class="card" href="detalle.html?id=${j.id}">
+    <div class="card__tier-bar" style="background:${TIER_COLORS[tier]}"></div>
+    <div class="card__photo">
+      ${j.foto ? `<img src="${esc(j.foto)}" alt="Foto de ${esc(j.nombre)}">` : SILUETA}
+      <div class="card__rating"><b>${j.rating}</b><span>${j.pos}</span></div>
+      <span class="tier" style="background:${TIER_COLORS[tier]}">${tier}</span>
+    </div>
+    <div class="card__body">
+      <div>
+        <div class="card__name">${esc(j.nombre)}</div>
+        <div class="card__club"><span class="crest" style="background:${j.clubColor}"></span>${esc(j.club)}</div>
+      </div>
+      <div class="card__price">
+        <strong>$ ${money(j.precio)}</strong>
+        <span class="${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(j.var24h).toFixed(1).replace('.', ',')}%</span>
+      </div>
+      <div>
+        <div class="supply__labels"><span>${int(j.enVenta)} en venta</span><span>${int(j.emitidos)} copias</span></div>
+        <div class="supply__bar"><div style="width:${pct}%"></div></div>
+      </div>
+      <span class="card__cta">Ver ofertas</span>
+    </div>
+  </a>`
+      }
+
+      function renderGrid() {
+        const q = estado.q.trim().toLowerCase()
+        let lista = JUGADORES.filter(
+          (j) =>
+            (estado.pos === 'Todos' || j.pos === estado.pos) &&
+            (!q ||
+              j.nombre.toLowerCase().includes(q) ||
+              j.club.toLowerCase().includes(q)),
+        )
+        const sorts = {
+          'precio-desc': (a, b) => b.precio - a.precio,
+          'precio-asc': (a, b) => a.precio - b.precio,
+          suba: (a, b) => b.var24h - a.var24h,
+          copias: (a, b) => a.emitidos - b.emitidos,
+        }
+        if (sorts[estado.orden]) lista = [...lista].sort(sorts[estado.orden])
+        document.getElementById('grid').innerHTML = lista.length
+          ? lista.map(cardHTML).join('')
+          : '<p class="empty">No hay cartas que coincidan con el filtro.</p>'
+      }
+
+      function renderFeed() {
+        document.getElementById('feed').innerHTML = ACTIVIDAD.map(
+          (t) => `
+    <li>
+      <div><b>${esc(t.jugador)}</b><small>${esc(t.detalle)}</small></div>
+      <div class="right"><span>$ ${money(t.precio)}</span><small>${t.hace}</small></div>
+    </li>`,
+        ).join('')
+      }
+
+      document.getElementById('pills').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-pos]')
+        if (!b) return
+        estado.pos = b.dataset.pos
+        renderPills()
+        renderGrid()
+      })
+      document.getElementById('buscar').addEventListener('input', (e) => {
+        estado.q = e.target.value
+        renderGrid()
+      })
+      document.getElementById('orden').addEventListener('change', (e) => {
+        estado.orden = e.target.value
+        renderGrid()
+      })
+
+      renderPills()
+      renderGrid()
+      renderFeed()
+    </script>
+  </body>
+</html>

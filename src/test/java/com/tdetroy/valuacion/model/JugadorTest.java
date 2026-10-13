@@ -228,4 +228,25 @@ class JugadorTest {
         assertThatNullPointerException()
                 .isThrownBy(() -> jugador.registrarActualizacionRendimiento(null));
     }
+
+    // ---- actualizarFoto ----
+
+    @Test
+    void actualizarFoto_fijaLaUrl() {
+        Jugador jugador = jugadorValido();
+
+        jugador.actualizarFoto("https://whoscored.test/fotos/123.jpg");
+
+        assertThat(jugador.getFotoUrl()).isEqualTo("https://whoscored.test/fotos/123.jpg");
+    }
+
+    @Test
+    void actualizarFoto_conNulo_dejaLaFotoEnNulo() {
+        Jugador jugador = jugadorValido();
+        jugador.actualizarFoto("https://whoscored.test/fotos/123.jpg");
+
+        jugador.actualizarFoto(null);
+
+        assertThat(jugador.getFotoUrl()).isNull();
+    }
 }

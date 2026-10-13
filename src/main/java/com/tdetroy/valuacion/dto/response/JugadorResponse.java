@@ -23,7 +23,8 @@ public record JugadorResponse(
         String nacionalidad,
         EstadoJugador estado,
         int tokensDisponibles,
-        Instant fechaUltimaActualizacionRendimiento) {
+        Instant fechaUltimaActualizacionRendimiento,
+        String fotoUrl) {
 
     public static JugadorResponse desde(Jugador jugador) {
         return new JugadorResponse(
@@ -35,6 +36,7 @@ public record JugadorResponse(
                 jugador.getNacionalidad(),
                 jugador.getEstado(),
                 jugador.tokensDisponibles(),
-                jugador.getFechaUltimaActualizacionRendimiento());
+                jugador.getFechaUltimaActualizacionRendimiento(),
+                jugador.getFotoUrl());
     }
 }

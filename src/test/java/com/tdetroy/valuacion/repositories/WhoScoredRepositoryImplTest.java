@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -158,13 +159,68 @@ class WhoScoredRepositoryImplTest {
     }
 
     private static Document documentoDesdeFixture() {
+        return documentoDesdeFixture("fixtures/whoscored/rendimiento-jugador.html");
+    }
+
+    private static Document documentoDesdeFixture(String ruta) {
         try (InputStream in =
-                WhoScoredRepositoryImplTest.class
-                        .getClassLoader()
-                        .getResourceAsStream("fixtures/whoscored/rendimiento-jugador.html")) {
+                WhoScoredRepositoryImplTest.class.getClassLoader().getResourceAsStream(ruta)) {
             return Jsoup.parse(in, "UTF-8", BASE_URL);
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }
+    }
+
+    // ---- obtenerFotoUrl ----
+
+    @Test
+    void obtenerFotoUrl_conFotoPublicada_devuelveLaUrl() {
+        UUID jugadorId = UUID.randomUUID();
+        String urlEsperada = "%s/jugadores/%s/perfil".formatted(BASE_URL, jugadorId);
+
+        WhoScoredRepositoryImpl repository =
+                new WhoScoredRepositoryImpl(
+                        BASE_URL,
+                        url -> {
+                            assertThat(url).isEqualTo(urlEsperada);
+                            return documentoDesdeFixture("fixtures/whoscored/perfil-jugador.html");
+                        });
+
+        Optional<String> foto = repository.obtenerFotoUrl(jugadorId);
+
+        assertThat(foto).contains("https://whoscored.test/fotos/12345.jpg");
+    }
+
+    @Test
+    void obtenerFotoUrl_sinFotoEnElPerfil_devuelveVacio() {
+        WhoScoredRepositoryImpl repository =
+                new WhoScoredRepositoryImpl(
+                        BASE_URL,
+                        url ->
+                                documentoDesdeFixture(
+                                        "fixtures/whoscored/perfil-jugador-sin-foto.html"));
+
+        Optional<String> foto = repository.obtenerFotoUrl(UUID.randomUUID());
+
+        assertThat(foto).isEmpty();
+    }
+
+    @Test
+    void obtenerFotoUrl_fallaDeRed_seAislaYDevuelveVacio() {
+        WhoScoredRepositoryImpl repository =
+                new WhoScoredRepositoryImpl(
+                        BASE_URL,
+                        url -> {
+                            throw new IOException("sitio no disponible");
+                        });
+
+        assertThat(repository.obtenerFotoUrl(UUID.randomUUID())).isEmpty();
+    }
+
+    @Test
+    void obtenerFotoUrl_jugadorIdNulo_lanzaExcepcion() {
+        WhoScoredRepositoryImpl repository = construirConFixtureVacia();
+
+        assertThatNullPointerException().isThrownBy(() -> repository.obtenerFotoUrl(null));
     }
 }

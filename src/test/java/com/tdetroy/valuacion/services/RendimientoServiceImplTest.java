@@ -23,6 +23,7 @@ import com.tdetroy.valuacion.repositories.RendimientoPartidoRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -233,6 +234,99 @@ class RendimientoServiceImplTest {
 
         verify(rendimientoPartidoRepository).save(any());
         verify(jugadorRepository).save(any());
+    }
+
+    // ---- ingestarRendimiento: foto de perfil ----
+
+    @Test
+    void ingestarRendimiento_conFotoNuevaYSinRendimiento_actualizaYPersisteLaFoto() {
+        Jugador jugador = jugadorActivo("Club A");
+        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
+                .thenReturn(List.of(JugadorEntity.desde(jugador)));
+        when(rendimientoExternoRepository.obtenerRendimiento(eq(jugador.getId()), any(), any()))
+                .thenReturn(List.of());
+        when(rendimientoExternoRepository.obtenerFotoUrl(jugador.getId()))
+                .thenReturn(Optional.of("https://whoscored.test/fotos/1.jpg"));
+
+        service.ingestarRendimiento();
+
+        ArgumentCaptor<JugadorEntity> jugadorCaptor = ArgumentCaptor.forClass(JugadorEntity.class);
+        verify(jugadorRepository).save(jugadorCaptor.capture());
+        assertThat(jugadorCaptor.getValue().getFotoUrl())
+                .isEqualTo("https://whoscored.test/fotos/1.jpg");
+        assertThat(jugadorCaptor.getValue().getFechaUltimaActualizacionRendimiento()).isNull();
+    }
+
+    @Test
+    void ingestarRendimiento_conFotoIgualALaYaPersistida_noGuardaDeNuevo() {
+        Jugador jugador = jugadorActivo("Club A");
+        jugador.actualizarFoto("https://whoscored.test/fotos/1.jpg");
+        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
+                .thenReturn(List.of(JugadorEntity.desde(jugador)));
+        when(rendimientoExternoRepository.obtenerRendimiento(eq(jugador.getId()), any(), any()))
+                .thenReturn(List.of());
+        when(rendimientoExternoRepository.obtenerFotoUrl(jugador.getId()))
+                .thenReturn(Optional.of("https://whoscored.test/fotos/1.jpg"));
+
+        service.ingestarRendimiento();
+
+        verify(jugadorRepository, never()).save(any());
+    }
+
+    @Test
+    void ingestarRendimiento_sinFotoDisponible_noGuardaPorEso() {
+        Jugador jugador = jugadorActivo("Club A");
+        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
+                .thenReturn(List.of(JugadorEntity.desde(jugador)));
+        when(rendimientoExternoRepository.obtenerRendimiento(eq(jugador.getId()), any(), any()))
+                .thenReturn(List.of());
+        when(rendimientoExternoRepository.obtenerFotoUrl(jugador.getId()))
+                .thenReturn(Optional.empty());
+
+        service.ingestarRendimiento();
+
+        verify(jugadorRepository, never()).save(any());
+    }
+
+    @Test
+    void ingestarRendimiento_fallaAlObtenerFoto_noInterrumpeLaIngestaDeRendimiento() {
+        Jugador jugador = jugadorActivo("Club A");
+        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
+                .thenReturn(List.of(JugadorEntity.desde(jugador)));
+        when(rendimientoExternoRepository.obtenerFotoUrl(jugador.getId()))
+                .thenThrow(new RuntimeException("whoscored no disponible"));
+        RendimientoCrudo crudo =
+                new RendimientoCrudo("444", LocalDate.of(2026, 2, 15), Map.of("goles", 2));
+        when(rendimientoExternoRepository.obtenerRendimiento(eq(jugador.getId()), any(), any()))
+                .thenReturn(List.of(crudo));
+        when(rendimientoPartidoRepository.existsByJugadorIdAndPartidoExternoId(
+                        jugador.getId(), "444"))
+                .thenReturn(false);
+
+        service.ingestarRendimiento();
+
+        verify(rendimientoPartidoRepository).save(any());
+        ArgumentCaptor<JugadorEntity> jugadorCaptor = ArgumentCaptor.forClass(JugadorEntity.class);
+        verify(jugadorRepository).save(jugadorCaptor.capture());
+        assertThat(jugadorCaptor.getValue().getFotoUrl()).isNull();
+    }
+
+    @Test
+    void ingestarRendimiento_fallaAlObtenerRendimientoPeroTraeFotoNueva_persisteLaFoto() {
+        Jugador jugador = jugadorActivo("Club A");
+        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
+                .thenReturn(List.of(JugadorEntity.desde(jugador)));
+        when(rendimientoExternoRepository.obtenerFotoUrl(jugador.getId()))
+                .thenReturn(Optional.of("https://whoscored.test/fotos/2.jpg"));
+        when(rendimientoExternoRepository.obtenerRendimiento(eq(jugador.getId()), any(), any()))
+                .thenThrow(new RuntimeException("whoscored no disponible"));
+
+        service.ingestarRendimiento();
+
+        ArgumentCaptor<JugadorEntity> jugadorCaptor = ArgumentCaptor.forClass(JugadorEntity.class);
+        verify(jugadorRepository).save(jugadorCaptor.capture());
+        assertThat(jugadorCaptor.getValue().getFotoUrl())
+                .isEqualTo("https://whoscored.test/fotos/2.jpg");
     }
 
     private RendimientoPartido capturarGuardado() {

@@ -17,6 +17,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.IsoFields;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +37,11 @@ import tools.jackson.databind.ObjectMapper;
  * {@code RendimientoPartidoRepository#existsByJugadorIdAndPartidoExternoId}): una reingesta del
  * mismo ciclo semanal (ej. reintento manual tras una falla parcial) nunca duplica una fila ya
  * persistida.
+ *
+ * <p>{@code ingestarRendimiento()} también aprovecha el mismo ciclo semanal para refrescar la foto
+ * de perfil de cada jugador vía {@code RendimientoExternoRepository#obtenerFotoUrl} (plan.md §8.1)
+ * — no es rendimiento deportivo, pero sale de la misma fuente y comparte la misma cadencia, así que
+ * no justifica un job propio.
  *
  * <p>Cada jugador se procesa de forma aislada (constitution.md §1 "manejo explícito de
  * fallos/indisponibilidad"): una excepción al traducir/persistir el rendimiento de un jugador
@@ -116,6 +123,8 @@ public class RendimientoServiceImpl implements RendimientoService {
     }
 
     private void ingestarRendimientoDeJugador(Jugador jugador, LocalDate desde, LocalDate hasta) {
+        boolean fotoActualizada = actualizarFotoSiCorresponde(jugador);
+
         List<RendimientoCrudo> rendimientos;
         try {
             rendimientos =
@@ -126,6 +135,9 @@ public class RendimientoServiceImpl implements RendimientoService {
                     jugador.getId(),
                     ex.getMessage(),
                     ex);
+            if (fotoActualizada) {
+                jugadorRepository.save(JugadorEntity.desde(jugador));
+            }
             return;
         }
 
@@ -152,8 +164,37 @@ public class RendimientoServiceImpl implements RendimientoService {
 
         if (huboIngestaNueva) {
             jugador.registrarActualizacionRendimiento(Instant.now());
+        }
+        if (huboIngestaNueva || fotoActualizada) {
             jugadorRepository.save(JugadorEntity.desde(jugador));
         }
+    }
+
+    /**
+     * Pide a WhoScored la foto de perfil del jugador y la aplica si trajo una URL nueva o distinta
+     * a la ya persistida. Aísla sus propios errores igual que el resto de la ingesta (constitution
+     * §1): una falla acá nunca interrumpe la ingesta de rendimiento del mismo jugador ni la del
+     * resto del catálogo.
+     *
+     * @return {@code true} si {@code jugador} quedó con una foto nueva pendiente de persistir
+     */
+    private boolean actualizarFotoSiCorresponde(Jugador jugador) {
+        Optional<String> fotoUrl;
+        try {
+            fotoUrl = rendimientoExternoRepository.obtenerFotoUrl(jugador.getId());
+        } catch (RuntimeException ex) {
+            log.error(
+                    "Fallo al obtener la foto de WhoScored para el jugador {}: {}",
+                    jugador.getId(),
+                    ex.getMessage(),
+                    ex);
+            return false;
+        }
+        if (fotoUrl.isEmpty() || Objects.equals(fotoUrl.get(), jugador.getFotoUrl())) {
+            return false;
+        }
+        jugador.actualizarFoto(fotoUrl.get());
+        return true;
     }
 
     private boolean ingestarSiNoExiste(

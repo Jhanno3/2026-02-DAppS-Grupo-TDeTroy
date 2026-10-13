@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { useParams } from 'react-router-dom'
-import { obtenerJugador } from '../../api/jugadores'
+import { Link, useParams } from 'react-router-dom'
+import { listarCotizaciones, obtenerJugador } from '../../api/jugadores'
 import { ApiError } from '../../api/client'
-import { LinkButton } from '../../shared/components/LinkButton'
+import { Avatar } from '../../shared/components/Avatar'
+import { CotizacionChart } from './CotizacionChart'
+import { TradePanel } from './TradePanel'
 import styles from './JugadorDetailPage.module.css'
 
 // fechaNacimiento es un LocalDate (sin huso horario) — forzar 'UTC' acá evita el clásico
@@ -20,8 +22,8 @@ const formatoFechaHora = new Intl.DateTimeFormat('es-AR', {
 })
 
 /**
- * UC-07: detalle de un jugador — identificatorios, tokens disponibles y fecha de última
- * actualización de rendimiento. Sin cotización/histórico todavía (UC-08 es T4.7, no construido).
+ * UC-07/UC-08: detalle de un jugador — identificatorios, cotización histórica (gráfico) y el panel
+ * de compra/venta contra el sistema (UC-09/UC-10).
  */
 export function JugadorDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -32,64 +34,98 @@ export function JugadorDetailPage() {
     enabled: Boolean(id),
   })
 
+  const cotizaciones = useQuery({
+    queryKey: ['cotizaciones', id],
+    queryFn: () => listarCotizaciones(id!),
+    enabled: Boolean(id),
+  })
+
   return (
-    <div className={styles.container}>
-      <LinkButton to="/jugadores" variant="ghost" small className={styles.back}>
-        ← Volver al catálogo
-      </LinkButton>
+    <div className={styles.scope}>
+      <main className={styles.container}>
+        <Link to="/mercado" className={styles.back}>
+          ← Volver al mercado
+        </Link>
 
-      {isLoading && <p>Cargando…</p>}
+        {isLoading && <p>Cargando…</p>}
 
-      {error && (
-        <p role="alert">
-          {error instanceof ApiError && error.status === 404
-            ? 'No existe un jugador con ese id.'
-            : 'No se pudo cargar el jugador. Intentá de nuevo.'}
-        </p>
-      )}
+        {error && (
+          <p role="alert">
+            {error instanceof ApiError && error.status === 404
+              ? 'No existe un jugador con ese id.'
+              : 'No se pudo cargar el jugador. Intentá de nuevo.'}
+          </p>
+        )}
 
-      {data && (
-        <>
-          <div className={styles.header}>
-            <h1 className={styles.nombre}>{data.nombre}</h1>
-            <span
-              className={`${styles.badge} ${
-                data.estado === 'ACTIVO'
-                  ? styles.badgeActivo
-                  : styles.badgeInactivo
-              }`}
-            >
-              {data.estado}
-            </span>
-          </div>
+        {data && (
+          <>
+            <div className={styles.header}>
+              <div className={styles.headerIdentidad}>
+                <Avatar src={data.fotoUrl} nombre={data.nombre} size="large" />
+                <h1 className={styles.nombre}>{data.nombre}</h1>
+              </div>
+              <span
+                className={`${styles.badge} ${
+                  data.estado === 'ACTIVO'
+                    ? styles.badgeActivo
+                    : styles.badgeInactivo
+                }`}
+              >
+                {data.estado}
+              </span>
+            </div>
 
-          <dl className={styles.datos}>
-            <dt>Club</dt>
-            <dd>{data.club}</dd>
+            <dl className={styles.datos}>
+              <dt>Club</dt>
+              <dd>{data.club}</dd>
 
-            <dt>Posición</dt>
-            <dd>{data.posicion}</dd>
+              <dt>Posición</dt>
+              <dd>{data.posicion}</dd>
 
-            <dt>Nacionalidad</dt>
-            <dd>{data.nacionalidad}</dd>
+              <dt>Nacionalidad</dt>
+              <dd>{data.nacionalidad}</dd>
 
-            <dt>Fecha de nacimiento</dt>
-            <dd>{formatoFecha.format(new Date(data.fechaNacimiento))}</dd>
+              <dt>Fecha de nacimiento</dt>
+              <dd>{formatoFecha.format(new Date(data.fechaNacimiento))}</dd>
 
-            <dt>Tokens disponibles</dt>
-            <dd>{data.tokensDisponibles} / 100</dd>
+              <dt>Tokens disponibles</dt>
+              <dd>{data.tokensDisponibles} / 100</dd>
 
-            <dt>Última actualización de rendimiento</dt>
-            <dd>
-              {data.fechaUltimaActualizacionRendimiento
-                ? formatoFechaHora.format(
-                    new Date(data.fechaUltimaActualizacionRendimiento),
-                  )
-                : 'Todavía sin datos de rendimiento'}
-            </dd>
-          </dl>
-        </>
-      )}
+              <dt>Última actualización de rendimiento</dt>
+              <dd>
+                {data.fechaUltimaActualizacionRendimiento
+                  ? formatoFechaHora.format(
+                      new Date(data.fechaUltimaActualizacionRendimiento),
+                    )
+                  : 'Todavía sin datos de rendimiento'}
+              </dd>
+            </dl>
+
+            <div className={styles.layout}>
+              <section className={styles.panel} aria-label="Cotización">
+                <h2>Cotización</h2>
+                {cotizaciones.isLoading && <p>Cargando…</p>}
+                {cotizaciones.data && (
+                  <CotizacionChart cotizaciones={cotizaciones.data} />
+                )}
+              </section>
+
+              <section aria-label="Operar">
+                <TradePanel
+                  jugadorId={data.id}
+                  cotizacionVigente={
+                    cotizaciones.data?.at(-1)
+                      ? Number(cotizaciones.data.at(-1)!.valor)
+                      : null
+                  }
+                  tokensDisponibles={data.tokensDisponibles}
+                  estaActivo={data.estado === 'ACTIVO'}
+                />
+              </section>
+            </div>
+          </>
+        )}
+      </main>
     </div>
   )
 }
