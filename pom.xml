@@ -296,13 +296,6 @@
 						</configuration>
 					</execution>
 					<execution>
-						<id>jacoco-report</id>
-						<phase>test</phase>
-						<goals>
-							<goal>report</goal>
-						</goals>
-					</execution>
-					<execution>
 						<id>jacoco-merge</id>
 						<phase>post-integration-test</phase>
 						<goals>
@@ -319,6 +312,24 @@
 								</fileSet>
 							</fileSets>
 							<destFile>${project.build.directory}/jacoco-merged.exec</destFile>
+						</configuration>
+					</execution>
+					<execution>
+						<!-- Reemplaza al viejo "jacoco-report" (bindeado a test, sobre jacoco.exec
+						     solamente): Sonar lee por convencion target/site/jacoco/jacoco.xml, y si
+						     ese reporte solo refleja los *Test.java unitarios, todo codigo ejercitado
+						     unicamente por un *IT.java (controllers/, buena parte de services/ via
+						     MockMvc) aparece como no cubierto en Sonar aunque jacoco-check si lo
+						     cuente (ese usa jacoco-merged.exec). Bindeado a verify, despues de
+						     jacoco-merge (post-integration-test), para que el reporte default que lee
+						     Sonar tambien sea sobre la cobertura unit+IT combinada. -->
+						<id>jacoco-report-merged</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+						<configuration>
+							<dataFile>${project.build.directory}/jacoco-merged.exec</dataFile>
 						</configuration>
 					</execution>
 					<execution>
