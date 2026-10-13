@@ -68,6 +68,18 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+      - name: Run frontend tests with coverage
+        working-directory: frontend
+        # Genera frontend/coverage/lcov.info *antes* del scan de Sonar (abajo) -- sin este paso,
+        # Sonar nunca ve cobertura de frontend/src (quedaba en 0%, arrastrando "new code coverage"
+        # muy por debajo del 80% aunque los tests existieran).
+        run: npm run test:coverage
+      - name: Corregir las rutas del lcov de frontend para que matcheen sonar.sources
+        # Vitest escribe las rutas "SF:" relativas a frontend/ (su propio cwd/root, ej.
+        # "SF:src/api/client.ts"), pero el scan de Sonar corre desde la raiz del repo con
+        # sonar.sources=frontend/src -- sin este prefijo, Sonar nunca matchea el reporte contra
+        # los archivos que analiza y descarta la cobertura entera en silencio.
+        run: sed -i 's|^SF:|SF:frontend/|' frontend/coverage/lcov.info
       - name: Build and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -76,10 +88,19 @@ jobs:
         # Un solo analisis cubriendo back y front bajo el mismo projectKey: Sonar trata cada
         # analisis como una foto completa del proyecto, asi que un segundo job/scan separado con
         # el mismo key pisaria por completo los resultados de este (no se combinan).
+        #
+        # sonar.sources=frontend/src incluye los *.test.ts(x) co-ubicados junto a cada componente
+        # (no hay carpeta de tests separada en frontend, a diferencia del backend) -- sin
+        # sonar.test.inclusions, Sonar los contaba como código fuente nuevo sin cobertura en vez
+        # de como tests, inflando el denominador de "new code coverage" con los tests mismos.
+        # sonar.javascript.lcov.reportPaths apunta al reporte generado en el paso anterior
+        # (sonar-javascript cubre TS también, no hace falta la propiedad "typescript" separada).
         run: >-
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -Ddependency-check.skip=true
           -Dsonar.projectKey=Jhanno3_2026-02-DAppS-Grupo-TDeTroy
           -Dsonar.sources=src/main/java,frontend/src
           -Dsonar.tests=src/test/java,frontend/e2e
-          -Dsonar.exclusions=frontend/node_modules/**,frontend/dist/**,frontend/test-results/**,frontend/playwright-report/**
+          -Dsonar.test.inclusions=frontend/src/**/*.test.ts,frontend/src/**/*.test.tsx
+          -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
+          -Dsonar.exclusions=frontend/node_modules/**,frontend/dist/**,frontend/coverage/**,frontend/test-results/**,frontend/playwright-report/**

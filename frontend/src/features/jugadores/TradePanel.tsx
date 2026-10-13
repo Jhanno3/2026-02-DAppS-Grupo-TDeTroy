@@ -51,9 +51,11 @@ export function TradePanel({
       modo === 'comprar'
         ? comprarTokens(jugadorId, cantidad, token!)
         : venderTokens(jugadorId, cantidad, token!),
-    onSuccess: (movimiento) => {
-      queryClient.invalidateQueries({ queryKey: ['portfolio', 'me'] })
-      queryClient.invalidateQueries({ queryKey: ['jugadores', jugadorId] })
+    onSuccess: async (movimiento) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portfolio', 'me'] }),
+        queryClient.invalidateQueries({ queryKey: ['jugadores', jugadorId] }),
+      ])
       setConfirmacion(
         `${modo === 'comprar' ? 'Compraste' : 'Vendiste'} ${movimiento.cantidad} token(s) por ${formatMoney(movimiento.montoTotal)}.`,
       )
