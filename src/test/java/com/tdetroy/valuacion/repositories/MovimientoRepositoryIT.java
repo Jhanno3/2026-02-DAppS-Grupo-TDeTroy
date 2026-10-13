@@ -98,4 +98,48 @@ class MovimientoRepositoryIT extends PostgresIntegrationTest {
         assertThat(primeroLeido.getMontoTotal()).isEqualByComparingTo("100.00");
         assertThat(segundoLeido.getMontoTotal()).isEqualByComparingTo("200.00");
     }
+
+    @Test
+    void findByUsuarioIdOrderByFechaAsc_devuelveSoloLosDeEseUsuarioEnOrdenCronologico() {
+        UUID usuarioId = UUID.randomUUID();
+        Movimiento masReciente =
+                Movimiento.registrar(
+                        usuarioId,
+                        null,
+                        TipoMovimiento.RECARGA_SALDO,
+                        null,
+                        null,
+                        new BigDecimal("200.00"),
+                        null,
+                        Instant.parse("2026-02-01T00:00:00Z"));
+        Movimiento masAntiguo =
+                Movimiento.registrar(
+                        usuarioId,
+                        null,
+                        TipoMovimiento.RECARGA_SALDO,
+                        null,
+                        null,
+                        new BigDecimal("100.00"),
+                        null,
+                        Instant.parse("2026-01-01T00:00:00Z"));
+        Movimiento deOtroUsuario =
+                Movimiento.registrar(
+                        UUID.randomUUID(),
+                        null,
+                        TipoMovimiento.RECARGA_SALDO,
+                        null,
+                        null,
+                        new BigDecimal("50.00"),
+                        null);
+        movimientoRepository.saveAndFlush(MovimientoEntity.desde(masReciente));
+        movimientoRepository.saveAndFlush(MovimientoEntity.desde(masAntiguo));
+        movimientoRepository.saveAndFlush(MovimientoEntity.desde(deOtroUsuario));
+        entityManager.clear();
+
+        var historial = movimientoRepository.findByUsuarioIdOrderByFechaAsc(usuarioId);
+
+        assertThat(historial)
+                .extracting(MovimientoEntity::getId)
+                .containsExactly(masAntiguo.getId(), masReciente.getId());
+    }
 }
