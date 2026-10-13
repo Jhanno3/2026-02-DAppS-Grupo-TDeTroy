@@ -1,282 +1,808 @@
 <!doctype html>
 <html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Detalle de jugador · Valuación</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#0B0F0D; --bg-header:#0E1411; --surface:#151B18; --surface-2:#1A221E; --chip:#1C2420;
-  --line:#26302B; --line-strong:#3A4640;
-  --text:#EEF2EE; --text-2:#B4BEB8; --muted:#9AA59F;
-  --accent:#C8F25A; --accent-hover:#E2FF9A; --down:#FF9A6B;
-  --oro:#E5B94E; --plata:#B9C2C8; --bronce:#C98652;
-  --display:'Barlow Condensed',sans-serif; --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',monospace;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px}
-a{color:var(--accent)}a:hover{color:var(--accent-hover)}
-.wrap{max-width:1360px;margin:0 auto;padding:0 24px}
-.header{border-bottom:1px solid var(--line);background:var(--bg-header)}
-.header .wrap{padding-top:14px;padding-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;gap:24px}
-.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
-.logo span{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:.04em}
-.nav{display:flex;flex-wrap:wrap;gap:4px;flex:1 1 auto}
-.nav a{padding:10px 14px;border-radius:8px;color:var(--text-2);text-decoration:none}
-.nav a[aria-current="page"]{background:var(--chip);color:var(--text);font-weight:600}
-.balance{text-align:right}
-.balance small{display:block;font-size:12px;color:var(--muted)}
-.balance strong{font-family:var(--mono);font-size:17px;font-weight:500}
-main{padding-top:24px;padding-bottom:64px}
-.back{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-size:14px;text-decoration:none}
-.layout{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start;margin-top:12px}
-.side{flex:1 1 320px;max-width:380px;display:flex;flex-direction:column;gap:16px}
-.content{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:24px}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
-.panel h2{margin:0 0 4px;font-family:var(--display);font-weight:700;font-size:26px}
-.panel .sub{margin:0 0 12px;font-size:13px;color:var(--muted)}
-/* carta grande */
-.bigcard{background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden}
-.bigcard__bar{height:8px;background:var(--oro)}
-.bigcard__photo{position:relative;height:320px;background:var(--surface-2);display:flex;align-items:flex-end;justify-content:center}
-.bigcard__rating{position:absolute;top:18px;left:18px;display:flex;flex-direction:column;align-items:center;line-height:1;font-family:var(--display)}
-.bigcard__rating b{font-weight:700;font-size:56px}
-.bigcard__rating span{font-weight:600;font-size:20px;color:var(--text-2);letter-spacing:.06em}
-.tier{position:absolute;top:20px;right:18px;padding:4px 12px;border-radius:999px;font-size:13px;font-weight:600;color:var(--bg);background:var(--oro)}
-.bigcard__body{padding:18px 20px 20px}
-.bigcard__name{font-family:var(--display);font-weight:700;font-size:34px;line-height:1}
-.bigcard__club{display:flex;align-items:center;gap:8px;margin-top:8px;color:var(--text-2)}
-.crest{width:18px;height:18px;border-radius:4px;background:#D94A3A}
-.stats{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.stats div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
-.stats dt{font-size:12px;color:var(--muted)}
-.stats dd{margin:4px 0 0;font-family:var(--mono);font-size:20px}
-/* precio */
-.price-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;align-items:flex-end}
-.price-head small{font-size:13px;color:var(--muted)}
-.price-now{display:flex;align-items:baseline;gap:14px;margin-top:4px;font-family:var(--mono)}
-.price-now strong{font-size:40px;font-weight:500}
-.up{color:var(--accent)}.down{color:var(--down)}
-.range{display:flex;gap:6px}
-.range button{height:44px;min-width:52px;border-radius:8px;border:1px solid var(--line-strong);background:transparent;color:#D5DCD7;font:inherit;cursor:pointer}
-.range button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--bg);font-weight:600}
-.chart{display:block;width:100%;height:200px;margin-top:20px}
-.row{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
-.row > .panel{flex:1 1 330px;min-width:0}
-/* tabla ofertas */
-.table-scroll{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th{color:var(--muted);font-size:12px;font-weight:500;text-align:left;padding:8px 0}
-td{padding:10px 0;border-top:1px solid var(--line)}
-.num{text-align:right;font-family:var(--mono)}
-th.num{font-family:var(--sans)}
-tr.is-selected td{color:var(--accent)}
-.btn-outline{height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);font:inherit;font-weight:600;cursor:pointer}
-.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-/* operar */
-.tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:4px;background:var(--bg-header);border-radius:12px}
-.tabs button{height:44px;border-radius:9px;border:none;font:inherit;font-weight:600;cursor:pointer;background:transparent;color:#D5DCD7}
-.tabs button[aria-selected="true"]{background:var(--accent);color:var(--bg)}
-.trade{display:flex;flex-direction:column;gap:16px;margin-top:20px}
-.kv{display:flex;justify-content:space-between;font-size:14px}
-.kv span:first-child{color:var(--muted)}
-.label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
-.stepper{display:flex;align-items:center;gap:8px}
-.stepper button{width:44px;height:44px;border-radius:10px;border:1px solid var(--line-strong);background:var(--chip);color:var(--text);font-size:20px;cursor:pointer}
-.stepper input{flex:1;min-width:0;height:44px;text-align:center;border-radius:10px;border:1px solid var(--line-strong);background:transparent;color:var(--text);font-family:var(--mono);font-size:18px}
-.hint{font-size:12px;color:var(--muted);margin-top:6px}
-.total{display:flex;justify-content:space-between;align-items:baseline;padding-top:14px;border-top:1px solid var(--line)}
-.total strong{font-family:var(--mono);font-size:24px;font-weight:500}
-.btn-primary{height:52px;border-radius:12px;border:none;background:var(--accent);color:var(--bg);font:inherit;font-weight:700;font-size:16px;cursor:pointer}
-.note{margin:0;font-size:12px;color:var(--muted)}
-</style>
-</head>
-<body>
-<header class="header">
-  <div class="wrap">
-    <a class="logo" href="mercado.html">
-      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="5" y="2" width="20" height="26" rx="4" fill="none" stroke="#C8F25A" stroke-width="2.5"/><circle cx="15" cy="13" r="4" fill="#C8F25A"/></svg>
-      <span>VALUACIÓN</span>
-    </a>
-    <nav class="nav" aria-label="Principal">
-      <a href="mercado.html" aria-current="page">Mercado</a>
-      <a href="cartera.html">Mi cartera</a>
-      <a href="#">Mis ofertas</a>
-      <a href="#">Historial</a>
-    </nav>
-    <div class="balance"><small>Saldo simulado</small><strong>$ 12.480,00</strong></div>
-  </div>
-</header>
-
-<main class="wrap">
-  <a class="back" href="mercado.html">
-    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    Volver al mercado
-  </a>
-
-  <div class="layout">
-    <div class="side">
-      <div class="bigcard">
-        <div class="bigcard__bar"></div>
-        <div class="bigcard__photo">
-          <!-- Reemplazar por <img src="..." alt="Foto de ..."> -->
-          <svg width="240" height="270" viewBox="0 0 150 168" aria-hidden="true"><circle cx="75" cy="62" r="36" fill="#2E3A34"/><path d="M12 168c4-40 30-62 63-62s59 22 63 62z" fill="#2E3A34"/></svg>
-          <div class="bigcard__rating"><b>90</b><span>MED</span></div>
-          <span class="tier">Oro</span>
-        </div>
-        <div class="bigcard__body">
-          <div class="bigcard__name">Nahuel Benítez</div>
-          <div class="bigcard__club"><span class="crest"></span>CA Ribera · 24 años · Argentina</div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Detalle de jugador · Valuación</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b0f0d;
+        --bg-header: #0e1411;
+        --surface: #151b18;
+        --surface-2: #1a221e;
+        --chip: #1c2420;
+        --line: #26302b;
+        --line-strong: #3a4640;
+        --text: #eef2ee;
+        --text-2: #b4beb8;
+        --muted: #9aa59f;
+        --accent: #c8f25a;
+        --accent-hover: #e2ff9a;
+        --down: #ff9a6b;
+        --oro: #e5b94e;
+        --plata: #b9c2c8;
+        --bronce: #c98652;
+        --display: 'Barlow Condensed', sans-serif;
+        --sans: 'IBM Plex Sans', system-ui, sans-serif;
+        --mono: 'IBM Plex Mono', monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 15px;
+      }
+      a {
+        color: var(--accent);
+      }
+      a:hover {
+        color: var(--accent-hover);
+      }
+      .wrap {
+        max-width: 1360px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .header {
+        border-bottom: 1px solid var(--line);
+        background: var(--bg-header);
+      }
+      .header .wrap {
+        padding-top: 14px;
+        padding-bottom: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 24px;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        color: var(--text);
+      }
+      .logo span {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 26px;
+        letter-spacing: 0.04em;
+      }
+      .nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        flex: 1 1 auto;
+      }
+      .nav a {
+        padding: 10px 14px;
+        border-radius: 8px;
+        color: var(--text-2);
+        text-decoration: none;
+      }
+      .nav a[aria-current='page'] {
+        background: var(--chip);
+        color: var(--text);
+        font-weight: 600;
+      }
+      .balance {
+        text-align: right;
+      }
+      .balance small {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .balance strong {
+        font-family: var(--mono);
+        font-size: 17px;
+        font-weight: 500;
+      }
+      main {
+        padding-top: 24px;
+        padding-bottom: 64px;
+      }
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        font-size: 14px;
+        text-decoration: none;
+      }
+      .layout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 32px;
+        align-items: flex-start;
+        margin-top: 12px;
+      }
+      .side {
+        flex: 1 1 320px;
+        max-width: 380px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .content {
+        flex: 999 1 560px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 20px;
+      }
+      .panel h2 {
+        margin: 0 0 4px;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 26px;
+      }
+      .panel .sub {
+        margin: 0 0 12px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      /* carta grande */
+      .bigcard {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        overflow: hidden;
+      }
+      .bigcard__bar {
+        height: 8px;
+        background: var(--oro);
+      }
+      .bigcard__photo {
+        position: relative;
+        height: 320px;
+        background: var(--surface-2);
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+      }
+      .bigcard__rating {
+        position: absolute;
+        top: 18px;
+        left: 18px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 1;
+        font-family: var(--display);
+      }
+      .bigcard__rating b {
+        font-weight: 700;
+        font-size: 56px;
+      }
+      .bigcard__rating span {
+        font-weight: 600;
+        font-size: 20px;
+        color: var(--text-2);
+        letter-spacing: 0.06em;
+      }
+      .tier {
+        position: absolute;
+        top: 20px;
+        right: 18px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--bg);
+        background: var(--oro);
+      }
+      .bigcard__body {
+        padding: 18px 20px 20px;
+      }
+      .bigcard__name {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 34px;
+        line-height: 1;
+      }
+      .bigcard__club {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+        color: var(--text-2);
+      }
+      .crest {
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        background: #d94a3a;
+      }
+      .stats {
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .stats div {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+      }
+      .stats dt {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .stats dd {
+        margin: 4px 0 0;
+        font-family: var(--mono);
+        font-size: 20px;
+      }
+      /* precio */
+      .price-head {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-end;
+      }
+      .price-head small {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .price-now {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        margin-top: 4px;
+        font-family: var(--mono);
+      }
+      .price-now strong {
+        font-size: 40px;
+        font-weight: 500;
+      }
+      .up {
+        color: var(--accent);
+      }
+      .down {
+        color: var(--down);
+      }
+      .range {
+        display: flex;
+        gap: 6px;
+      }
+      .range button {
+        height: 44px;
+        min-width: 52px;
+        border-radius: 8px;
+        border: 1px solid var(--line-strong);
+        background: transparent;
+        color: #d5dcd7;
+        font: inherit;
+        cursor: pointer;
+      }
+      .range button[aria-pressed='true'] {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--bg);
+        font-weight: 600;
+      }
+      .chart {
+        display: block;
+        width: 100%;
+        height: 200px;
+        margin-top: 20px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        align-items: flex-start;
+      }
+      .row > .panel {
+        flex: 1 1 330px;
+        min-width: 0;
+      }
+      /* tabla ofertas */
+      .table-scroll {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+        text-align: left;
+        padding: 8px 0;
+      }
+      td {
+        padding: 10px 0;
+        border-top: 1px solid var(--line);
+      }
+      .num {
+        text-align: right;
+        font-family: var(--mono);
+      }
+      th.num {
+        font-family: var(--sans);
+      }
+      tr.is-selected td {
+        color: var(--accent);
+      }
+      .btn-outline {
+        height: 44px;
+        padding: 0 14px;
+        border-radius: 8px;
+        border: 1px solid var(--accent);
+        background: transparent;
+        color: var(--accent);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      /* operar */
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        padding: 4px;
+        background: var(--bg-header);
+        border-radius: 12px;
+      }
+      .tabs button {
+        height: 44px;
+        border-radius: 9px;
+        border: none;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        background: transparent;
+        color: #d5dcd7;
+      }
+      .tabs button[aria-selected='true'] {
+        background: var(--accent);
+        color: var(--bg);
+      }
+      .trade {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-top: 20px;
+      }
+      .kv {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+      }
+      .kv span:first-child {
+        color: var(--muted);
+      }
+      .label {
+        display: block;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .stepper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .stepper button {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        border: 1px solid var(--line-strong);
+        background: var(--chip);
+        color: var(--text);
+        font-size: 20px;
+        cursor: pointer;
+      }
+      .stepper input {
+        flex: 1;
+        min-width: 0;
+        height: 44px;
+        text-align: center;
+        border-radius: 10px;
+        border: 1px solid var(--line-strong);
+        background: transparent;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 18px;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .total {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+      .total strong {
+        font-family: var(--mono);
+        font-size: 24px;
+        font-weight: 500;
+      }
+      .btn-primary {
+        height: 52px;
+        border-radius: 12px;
+        border: none;
+        background: var(--accent);
+        color: var(--bg);
+        font: inherit;
+        font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .note {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="wrap">
+        <a class="logo" href="mercado.html">
+          <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+            <rect
+              x="5"
+              y="2"
+              width="20"
+              height="26"
+              rx="4"
+              fill="none"
+              stroke="#C8F25A"
+              stroke-width="2.5"
+            />
+            <circle cx="15" cy="13" r="4" fill="#C8F25A" />
+          </svg>
+          <span>VALUACIÓN</span>
+        </a>
+        <nav class="nav" aria-label="Principal">
+          <a href="mercado.html" aria-current="page">Mercado</a>
+          <a href="cartera.html">Mi cartera</a>
+          <a href="#">Mis ofertas</a>
+          <a href="#">Historial</a>
+        </nav>
+        <div class="balance">
+          <small>Saldo simulado</small><strong>$ 12.480,00</strong>
         </div>
       </div>
-      <dl class="stats">
-        <div><dt>Copias emitidas</dt><dd>100</dd></div>
-        <div><dt>En venta ahora</dt><dd>6</dd></div>
-        <div><dt>Tenedores</dt><dd>47</dd></div>
-        <div><dt>Tus copias</dt><dd class="up" id="mis-copias">3</dd></div>
-      </dl>
-    </div>
+    </header>
 
-    <div class="content">
-      <section class="panel" aria-label="Precio" style="padding:24px">
-        <div class="price-head">
-          <div>
-            <small>Último precio por copia</small>
-            <div class="price-now"><strong>$ 2.150,00</strong><span class="up">▲ 7,1% (24h)</span></div>
-          </div>
-          <div class="range" role="group" aria-label="Rango del gráfico" id="range">
-            <button type="button" aria-pressed="false">24h</button>
-            <button type="button" aria-pressed="true">7d</button>
-            <button type="button" aria-pressed="false">30d</button>
-            <button type="button" aria-pressed="false">Todo</button>
-          </div>
-        </div>
-        <svg class="chart" viewBox="0 0 800 200" preserveAspectRatio="none" role="img" aria-label="Precio en los últimos 7 días, en suba">
-          <line x1="0" y1="50" x2="800" y2="50" stroke="#26302B"/>
-          <line x1="0" y1="100" x2="800" y2="100" stroke="#26302B"/>
-          <line x1="0" y1="150" x2="800" y2="150" stroke="#26302B"/>
-          <polyline points="0,150 70,142 140,148 210,128 280,132 350,118 420,124 490,98 560,104 630,80 700,66 800,42" fill="none" stroke="#C8F25A" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <main class="wrap">
+      <a class="back" href="mercado.html">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+          <path
+            d="M10 3 5 8l5 5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
-      </section>
+        Volver al mercado
+      </a>
 
-      <div class="row">
-        <section class="panel" aria-label="Ofertas de venta">
-          <h2>Ofertas de venta</h2>
-          <p class="sub">Usuarios que venden copias de esta carta</p>
-          <div class="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Vendedor</th>
-                  <th scope="col" class="num">Copias</th>
-                  <th scope="col" class="num">Precio c/u</th>
-                  <th scope="col"><span class="sr-only">Acción</span></th>
-                </tr>
-              </thead>
-              <tbody id="ofertas"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="panel" aria-label="Operar">
-          <div class="tabs" role="tablist" aria-label="Tipo de operación">
-            <button type="button" role="tab" id="tab-comprar" aria-selected="true">Comprar</button>
-            <button type="button" role="tab" id="tab-vender" aria-selected="false">Vender</button>
-          </div>
-          <form class="trade" id="trade">
-            <div class="kv"><span id="contraparte-label">Le comprás a</span><span style="font-weight:600" id="contraparte"></span></div>
-            <div>
-              <label class="label" for="cantidad">Cantidad de copias</label>
-              <div class="stepper">
-                <button type="button" aria-label="Restar una copia" id="menos">−</button>
-                <input type="number" name="cantidad" id="cantidad" min="1" value="1" inputmode="numeric">
-                <button type="button" aria-label="Sumar una copia" id="mas">+</button>
+      <div class="layout">
+        <div class="side">
+          <div class="bigcard">
+            <div class="bigcard__bar"></div>
+            <div class="bigcard__photo">
+              <!-- Reemplazar por <img src="..." alt="Foto de ..."> -->
+              <svg
+                width="240"
+                height="270"
+                viewBox="0 0 150 168"
+                aria-hidden="true"
+              >
+                <circle cx="75" cy="62" r="36" fill="#2E3A34" />
+                <path
+                  d="M12 168c4-40 30-62 63-62s59 22 63 62z"
+                  fill="#2E3A34"
+                />
+              </svg>
+              <div class="bigcard__rating"><b>90</b><span>MED</span></div>
+              <span class="tier">Oro</span>
+            </div>
+            <div class="bigcard__body">
+              <div class="bigcard__name">Nahuel Benítez</div>
+              <div class="bigcard__club">
+                <span class="crest"></span>CA Ribera · 24 años · Argentina
               </div>
-              <div class="hint" id="max-hint"></div>
             </div>
-            <div class="kv" id="precio-row">
-              <span>Precio por copia</span><span style="font-family:var(--mono)" id="precio-unit"></span>
+          </div>
+          <dl class="stats">
+            <div>
+              <dt>Copias emitidas</dt>
+              <dd>100</dd>
             </div>
-            <div class="total"><span style="font-weight:600">Total</span><strong id="total"></strong></div>
-            <button type="submit" class="btn-primary" id="cta">Confirmar compra</button>
-            <p class="note">Operación simulada: el saldo y las copias se transfieren entre usuarios de la plataforma.</p>
-          </form>
-        </section>
+            <div>
+              <dt>En venta ahora</dt>
+              <dd>6</dd>
+            </div>
+            <div>
+              <dt>Tenedores</dt>
+              <dd>47</dd>
+            </div>
+            <div>
+              <dt>Tus copias</dt>
+              <dd class="up" id="mis-copias">3</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="content">
+          <section class="panel" aria-label="Precio" style="padding: 24px">
+            <div class="price-head">
+              <div>
+                <small>Último precio por copia</small>
+                <div class="price-now">
+                  <strong>$ 2.150,00</strong
+                  ><span class="up">▲ 7,1% (24h)</span>
+                </div>
+              </div>
+              <div
+                class="range"
+                role="group"
+                aria-label="Rango del gráfico"
+                id="range"
+              >
+                <button type="button" aria-pressed="false">24h</button>
+                <button type="button" aria-pressed="true">7d</button>
+                <button type="button" aria-pressed="false">30d</button>
+                <button type="button" aria-pressed="false">Todo</button>
+              </div>
+            </div>
+            <svg
+              class="chart"
+              viewBox="0 0 800 200"
+              preserveAspectRatio="none"
+              role="img"
+              aria-label="Precio en los últimos 7 días, en suba"
+            >
+              <line x1="0" y1="50" x2="800" y2="50" stroke="#26302B" />
+              <line x1="0" y1="100" x2="800" y2="100" stroke="#26302B" />
+              <line x1="0" y1="150" x2="800" y2="150" stroke="#26302B" />
+              <polyline
+                points="0,150 70,142 140,148 210,128 280,132 350,118 420,124 490,98 560,104 630,80 700,66 800,42"
+                fill="none"
+                stroke="#C8F25A"
+                stroke-width="3"
+                stroke-linejoin="round"
+                vector-effect="non-scaling-stroke"
+              />
+            </svg>
+          </section>
+
+          <div class="row">
+            <section class="panel" aria-label="Ofertas de venta">
+              <h2>Ofertas de venta</h2>
+              <p class="sub">Usuarios que venden copias de esta carta</p>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Vendedor</th>
+                      <th scope="col" class="num">Copias</th>
+                      <th scope="col" class="num">Precio c/u</th>
+                      <th scope="col"><span class="sr-only">Acción</span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="ofertas"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel" aria-label="Operar">
+              <div class="tabs" role="tablist" aria-label="Tipo de operación">
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-comprar"
+                  aria-selected="true"
+                >
+                  Comprar
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-vender"
+                  aria-selected="false"
+                >
+                  Vender
+                </button>
+              </div>
+              <form class="trade" id="trade">
+                <div class="kv">
+                  <span id="contraparte-label">Le comprás a</span
+                  ><span style="font-weight: 600" id="contraparte"></span>
+                </div>
+                <div>
+                  <label class="label" for="cantidad">Cantidad de copias</label>
+                  <div class="stepper">
+                    <button
+                      type="button"
+                      aria-label="Restar una copia"
+                      id="menos"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      name="cantidad"
+                      id="cantidad"
+                      min="1"
+                      value="1"
+                      inputmode="numeric"
+                    />
+                    <button type="button" aria-label="Sumar una copia" id="mas">
+                      +
+                    </button>
+                  </div>
+                  <div class="hint" id="max-hint"></div>
+                </div>
+                <div class="kv" id="precio-row">
+                  <span>Precio por copia</span
+                  ><span
+                    style="font-family: var(--mono)"
+                    id="precio-unit"
+                  ></span>
+                </div>
+                <div class="total">
+                  <span style="font-weight: 600">Total</span
+                  ><strong id="total"></strong>
+                </div>
+                <button type="submit" class="btn-primary" id="cta">
+                  Confirmar compra
+                </button>
+                <p class="note">
+                  Operación simulada: el saldo y las copias se transfieren entre
+                  usuarios de la plataforma.
+                </p>
+              </form>
+            </section>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</main>
+    </main>
 
-<script>
-// Datos de ejemplo — reemplazar por GET /api/v1/jugadores/{id} y sus ofertas
-const OFERTAS = [
-  { user: '@lucia_m', copias: 2, precio: 2150 },
-  { user: '@tincho',  copias: 1, precio: 2180 },
-  { user: '@sofi',    copias: 2, precio: 2200 },
-  { user: '@rober',   copias: 1, precio: 2290 }
-];
-const MIS_COPIAS = 3;
-const ULTIMO_PRECIO = 2150;
+    <script>
+      // Datos de ejemplo — reemplazar por GET /api/v1/jugadores/{id} y sus ofertas
+      const OFERTAS = [
+        { user: '@lucia_m', copias: 2, precio: 2150 },
+        { user: '@tincho', copias: 1, precio: 2180 },
+        { user: '@sofi', copias: 2, precio: 2200 },
+        { user: '@rober', copias: 1, precio: 2290 },
+      ]
+      const MIS_COPIAS = 3
+      const ULTIMO_PRECIO = 2150
 
-const money = (n) => n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const $ = (id) => document.getElementById(id);
-const estado = { modo: 'comprar', oferta: 0, cantidad: 1 };
+      const money = (n) =>
+        n.toLocaleString('es-AR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      const $ = (id) => document.getElementById(id)
+      const estado = { modo: 'comprar', oferta: 0, cantidad: 1 }
 
-function maxPermitido() {
-  return estado.modo === 'comprar' ? OFERTAS[estado.oferta].copias : MIS_COPIAS;
-}
+      function maxPermitido() {
+        return estado.modo === 'comprar'
+          ? OFERTAS[estado.oferta].copias
+          : MIS_COPIAS
+      }
 
-function render() {
-  const comprar = estado.modo === 'comprar';
-  const max = maxPermitido();
-  estado.cantidad = Math.min(Math.max(1, estado.cantidad), max);
-  const unit = comprar ? OFERTAS[estado.oferta].precio : ULTIMO_PRECIO;
+      function render() {
+        const comprar = estado.modo === 'comprar'
+        const max = maxPermitido()
+        estado.cantidad = Math.min(Math.max(1, estado.cantidad), max)
+        const unit = comprar ? OFERTAS[estado.oferta].precio : ULTIMO_PRECIO
 
-  $('ofertas').innerHTML = OFERTAS.map((o, i) => `
+        $('ofertas').innerHTML = OFERTAS.map(
+          (o, i) => `
     <tr class="${comprar && i === estado.oferta ? 'is-selected' : ''}">
       <td>${o.user}</td>
       <td class="num">${o.copias}</td>
       <td class="num">$ ${money(o.precio)}</td>
       <td style="text-align:right;padding-left:12px"><button type="button" class="btn-outline" data-oferta="${i}">Elegir</button></td>
-    </tr>`).join('');
+    </tr>`,
+        ).join('')
 
-  $('tab-comprar').setAttribute('aria-selected', comprar);
-  $('tab-vender').setAttribute('aria-selected', !comprar);
-  $('contraparte-label').textContent = comprar ? 'Le comprás a' : 'Publicás en';
-  $('contraparte').textContent = comprar ? OFERTAS[estado.oferta].user : 'Mercado abierto';
-  $('cantidad').value = estado.cantidad;
-  $('cantidad').max = max;
-  $('max-hint').textContent = comprar ? `Máximo ${max} en esta oferta` : `Tenés ${MIS_COPIAS} copias disponibles`;
-  $('precio-unit').textContent = '$ ' + money(unit);
-  $('total').textContent = '$ ' + money(unit * estado.cantidad);
-  $('cta').textContent = comprar ? 'Confirmar compra' : 'Publicar venta';
-}
+        $('tab-comprar').setAttribute('aria-selected', comprar)
+        $('tab-vender').setAttribute('aria-selected', !comprar)
+        $('contraparte-label').textContent = comprar
+          ? 'Le comprás a'
+          : 'Publicás en'
+        $('contraparte').textContent = comprar
+          ? OFERTAS[estado.oferta].user
+          : 'Mercado abierto'
+        $('cantidad').value = estado.cantidad
+        $('cantidad').max = max
+        $('max-hint').textContent = comprar
+          ? `Máximo ${max} en esta oferta`
+          : `Tenés ${MIS_COPIAS} copias disponibles`
+        $('precio-unit').textContent = '$ ' + money(unit)
+        $('total').textContent = '$ ' + money(unit * estado.cantidad)
+        $('cta').textContent = comprar ? 'Confirmar compra' : 'Publicar venta'
+      }
 
-$('ofertas').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-oferta]');
-  if (!b) return;
-  Object.assign(estado, { modo: 'comprar', oferta: Number(b.dataset.oferta), cantidad: 1 });
-  render();
-});
-$('tab-comprar').addEventListener('click', () => { Object.assign(estado, { modo: 'comprar', cantidad: 1 }); render(); });
-$('tab-vender').addEventListener('click', () => { Object.assign(estado, { modo: 'vender', cantidad: 1 }); render(); });
-$('menos').addEventListener('click', () => { estado.cantidad--; render(); });
-$('mas').addEventListener('click', () => { estado.cantidad++; render(); });
-$('cantidad').addEventListener('change', (e) => { estado.cantidad = parseInt(e.target.value, 10) || 1; render(); });
-$('range').addEventListener('click', (e) => {
-  const b = e.target.closest('button');
-  if (!b) return;
-  $('range').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b));
-});
-$('trade').addEventListener('submit', (e) => {
-  e.preventDefault();
-  // Acá va la llamada al backend (POST de compra / publicación de venta)
-  alert(`${estado.modo === 'comprar' ? 'Compra' : 'Venta'} simulada: ${estado.cantidad} copia(s) — total ${$('total').textContent}`);
-});
+      $('ofertas').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-oferta]')
+        if (!b) return
+        Object.assign(estado, {
+          modo: 'comprar',
+          oferta: Number(b.dataset.oferta),
+          cantidad: 1,
+        })
+        render()
+      })
+      $('tab-comprar').addEventListener('click', () => {
+        Object.assign(estado, { modo: 'comprar', cantidad: 1 })
+        render()
+      })
+      $('tab-vender').addEventListener('click', () => {
+        Object.assign(estado, { modo: 'vender', cantidad: 1 })
+        render()
+      })
+      $('menos').addEventListener('click', () => {
+        estado.cantidad--
+        render()
+      })
+      $('mas').addEventListener('click', () => {
+        estado.cantidad++
+        render()
+      })
+      $('cantidad').addEventListener('change', (e) => {
+        estado.cantidad = parseInt(e.target.value, 10) || 1
+        render()
+      })
+      $('range').addEventListener('click', (e) => {
+        const b = e.target.closest('button')
+        if (!b) return
+        $('range')
+          .querySelectorAll('button')
+          .forEach((x) => x.setAttribute('aria-pressed', x === b))
+      })
+      $('trade').addEventListener('submit', (e) => {
+        e.preventDefault()
+        // Acá va la llamada al backend (POST de compra / publicación de venta)
+        alert(
+          `${estado.modo === 'comprar' ? 'Compra' : 'Venta'} simulada: ${estado.cantidad} copia(s) — total ${$('total').textContent}`,
+        )
+      })
 
-render();
-</script>
-</body>
+      render()
+    </script>
+  </body>
 </html>

@@ -99,7 +99,11 @@ export function TradePanel({
 
   return (
     <div className={styles.panel}>
-      <div className={styles.tabs} role="tablist" aria-label="Tipo de operación">
+      <div
+        className={styles.tabs}
+        role="tablist"
+        aria-label="Tipo de operación"
+      >
         <button
           type="button"
           role="tab"

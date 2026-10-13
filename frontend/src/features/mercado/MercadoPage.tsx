@@ -77,7 +77,10 @@ export function MercadoPage() {
           jugador.nombre.toLowerCase().includes(q) ||
           jugador.club.toLowerCase().includes(q)),
     )
-    const sorts: Record<Orden, (a: JugadorConPrecio, b: JugadorConPrecio) => number> = {
+    const sorts: Record<
+      Orden,
+      (a: JugadorConPrecio, b: JugadorConPrecio) => number
+    > = {
       nombre: (a, b) => a.jugador.nombre.localeCompare(b.jugador.nombre),
       'precio-desc': (a, b) => (b.precio ?? 0) - (a.precio ?? 0),
       'precio-asc': (a, b) => (a.precio ?? 0) - (b.precio ?? 0),
@@ -192,7 +195,9 @@ function Carta({ item }: { item: JugadorConPrecio }) {
           </div>
         </div>
         <div className={styles.cardPrice}>
-          <strong>{precio !== null ? formatMoney(precio) : 'Sin cotización'}</strong>
+          <strong>
+            {precio !== null ? formatMoney(precio) : 'Sin cotización'}
+          </strong>
           {variacion !== null && (
             <span className={sube ? styles.up : styles.down}>
               {sube ? '▲' : '▼'} {Math.abs(variacion).toFixed(1)}%

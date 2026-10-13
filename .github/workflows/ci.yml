@@ -84,6 +84,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
+      - run: npm run test:coverage
+        # Vitest + React Testing Library (src/**/*.test.{ts,tsx}): cubre api/, hooks de auth y los
+        # componentes con lógica propia (Avatar, CotizacionChart, TradePanel, MercadoPage,
+        # CarteraPage). Nunca corre e2e/*.e2e.spec.ts (Playwright) — vite.config.ts lo excluye
+        # explícitamente del `include` de Vitest.
       - run: npm run build
-        # Sin `npm test` todavía: T8.x (componentes/hooks del frontend) no arrancó, no hay tests
-        # que correr. Se suma acá en cuanto exista el primer test de React Testing Library/Jest.

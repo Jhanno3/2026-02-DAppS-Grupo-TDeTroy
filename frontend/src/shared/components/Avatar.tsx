@@ -23,7 +23,11 @@ function iniciales(nombre: string): string {
 export function Avatar({ src, nombre, size = 'small' }: AvatarProps) {
   const [fallo, setFallo] = useState(false)
   const sizeClass =
-    size === 'fill' ? styles.fill : size === 'large' ? styles.large : styles.small
+    size === 'fill'
+      ? styles.fill
+      : size === 'large'
+        ? styles.large
+        : styles.small
 
   if (!src || fallo) {
     return (
@@ -40,7 +44,12 @@ export function Avatar({ src, nombre, size = 'small' }: AvatarProps) {
     // que no calzan con el contenedor).
     return (
       <div className={`${styles.avatar} ${sizeClass} ${styles.fillWrapper}`}>
-        <img src={src} alt="" aria-hidden="true" className={styles.fillBackdrop} />
+        <img
+          src={src}
+          alt=""
+          aria-hidden="true"
+          className={styles.fillBackdrop}
+        />
         <img
           src={src}
           alt={`Foto de ${nombre}`}

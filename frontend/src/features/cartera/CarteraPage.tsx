@@ -88,7 +88,9 @@ export function CarteraPage() {
                               nombre={jugador?.nombre ?? '?'}
                             />
                             <div>
-                              <b>{jugador?.nombre ?? 'Jugador no disponible'}</b>
+                              <b>
+                                {jugador?.nombre ?? 'Jugador no disponible'}
+                              </b>
                               <small>{jugador?.club}</small>
                             </div>
                           </div>
