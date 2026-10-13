@@ -112,7 +112,7 @@ class MovimientoControllerIT {
     @Test
     void obtenerMiHistorial_deUnUsuario_nuncaIncluyeMovimientosDeOtroUsuario() {
         Usuario usuarioUno = crearUsuarioConSaldo(new BigDecimal("1000.00"));
-        Usuario usuarioDos = crearUsuarioConSaldo(new BigDecimal("1000.00"));
+        Usuario usuarioDos = crearUsuarioConSaldo(BigDecimal.ZERO);
         Jugador jugador = crearJugador();
         mvc.post()
                 .uri("/api/v1/jugadores/{id}/compras", jugador.getId())
