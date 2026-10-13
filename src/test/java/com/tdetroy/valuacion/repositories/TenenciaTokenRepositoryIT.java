@@ -84,4 +84,20 @@ class TenenciaTokenRepositoryIT extends PostgresIntegrationTest {
                                                 TenenciaToken.abrir(usuarioId, jugadorId))))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
+
+    @Test
+    void findByUsuarioIdAndCantidadGreaterThan_soloTraeLasTenenciasConCantidadPositiva() {
+        UUID usuarioId = UUID.randomUUID();
+        TenenciaToken conTokens = TenenciaToken.abrir(usuarioId, UUID.randomUUID());
+        conTokens.acreditar(5);
+        TenenciaToken sinTokens = TenenciaToken.abrir(usuarioId, UUID.randomUUID());
+        tenenciaTokenRepository.saveAndFlush(TenenciaTokenEntity.desde(conTokens));
+        tenenciaTokenRepository.saveAndFlush(TenenciaTokenEntity.desde(sinTokens));
+        entityManager.clear();
+
+        var resultado = tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0);
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getId()).isEqualTo(conTokens.getId());
+    }
 }
