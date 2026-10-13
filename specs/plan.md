@@ -88,6 +88,7 @@ Jugador (entidad JPA)
   tokensEmitidos: int  (0..100, invariante propia de la entidad)
   cotizacionVigenteId: referencia a la última CotizacionHistorica (puede ser null hasta el primer cálculo)
   fechaUltimaActualizacionRendimiento: Instant (nullable)
+  fotoUrl: String (nullable; la fija RendimientoServiceImpl via WhoScoredRepositoryImpl#obtenerFotoUrl, ver §8.1 — nunca el alta/edición de UC-03/UC-04)
 
 Métodos propios:
   emitirTokens(int cantidad)   -> throws EmisionMaximaSuperadaException si tokensEmitidos + cantidad > 100
@@ -336,6 +337,7 @@ Dos estrategias iniciales (registradas como beans, seleccionables por `clave`):
 ```
 repositories/
   RendimientoExternoRepository (interfaz)      -- obtenerRendimiento(jugador, rangoFechas) -> List<RendimientoCrudo>
+                                                -- obtenerFotoUrl(jugador) -> Optional<String>
   FixtureRepository (interfaz)                 -- obtenerPartidosDisputados(rangoFechas) -> List<PartidoCrudo>
   WhoScoredRepositoryImpl implements RendimientoExternoRepository
   FootballDataRepositoryImpl implements FixtureRepository
@@ -343,6 +345,8 @@ repositories/
 ```
 
 `RendimientoService` sólo conoce las interfaces `RendimientoExternoRepository`/`FixtureRepository` y el modelo interno (`RendimientoPartido`); nunca el formato de respuesta de WhoScored ni de Football-Data.org (constitution §1/§2). Cada implementación traduce y aísla sus propios errores (try/catch interno + logging), nunca propaga una excepción que tumbe al otro flujo.
+
+`obtenerFotoUrl` no es rendimiento deportivo (no genera `RendimientoPartido`): es la URL de la foto de perfil del jugador, scrapeada de la misma fuente (WhoScored) y aplicada sobre `Jugador.fotoUrl` (plan §2.2) por `RendimientoServiceImpl.ingestarRendimiento()`, reutilizando su misma ventana e isolation de errores en vez de un job propio. `Optional.empty()` cuando la fuente no tiene foto para ese jugador — nunca bloquea al resto de la ingesta.
 
 ### 8.2 Frecuencia de ingesta (constitution §1, decisión firme)
 

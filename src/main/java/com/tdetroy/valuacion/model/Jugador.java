@@ -39,6 +39,7 @@ public class Jugador {
 
     private UUID cotizacionVigenteId;
     private Instant fechaUltimaActualizacionRendimiento;
+    private String fotoUrl;
 
     private Jugador(
             String nombre,
@@ -58,6 +59,7 @@ public class Jugador {
         this.token = Token.nueva();
         this.cotizacionVigenteId = null;
         this.fechaUltimaActualizacionRendimiento = null;
+        this.fotoUrl = null;
     }
 
     /**
@@ -83,7 +85,8 @@ public class Jugador {
             EstadoJugador estado,
             int tokensEmitidos,
             UUID cotizacionVigenteId,
-            Instant fechaUltimaActualizacionRendimiento) {
+            Instant fechaUltimaActualizacionRendimiento,
+            String fotoUrl) {
         this.id = id;
         this.nombre = nombre;
         this.club = club;
@@ -94,6 +97,7 @@ public class Jugador {
         this.token = Token.reconstruir(tokensEmitidos);
         this.cotizacionVigenteId = cotizacionVigenteId;
         this.fechaUltimaActualizacionRendimiento = fechaUltimaActualizacionRendimiento;
+        this.fotoUrl = fotoUrl;
     }
 
     /**
@@ -112,7 +116,8 @@ public class Jugador {
             EstadoJugador estado,
             int tokensEmitidos,
             UUID cotizacionVigenteId,
-            Instant fechaUltimaActualizacionRendimiento) {
+            Instant fechaUltimaActualizacionRendimiento,
+            String fotoUrl) {
         return new Jugador(
                 id,
                 nombre,
@@ -123,7 +128,8 @@ public class Jugador {
                 estado,
                 tokensEmitidos,
                 cotizacionVigenteId,
-                fechaUltimaActualizacionRendimiento);
+                fechaUltimaActualizacionRendimiento,
+                fotoUrl);
     }
 
     /**
@@ -202,6 +208,19 @@ public class Jugador {
     public void registrarActualizacionRendimiento(Instant fecha) {
         Objects.requireNonNull(fecha, "fecha no puede ser null");
         this.fechaUltimaActualizacionRendimiento = fecha;
+    }
+
+    /**
+     * Actualiza la URL de la foto de perfil con la que {@code RendimientoServiceImpl} (tasks.md
+     * T3.5) scrapeó desde WhoScored durante la ingesta semanal — nunca seteable desde el
+     * alta/edición (UC-03/UC-04): no es un dato identificatorio que administre un Administrador,
+     * sino un dato derivado de la fuente externa, igual criterio que {@link
+     * #registrarActualizacionRendimiento}. Sin validar formato: una URL vacía o inválida
+     * simplemente no es la responsabilidad de este método (el scraper nunca llega a invocarlo si no
+     * encontró una foto, ver {@code RendimientoExternoRepository#obtenerFotoUrl}).
+     */
+    public void actualizarFoto(String fotoUrl) {
+        this.fotoUrl = fotoUrl;
     }
 
     /**

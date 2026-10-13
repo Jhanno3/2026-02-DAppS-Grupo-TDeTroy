@@ -109,6 +109,7 @@ class CotizacionServiceImplTest {
                 EstadoJugador.ACTIVO,
                 0,
                 null,
+                null,
                 null);
     }
 

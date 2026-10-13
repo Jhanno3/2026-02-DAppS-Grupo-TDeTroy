@@ -1,38 +1,73 @@
+.scope {
+  --bg: #0b0f0d;
+  --surface: #151b18;
+  --surface-2: #1a221e;
+  --chip: #1c2420;
+  --line: #26302b;
+  --line-strong: #3a4640;
+  --text: #eef2ee;
+  --text-2: #b4beb8;
+  --muted: #9aa59f;
+  --accent: #c8f25a;
+  --down: #ff9a6b;
+
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100%;
+}
+
 .container {
-  padding: 1.5rem;
-  max-width: 32rem;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
 }
 
 .back {
-  margin-bottom: 1rem;
+  display: inline-flex;
+  margin-bottom: 1.5rem;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.back:hover {
+  color: var(--accent);
 }
 
 .header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  gap: 1rem;
+}
+
+.headerIdentidad {
+  display: flex;
+  align-items: center;
   gap: 1rem;
 }
 
 .nombre {
   margin: 0;
+  font-size: 2rem;
 }
 
 .badge {
-  padding: 0.125rem 0.5rem;
+  padding: 0.1875rem 0.625rem;
   border-radius: 999px;
   font-size: 0.8rem;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .badgeActivo {
-  background: light-dark(#e8f4ea, #1e3324);
-  color: light-dark(#1e5c2c, #8fd9a0);
+  background: var(--chip);
+  color: var(--accent);
 }
 
 .badgeInactivo {
-  background: light-dark(#f1f1f1, #2a2a2a);
-  color: light-dark(#666, #999);
+  background: var(--chip);
+  color: var(--text-2);
 }
 
 .datos {
@@ -44,9 +79,34 @@
 }
 
 .datos dt {
-  color: light-dark(#666, #999);
+  color: var(--muted);
 }
 
 .datos dd {
   margin: 0;
+}
+
+.layout {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.layout > * {
+  flex: 1 1 20rem;
+  min-width: 0;
+}
+
+.panel {
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
 }

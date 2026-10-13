@@ -54,6 +54,8 @@ public class JugadorEntity {
 
     private Instant fechaUltimaActualizacionRendimiento;
 
+    private String fotoUrl;
+
     /** Traduce {@code jugador} a la fila que persiste {@code repositories/}. */
     public static JugadorEntity desde(Jugador jugador) {
         JugadorEntity entity = new JugadorEntity();
@@ -68,6 +70,7 @@ public class JugadorEntity {
         entity.cotizacionVigenteId = jugador.getCotizacionVigenteId();
         entity.fechaUltimaActualizacionRendimiento =
                 jugador.getFechaUltimaActualizacionRendimiento();
+        entity.fotoUrl = jugador.getFotoUrl();
         return entity;
     }
 
@@ -83,6 +86,7 @@ public class JugadorEntity {
                 estado,
                 tokensEmitidos,
                 cotizacionVigenteId,
-                fechaUltimaActualizacionRendimiento);
+                fechaUltimaActualizacionRendimiento,
+                fotoUrl);
     }
 }

@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -29,10 +30,15 @@ import org.springframework.stereotype.Repository;
  * a exponer (o deje de exponer) no rompe la traducción (plan.md §2.3/§6.2, spec.md UC-05: "sin
  * curación previa").
  *
+ * <p>{@link #obtenerFotoUrl} scrapea una página de perfil separada ({@code /jugadores/{id}/perfil},
+ * distinta de la de rendimiento) leyendo el {@code src} de {@code img#foto-jugador}; devuelve
+ * {@link Optional#empty()} si la página no trae esa foto, mismo criterio de "no bloquea el resto
+ * del catálogo" que {@link #obtenerRendimiento}.
+ *
  * <p>Aísla sus propios errores: cualquier falla de red/parseo se loguea acá y devuelve lista vacía
- * en lugar de propagar la excepción — una caída o un cambio de estructura de WhoScored nunca debe
- * tumbar el resto del sistema ni al flujo de Football-Data.org (constitution §1, "Manejo explícito
- * de fallos/indisponibilidad por fuente").
+ * (o {@link Optional#empty()}) en lugar de propagar la excepción — una caída o un cambio de
+ * estructura de WhoScored nunca debe tumbar el resto del sistema ni al flujo de Football-Data.org
+ * (constitution §1, "Manejo explícito de fallos/indisponibilidad por fuente").
  */
 @Repository
 public class WhoScoredRepositoryImpl implements RendimientoExternoRepository {
@@ -43,6 +49,7 @@ public class WhoScoredRepositoryImpl implements RendimientoExternoRepository {
     private static final int TIMEOUT_MS = 10_000;
     private static final String SELECTOR_FILA_PARTIDO = "tr.partido";
     private static final String SELECTOR_METRICA = "td[data-metrica]";
+    private static final String SELECTOR_FOTO = "img#foto-jugador";
 
     private final String baseUrl;
     private final DocumentoFetcher documentoFetcher;
@@ -75,6 +82,27 @@ public class WhoScoredRepositoryImpl implements RendimientoExternoRepository {
                     ex.getMessage(),
                     ex);
             return List.of();
+        }
+    }
+
+    @Override
+    public Optional<String> obtenerFotoUrl(UUID jugadorId) {
+        Objects.requireNonNull(jugadorId, "jugadorId no puede ser null");
+        String url = "%s/jugadores/%s/perfil".formatted(baseUrl, jugadorId);
+        try {
+            Element foto = documentoFetcher.obtener(url).selectFirst(SELECTOR_FOTO);
+            if (foto == null) {
+                return Optional.empty();
+            }
+            String src = foto.attr("src");
+            return src.isBlank() ? Optional.empty() : Optional.of(src);
+        } catch (IOException | RuntimeException ex) {
+            log.error(
+                    "Fallo al obtener la foto de WhoScored para el jugador {}: {}",
+                    jugadorId,
+                    ex.getMessage(),
+                    ex);
+            return Optional.empty();
         }
     }
 
