@@ -40,5 +40,16 @@ services:
       timeout: 5s
       retries: 10
 
+  # Microservicio sidecar en Node.js + Playwright para resolver
+  # los desafíos anti-bot de Cloudflare en WhoScored
+  scraper-service:
+    build:
+      context: ./scraper-service
+      dockerfile: Dockerfile
+    container_name: whoscored-scraper-dev
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+
 volumes:
   valuacion_dev_data:

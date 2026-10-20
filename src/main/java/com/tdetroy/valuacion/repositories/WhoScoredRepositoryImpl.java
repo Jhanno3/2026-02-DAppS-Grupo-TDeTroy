@@ -46,7 +46,8 @@ public class WhoScoredRepositoryImpl implements RendimientoExternoRepository {
     private static final Logger log = LoggerFactory.getLogger(WhoScoredRepositoryImpl.class);
 
     private static final String USER_AGENT = "Mozilla/5.0 (compatible; ValuacionJugadoresBot/1.0)";
-    private static final int TIMEOUT_MS = 10_000;
+    private static final int TIMEOUT_MS = 35_000;
+    ;
     private static final String SELECTOR_FILA_PARTIDO = "tr.partido";
     private static final String SELECTOR_METRICA = "td[data-metrica]";
     private static final String SELECTOR_FOTO = "img#foto-jugador";
@@ -55,8 +56,26 @@ public class WhoScoredRepositoryImpl implements RendimientoExternoRepository {
     private final DocumentoFetcher documentoFetcher;
 
     @Autowired
-    public WhoScoredRepositoryImpl(@Value("${app.whoscored.base-url}") String baseUrl) {
-        this(baseUrl, url -> Jsoup.connect(url).userAgent(USER_AGENT).timeout(TIMEOUT_MS).get());
+    public WhoScoredRepositoryImpl(
+            @Value("${app.whoscored.base-url}") String baseUrl,
+            @Value("${app.whoscored.fetcher-url:}") String fetcherUrl) {
+        this(
+                baseUrl,
+                url -> {
+                    String urlEfectiva = url;
+                    // Si tenemos configurado el scraper sidecar, pasamos la petición por él
+                    if (fetcherUrl != null && !fetcherUrl.isBlank()) {
+                        String urlCodificada =
+                                java.net.URLEncoder.encode(
+                                        url, java.nio.charset.StandardCharsets.UTF_8);
+                        urlEfectiva = "%s?url=%s".formatted(fetcherUrl, urlCodificada);
+                    }
+                    return Jsoup.connect(urlEfectiva)
+                            .userAgent(USER_AGENT)
+                            .timeout(TIMEOUT_MS)
+                            .maxBodySize(0)
+                            .get();
+                });
     }
 
     WhoScoredRepositoryImpl(String baseUrl, DocumentoFetcher documentoFetcher) {
