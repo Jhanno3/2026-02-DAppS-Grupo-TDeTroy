@@ -106,6 +106,7 @@ class CotizacionServiceImplTest {
                 "Delantero",
                 LocalDate.of(2000, 1, 1),
                 "Argentina",
+                "Liga de prueba",
                 EstadoJugador.ACTIVO,
                 0,
                 null,

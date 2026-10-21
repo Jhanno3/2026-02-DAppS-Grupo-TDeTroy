@@ -85,6 +85,9 @@ export function JugadorDetailPage() {
               <dt>Nacionalidad</dt>
               <dd>{data.nacionalidad}</dd>
 
+              <dt>Liga</dt>
+              <dd>{data.liga}</dd>
+
               <dt>Fecha de nacimiento</dt>
               <dd>{formatoFecha.format(new Date(data.fechaNacimiento))}</dd>
 

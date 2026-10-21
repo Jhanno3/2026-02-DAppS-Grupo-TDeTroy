@@ -33,7 +33,8 @@ class JugadorRepositoryIT extends PostgresIntegrationTest {
                         "Inter Miami CF",
                         "Delantero",
                         fechaNacimiento,
-                        "Argentina");
+                        "Argentina",
+                        "Major League Soccer");
 
         JugadorEntity guardado = jugadorRepository.saveAndFlush(JugadorEntity.desde(jugador));
         entityManager.clear();
@@ -46,6 +47,7 @@ class JugadorRepositoryIT extends PostgresIntegrationTest {
         assertThat(leido.getPosicion()).isEqualTo("Delantero");
         assertThat(leido.getFechaNacimiento()).isEqualTo(fechaNacimiento);
         assertThat(leido.getNacionalidad()).isEqualTo("Argentina");
+        assertThat(leido.getLiga()).isEqualTo("Major League Soccer");
         assertThat(leido.getEstado()).isEqualTo(EstadoJugador.ACTIVO);
         assertThat(leido.getTokensEmitidos()).isZero();
         assertThat(leido.getCotizacionVigenteId()).isNull();
@@ -62,7 +64,8 @@ class JugadorRepositoryIT extends PostgresIntegrationTest {
                                         "Real Madrid CF",
                                         "Delantero",
                                         LocalDate.of(1998, 12, 20),
-                                        "Francia")));
+                                        "Francia",
+                                        "La Liga")));
         jugador.setTokensEmitidos(80);
         jugadorRepository.saveAndFlush(jugador);
         entityManager.clear();
@@ -90,7 +93,8 @@ class JugadorRepositoryIT extends PostgresIntegrationTest {
                                         "Club A",
                                         "Delantero",
                                         LocalDate.of(2000, 1, 1),
-                                        "Argentina")));
+                                        "Argentina",
+                                        "Liga A")));
         JugadorEntity inactivo =
                 JugadorEntity.desde(
                         Jugador.darAlta(
@@ -98,7 +102,8 @@ class JugadorRepositoryIT extends PostgresIntegrationTest {
                                 "Club B",
                                 "Arquero",
                                 LocalDate.of(1995, 5, 5),
-                                "Brasil"));
+                                "Brasil",
+                                "Liga B"));
         inactivo.setEstado(EstadoJugador.INACTIVO);
         jugadorRepository.saveAndFlush(inactivo);
         entityManager.clear();

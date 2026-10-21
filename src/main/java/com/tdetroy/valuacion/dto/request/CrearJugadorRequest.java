@@ -15,4 +15,5 @@ public record CrearJugadorRequest(
         @NotBlank String club,
         @NotBlank String posicion,
         @NotNull @Past LocalDate fechaNacimiento,
-        @NotBlank String nacionalidad) {}
+        @NotBlank String nacionalidad,
+        @NotBlank String liga) {}

@@ -22,9 +22,10 @@ class JugadorTest {
     private static final String POSICION = "Delantero";
     private static final LocalDate FECHA_NACIMIENTO = LocalDate.of(1987, 6, 24);
     private static final String NACIONALIDAD = "Argentina";
+    private static final String LIGA = "Major League Soccer";
 
     private static Jugador jugadorValido() {
-        return Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD);
+        return Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD, LIGA);
     }
 
     // ---- Alta (UC-03) ----
@@ -39,6 +40,7 @@ class JugadorTest {
         assertThat(jugador.getPosicion()).isEqualTo(POSICION);
         assertThat(jugador.getFechaNacimiento()).isEqualTo(FECHA_NACIMIENTO);
         assertThat(jugador.getNacionalidad()).isEqualTo(NACIONALIDAD);
+        assertThat(jugador.getLiga()).isEqualTo(LIGA);
         assertThat(jugador.getEstado()).isEqualTo(EstadoJugador.ACTIVO);
         assertThat(jugador.getTokensEmitidos()).isZero();
         assertThat(jugador.getCotizacionVigenteId()).isNull();
@@ -51,7 +53,12 @@ class JugadorTest {
                 .isThrownBy(
                         () ->
                                 Jugador.darAlta(
-                                        null, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD));
+                                        null,
+                                        CLUB,
+                                        POSICION,
+                                        FECHA_NACIMIENTO,
+                                        NACIONALIDAD,
+                                        LIGA));
     }
 
     @Test
@@ -60,13 +67,33 @@ class JugadorTest {
                 .isThrownBy(
                         () ->
                                 Jugador.darAlta(
-                                        NOMBRE, "   ", POSICION, FECHA_NACIMIENTO, NACIONALIDAD));
+                                        NOMBRE,
+                                        "   ",
+                                        POSICION,
+                                        FECHA_NACIMIENTO,
+                                        NACIONALIDAD,
+                                        LIGA));
     }
 
     @Test
     void darAlta_conFechaNacimientoNula_lanzaExcepcion() {
         assertThatNullPointerException()
-                .isThrownBy(() -> Jugador.darAlta(NOMBRE, CLUB, POSICION, null, NACIONALIDAD));
+                .isThrownBy(
+                        () -> Jugador.darAlta(NOMBRE, CLUB, POSICION, null, NACIONALIDAD, LIGA));
+    }
+
+    @Test
+    void darAlta_conLigaBlanco_lanzaExcepcion() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () ->
+                                Jugador.darAlta(
+                                        NOMBRE,
+                                        CLUB,
+                                        POSICION,
+                                        FECHA_NACIMIENTO,
+                                        NACIONALIDAD,
+                                        "   "));
     }
 
     @Test

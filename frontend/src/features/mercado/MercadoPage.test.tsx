@@ -17,6 +17,7 @@ function jugador(overrides: Partial<JugadorResponse> = {}): JugadorResponse {
     posicion: 'Delantero',
     fechaNacimiento: '1987-06-24',
     nacionalidad: 'Argentina',
+    liga: 'Major League Soccer',
     estado: 'ACTIVO',
     tokensDisponibles: 57,
     fechaUltimaActualizacionRendimiento: null,

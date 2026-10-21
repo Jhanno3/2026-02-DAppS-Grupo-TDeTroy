@@ -100,6 +100,7 @@ public class DevDataSeeder implements CommandLineRunner {
                 "Delantero",
                 LocalDate.of(1987, 6, 24),
                 "Argentina",
+                "Major League Soccer",
                 null);
         jugadorService.darAlta(
                 "Kylian Mbappé",
@@ -107,6 +108,7 @@ public class DevDataSeeder implements CommandLineRunner {
                 "Delantero",
                 LocalDate.of(1998, 12, 20),
                 "Francia",
+                "La Liga",
                 null);
         jugadorService.darAlta(
                 "Erling Haaland",
@@ -114,6 +116,7 @@ public class DevDataSeeder implements CommandLineRunner {
                 "Delantero",
                 LocalDate.of(2000, 7, 21),
                 "Noruega",
+                "Premier League",
                 null);
     }
 }

@@ -32,6 +32,7 @@ public class Jugador {
     private String posicion;
     private LocalDate fechaNacimiento;
     private String nacionalidad;
+    private String liga;
     private EstadoJugador estado;
 
     @Getter(AccessLevel.NONE)
@@ -46,8 +47,9 @@ public class Jugador {
             String club,
             String posicion,
             LocalDate fechaNacimiento,
-            String nacionalidad) {
-        validarCampos(nombre, club, posicion, fechaNacimiento, nacionalidad);
+            String nacionalidad,
+            String liga) {
+        validarCampos(nombre, club, posicion, fechaNacimiento, nacionalidad, liga);
 
         this.id = UUID.randomUUID();
         this.nombre = nombre;
@@ -55,6 +57,7 @@ public class Jugador {
         this.posicion = posicion;
         this.fechaNacimiento = fechaNacimiento;
         this.nacionalidad = nacionalidad;
+        this.liga = liga;
         this.estado = EstadoJugador.ACTIVO;
         this.token = Token.nueva();
         this.cotizacionVigenteId = null;
@@ -71,8 +74,9 @@ public class Jugador {
             String club,
             String posicion,
             LocalDate fechaNacimiento,
-            String nacionalidad) {
-        return new Jugador(nombre, club, posicion, fechaNacimiento, nacionalidad);
+            String nacionalidad,
+            String liga) {
+        return new Jugador(nombre, club, posicion, fechaNacimiento, nacionalidad, liga);
     }
 
     private Jugador(
@@ -82,6 +86,7 @@ public class Jugador {
             String posicion,
             LocalDate fechaNacimiento,
             String nacionalidad,
+            String liga,
             EstadoJugador estado,
             int tokensEmitidos,
             UUID cotizacionVigenteId,
@@ -93,6 +98,7 @@ public class Jugador {
         this.posicion = posicion;
         this.fechaNacimiento = fechaNacimiento;
         this.nacionalidad = nacionalidad;
+        this.liga = liga;
         this.estado = estado;
         this.token = Token.reconstruir(tokensEmitidos);
         this.cotizacionVigenteId = cotizacionVigenteId;
@@ -113,6 +119,7 @@ public class Jugador {
             String posicion,
             LocalDate fechaNacimiento,
             String nacionalidad,
+            String liga,
             EstadoJugador estado,
             int tokensEmitidos,
             UUID cotizacionVigenteId,
@@ -125,6 +132,7 @@ public class Jugador {
                 posicion,
                 fechaNacimiento,
                 nacionalidad,
+                liga,
                 estado,
                 tokensEmitidos,
                 cotizacionVigenteId,
@@ -180,14 +188,16 @@ public class Jugador {
             String club,
             String posicion,
             LocalDate fechaNacimiento,
-            String nacionalidad) {
-        validarCampos(nombre, club, posicion, fechaNacimiento, nacionalidad);
+            String nacionalidad,
+            String liga) {
+        validarCampos(nombre, club, posicion, fechaNacimiento, nacionalidad, liga);
 
         this.nombre = nombre;
         this.club = club;
         this.posicion = posicion;
         this.fechaNacimiento = fechaNacimiento;
         this.nacionalidad = nacionalidad;
+        this.liga = liga;
     }
 
     /**
@@ -240,16 +250,19 @@ public class Jugador {
             String club,
             String posicion,
             LocalDate fechaNacimiento,
-            String nacionalidad) {
+            String nacionalidad,
+            String liga) {
         Objects.requireNonNull(nombre, "nombre no puede ser null");
         Objects.requireNonNull(club, "club no puede ser null");
         Objects.requireNonNull(posicion, "posicion no puede ser null");
         Objects.requireNonNull(fechaNacimiento, "fechaNacimiento no puede ser null");
         Objects.requireNonNull(nacionalidad, "nacionalidad no puede ser null");
+        Objects.requireNonNull(liga, "liga no puede ser null");
         requireNoBlank(nombre, "nombre");
         requireNoBlank(club, "club");
         requireNoBlank(posicion, "posicion");
         requireNoBlank(nacionalidad, "nacionalidad");
+        requireNoBlank(liga, "liga");
     }
 
     private static void requireNoBlank(String valor, String nombreCampo) {

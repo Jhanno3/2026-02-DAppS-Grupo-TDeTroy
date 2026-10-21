@@ -45,6 +45,7 @@ describe('api/jugadores', () => {
       posicion: 'Delantero',
       fechaNacimiento: '1987-06-24',
       nacionalidad: 'Argentina',
+      liga: 'Major League Soccer',
     }
 
     await crearJugador(datos, 'admin-token')
@@ -63,6 +64,7 @@ describe('api/jugadores', () => {
       posicion: 'Delantero',
       fechaNacimiento: '1987-06-24',
       nacionalidad: 'Argentina',
+      liga: 'Major League Soccer',
     }
 
     await editarJugador('abc-123', datos, 'admin-token')

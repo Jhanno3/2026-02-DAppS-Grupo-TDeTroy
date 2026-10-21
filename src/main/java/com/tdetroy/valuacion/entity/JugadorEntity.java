@@ -43,6 +43,9 @@ public class JugadorEntity {
     @Column(nullable = false)
     private String nacionalidad;
 
+    @Column(nullable = false)
+    private String liga;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private EstadoJugador estado;
@@ -65,6 +68,7 @@ public class JugadorEntity {
         entity.posicion = jugador.getPosicion();
         entity.fechaNacimiento = jugador.getFechaNacimiento();
         entity.nacionalidad = jugador.getNacionalidad();
+        entity.liga = jugador.getLiga();
         entity.estado = jugador.getEstado();
         entity.tokensEmitidos = jugador.getTokensEmitidos();
         entity.cotizacionVigenteId = jugador.getCotizacionVigenteId();
@@ -83,6 +87,7 @@ public class JugadorEntity {
                 posicion,
                 fechaNacimiento,
                 nacionalidad,
+                liga,
                 estado,
                 tokensEmitidos,
                 cotizacionVigenteId,

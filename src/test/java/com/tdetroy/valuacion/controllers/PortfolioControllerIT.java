@@ -59,6 +59,7 @@ class PortfolioControllerIT {
                 "Delantero",
                 LocalDate.of(2000, 1, 1),
                 "Argentina",
+                "Liga de prueba",
                 UUID.randomUUID());
     }
 

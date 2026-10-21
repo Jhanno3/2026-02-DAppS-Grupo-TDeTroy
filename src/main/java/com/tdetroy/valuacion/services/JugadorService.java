@@ -37,6 +37,7 @@ public interface JugadorService {
             String posicion,
             LocalDate fechaNacimiento,
             String nacionalidad,
+            String liga,
             UUID actorId);
 
     /**
@@ -54,5 +55,6 @@ public interface JugadorService {
             String posicion,
             LocalDate fechaNacimiento,
             String nacionalidad,
+            String liga,
             UUID actorId);
 }

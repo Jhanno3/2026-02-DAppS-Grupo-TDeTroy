@@ -46,6 +46,7 @@ public class JugadorServiceImpl implements JugadorService {
             String posicion,
             LocalDate fechaNacimiento,
             String nacionalidad,
+            String liga,
             UUID actorId) {
         Jugador jugador =
                 jugadorRepository
@@ -56,7 +57,8 @@ public class JugadorServiceImpl implements JugadorService {
                                                 club,
                                                 posicion,
                                                 fechaNacimiento,
-                                                nacionalidad)))
+                                                nacionalidad,
+                                                liga)))
                         .aModelo();
 
         auditoriaService.registrar(
@@ -79,6 +81,7 @@ public class JugadorServiceImpl implements JugadorService {
             String posicion,
             LocalDate fechaNacimiento,
             String nacionalidad,
+            String liga,
             UUID actorId) {
         Jugador jugador =
                 jugadorRepository
@@ -91,7 +94,7 @@ public class JugadorServiceImpl implements JugadorService {
 
         DatosIdentificatoriosAuditoria antes = datosIdentificatoriosDe(jugador);
         jugador.actualizarDatosIdentificatorios(
-                nombre, club, posicion, fechaNacimiento, nacionalidad);
+                nombre, club, posicion, fechaNacimiento, nacionalidad, liga);
         jugadorRepository.save(JugadorEntity.desde(jugador));
 
         auditoriaService.registrar(
@@ -111,7 +114,8 @@ public class JugadorServiceImpl implements JugadorService {
                 jugador.getClub(),
                 jugador.getPosicion(),
                 jugador.getFechaNacimiento(),
-                jugador.getNacionalidad());
+                jugador.getNacionalidad(),
+                jugador.getLiga());
     }
 
     private record DatosIdentificatoriosAuditoria(
@@ -119,5 +123,6 @@ public class JugadorServiceImpl implements JugadorService {
             String club,
             String posicion,
             LocalDate fechaNacimiento,
-            String nacionalidad) {}
+            String nacionalidad,
+            String liga) {}
 }

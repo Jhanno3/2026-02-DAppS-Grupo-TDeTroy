@@ -55,7 +55,8 @@ class JugadorControllerIT {
     private static String requestJson(String nombre) {
         return """
                 {"nombre":"%s","club":"Inter Miami CF","posicion":"Delantero",\
-                "fechaNacimiento":"1987-06-24","nacionalidad":"Argentina"}"""
+                "fechaNacimiento":"1987-06-24","nacionalidad":"Argentina",\
+                "liga":"Major League Soccer"}"""
                 .formatted(nombre);
     }
 
@@ -174,7 +175,8 @@ class JugadorControllerIT {
         String body =
                 """
                 {"nombre":"   ","club":"Club","posicion":"Delantero",\
-                "fechaNacimiento":"1987-06-24","nacionalidad":"Argentina"}""";
+                "fechaNacimiento":"1987-06-24","nacionalidad":"Argentina",\
+                "liga":"Liga de prueba"}""";
 
         crear(tokenAdmin(), body).assertThat().hasStatus(400);
     }
@@ -187,7 +189,8 @@ class JugadorControllerIT {
         String bodyEdicion =
                 """
                 {"nombre":"Nombre Editado","club":"Club Editado","posicion":"Mediocampista",\
-                "fechaNacimiento":"1990-05-10","nacionalidad":"Brasil"}""";
+                "fechaNacimiento":"1990-05-10","nacionalidad":"Brasil",\
+                "liga":"Brasileirao"}""";
 
         mvc.put()
                 .uri("/api/v1/jugadores/{id}", id)
