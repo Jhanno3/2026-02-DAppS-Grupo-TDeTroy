@@ -38,6 +38,7 @@ class JugadorServiceImplTest {
     private static final String POSICION = "Delantero";
     private static final LocalDate FECHA_NACIMIENTO = LocalDate.of(1987, 6, 24);
     private static final String NACIONALIDAD = "Argentina";
+    private static final String LIGA = "Major League Soccer";
 
     @Mock private JugadorRepository jugadorRepository;
     @Mock private AuditoriaService auditoriaService;
@@ -53,7 +54,8 @@ class JugadorServiceImplTest {
 
     @Test
     void listar_delegaEnElRepositorioYDevuelveElCatalogoCompleto() {
-        Jugador jugador = Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD);
+        Jugador jugador =
+                Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD, LIGA);
         when(jugadorRepository.findAll()).thenReturn(List.of(JugadorEntity.desde(jugador)));
 
         assertThat(service.listar()).extracting(Jugador::getId).containsExactly(jugador.getId());
@@ -62,7 +64,8 @@ class JugadorServiceImplTest {
     @Test
     void obtenerPorId_conJugadorExistente_loDevuelve() {
         UUID jugadorId = UUID.randomUUID();
-        Jugador jugador = Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD);
+        Jugador jugador =
+                Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD, LIGA);
         when(jugadorRepository.findById(jugadorId))
                 .thenReturn(Optional.of(JugadorEntity.desde(jugador)));
 
@@ -88,7 +91,8 @@ class JugadorServiceImplTest {
                 .thenAnswer(inv -> inv.getArgument(0));
 
         Jugador creado =
-                service.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD, actorId);
+                service.darAlta(
+                        NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD, LIGA, actorId);
 
         assertThat(creado.getNombre()).isEqualTo(NOMBRE);
         assertThat(creado.getEstado()).isEqualTo(EstadoJugador.ACTIVO);
@@ -115,6 +119,7 @@ class JugadorServiceImplTest {
                                         POSICION,
                                         FECHA_NACIMIENTO,
                                         NACIONALIDAD,
+                                        LIGA,
                                         UUID.randomUUID()));
 
         verifyNoInteractions(jugadorRepository, auditoriaService);
@@ -128,19 +133,32 @@ class JugadorServiceImplTest {
         UUID actorId = UUID.randomUUID();
         Jugador jugador =
                 Jugador.darAlta(
-                        "Nombre Viejo", "Club Viejo", "Arquero", FECHA_NACIMIENTO, "Brasil");
+                        "Nombre Viejo",
+                        "Club Viejo",
+                        "Arquero",
+                        FECHA_NACIMIENTO,
+                        "Brasil",
+                        "Brasileirao");
         jugador.emitirTokens(40);
         when(jugadorRepository.findById(jugadorId))
                 .thenReturn(Optional.of(JugadorEntity.desde(jugador)));
 
         Jugador editado =
                 service.editar(
-                        jugadorId, NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD, actorId);
+                        jugadorId,
+                        NOMBRE,
+                        CLUB,
+                        POSICION,
+                        FECHA_NACIMIENTO,
+                        NACIONALIDAD,
+                        LIGA,
+                        actorId);
 
         assertThat(editado.getNombre()).isEqualTo(NOMBRE);
         assertThat(editado.getClub()).isEqualTo(CLUB);
         assertThat(editado.getPosicion()).isEqualTo(POSICION);
         assertThat(editado.getNacionalidad()).isEqualTo(NACIONALIDAD);
+        assertThat(editado.getLiga()).isEqualTo(LIGA);
         assertThat(editado.getEstado()).isEqualTo(EstadoJugador.ACTIVO);
         assertThat(editado.getTokensEmitidos()).isEqualTo(40);
         assertThat(editado.getCotizacionVigenteId()).isNull();
@@ -170,6 +188,7 @@ class JugadorServiceImplTest {
                                         POSICION,
                                         FECHA_NACIMIENTO,
                                         NACIONALIDAD,
+                                        LIGA,
                                         UUID.randomUUID()))
                 .isInstanceOf(RecursoNoEncontradoException.class)
                 .hasMessageContaining(jugadorId.toString());
@@ -180,7 +199,8 @@ class JugadorServiceImplTest {
     @Test
     void editar_conClubBlanco_lanzaExcepcionYNoAuditaNiMutaElJugador() {
         UUID jugadorId = UUID.randomUUID();
-        Jugador jugador = Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD);
+        Jugador jugador =
+                Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD, LIGA);
         when(jugadorRepository.findById(jugadorId))
                 .thenReturn(Optional.of(JugadorEntity.desde(jugador)));
 
@@ -194,6 +214,7 @@ class JugadorServiceImplTest {
                                         POSICION,
                                         FECHA_NACIMIENTO,
                                         NACIONALIDAD,
+                                        LIGA,
                                         UUID.randomUUID()));
 
         assertThat(jugador.getClub()).isEqualTo(CLUB);

@@ -43,10 +43,11 @@ function JugadorForm({
   const [nacionalidad, setNacionalidad] = useState(
     valoresIniciales.nacionalidad,
   )
+  const [liga, setLiga] = useState(valoresIniciales.liga)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    onGuardar({ nombre, club, posicion, fechaNacimiento, nacionalidad })
+    onGuardar({ nombre, club, posicion, fechaNacimiento, nacionalidad, liga })
   }
 
   return (
@@ -109,6 +110,17 @@ function JugadorForm({
         />
       </label>
 
+      <label className={styles.field}>
+        Liga
+        <input
+          type="text"
+          name="liga"
+          value={liga}
+          onChange={(event) => setLiga(event.target.value)}
+          required
+        />
+      </label>
+
       {error != null && (
         <p className={styles.error} role="alert">
           {error instanceof ApiError
@@ -130,6 +142,7 @@ const VALORES_VACIOS: DatosIdentificatoriosJugador = {
   posicion: '',
   fechaNacimiento: '',
   nacionalidad: '',
+  liga: '',
 }
 
 /**

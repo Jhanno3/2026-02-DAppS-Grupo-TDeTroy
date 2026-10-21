@@ -63,7 +63,12 @@ class RendimientoServiceImplTest {
 
     private static Jugador jugadorActivo(String club) {
         return Jugador.darAlta(
-                "Jugador de prueba", club, "Delantero", LocalDate.of(2000, 1, 1), "Argentina");
+                "Jugador de prueba",
+                club,
+                "Delantero",
+                LocalDate.of(2000, 1, 1),
+                "Argentina",
+                "Liga de prueba");
     }
 
     // ---- ingestarFixtures ----

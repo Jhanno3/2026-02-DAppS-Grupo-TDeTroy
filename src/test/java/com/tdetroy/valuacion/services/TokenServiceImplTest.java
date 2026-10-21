@@ -57,6 +57,7 @@ class TokenServiceImplTest {
     private static final String POSICION = "Delantero";
     private static final LocalDate FECHA_NACIMIENTO = LocalDate.of(1987, 6, 24);
     private static final String NACIONALIDAD = "Argentina";
+    private static final String LIGA = "Major League Soccer";
 
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private JugadorRepository jugadorRepository;
@@ -98,7 +99,8 @@ class TokenServiceImplTest {
     }
 
     private void stubJugadorConEmision(int tokensEmitidos) {
-        Jugador jugador = Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD);
+        Jugador jugador =
+                Jugador.darAlta(NOMBRE, CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD, LIGA);
         if (tokensEmitidos > 0) {
             jugador.emitirTokens(tokensEmitidos);
         }

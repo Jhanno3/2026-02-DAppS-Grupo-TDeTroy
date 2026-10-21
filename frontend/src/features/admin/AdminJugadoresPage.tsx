@@ -26,6 +26,7 @@ export function AdminJugadoresPage() {
             <tr>
               <th>Nombre</th>
               <th>Club</th>
+              <th>Liga</th>
               <th>Posición</th>
               <th>Tokens disponibles</th>
               <th>Estado</th>
@@ -37,6 +38,7 @@ export function AdminJugadoresPage() {
               <tr key={jugador.id}>
                 <td>{jugador.nombre}</td>
                 <td>{jugador.club}</td>
+                <td>{jugador.liga}</td>
                 <td>{jugador.posicion}</td>
                 <td>{jugador.tokensDisponibles} / 100</td>
                 <td>

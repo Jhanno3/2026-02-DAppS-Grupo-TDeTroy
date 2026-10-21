@@ -49,7 +49,7 @@ class DevDataSeederTest {
 
         verify(usuarioService).registrar(any(), any());
         verify(usuarioRepository).save(any());
-        verify(jugadorService, times(3)).darAlta(any(), any(), any(), any(), any(), any());
+        verify(jugadorService, times(3)).darAlta(any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -60,6 +60,6 @@ class DevDataSeederTest {
 
         verify(usuarioService, never()).registrar(any(), any());
         verify(usuarioRepository, never()).save(any());
-        verify(jugadorService, never()).darAlta(any(), any(), any(), any(), any(), any());
+        verify(jugadorService, never()).darAlta(any(), any(), any(), any(), any(), any(), any());
     }
 }

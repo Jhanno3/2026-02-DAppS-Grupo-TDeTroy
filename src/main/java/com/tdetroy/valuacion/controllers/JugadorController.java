@@ -77,6 +77,7 @@ public class JugadorController {
                         request.posicion(),
                         request.fechaNacimiento(),
                         request.nacionalidad(),
+                        request.liga(),
                         principal.getUsuarioId());
         return ResponseEntity.status(HttpStatus.CREATED).body(JugadorResponse.desde(jugador));
     }
@@ -96,6 +97,7 @@ public class JugadorController {
                         request.posicion(),
                         request.fechaNacimiento(),
                         request.nacionalidad(),
+                        request.liga(),
                         principal.getUsuarioId());
         return JugadorResponse.desde(jugador);
     }

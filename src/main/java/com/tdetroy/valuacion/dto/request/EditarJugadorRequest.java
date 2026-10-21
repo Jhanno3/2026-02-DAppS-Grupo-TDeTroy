@@ -14,4 +14,5 @@ public record EditarJugadorRequest(
         @NotBlank String club,
         @NotBlank String posicion,
         @NotNull @Past LocalDate fechaNacimiento,
-        @NotBlank String nacionalidad) {}
+        @NotBlank String nacionalidad,
+        @NotBlank String liga) {}

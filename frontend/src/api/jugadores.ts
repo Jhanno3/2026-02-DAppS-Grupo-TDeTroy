@@ -7,6 +7,7 @@ export interface JugadorResponse {
   posicion: string
   fechaNacimiento: string
   nacionalidad: string
+  liga: string
   estado: 'ACTIVO' | 'INACTIVO'
   tokensDisponibles: number
   fechaUltimaActualizacionRendimiento: string | null
@@ -33,6 +34,7 @@ export interface DatosIdentificatoriosJugador {
   posicion: string
   fechaNacimiento: string
   nacionalidad: string
+  liga: string
 }
 
 /** UC-03 (ADMIN). */
