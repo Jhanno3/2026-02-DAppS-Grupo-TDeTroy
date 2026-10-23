@@ -20,9 +20,19 @@ interface TradePanelProps {
 type Modo = 'comprar' | 'vender'
 
 /**
- * UC-09/UC-10: compra/venta de tokens contra el sistema, a la cotización vigente (nunca un precio
- * que elija el usuario — `TokenServiceImpl` la vuelve a calcular en el backend igual, esto es sólo
- * para mostrarle el total esperado antes de confirmar).
+ * Igual que `app.token.descuento-venta-sistema` en el backend (`TokenServiceImpl`, UC-10) — sólo
+ * para estimar el total esperado antes de confirmar, el backend es quien realmente lo aplica y
+ * vuelve a calcular el monto. Deliberado (spec.md UC-10): vender al sistema paga menos que vender
+ * vía oferta P2P (que sigue pagando la cotización completa, ver `OfertasPanel`), para incentivar
+ * esa vía por sobre esta.
+ */
+const DESCUENTO_VENTA_SISTEMA = 0.15
+
+/**
+ * UC-09/UC-10: compra/venta de tokens contra el sistema. La compra paga la cotización vigente
+ * completa; la venta se liquida con el descuento de {@link DESCUENTO_VENTA_SISTEMA} (nunca un
+ * precio que elija el usuario — `TokenServiceImpl` vuelve a calcular el monto real en el backend
+ * igual, esto es sólo para mostrarle el total esperado antes de confirmar).
  */
 export function TradePanel({
   jugadorId,
@@ -84,7 +94,11 @@ export function TradePanel({
   }
 
   const max = modo === 'comprar' ? tokensDisponibles : misCopias
-  const precioUnitario = cotizacionVigente ?? 100
+  const cotizacionBase = cotizacionVigente ?? 100
+  const precioUnitario =
+    modo === 'vender'
+      ? cotizacionBase * (1 - DESCUENTO_VENTA_SISTEMA)
+      : cotizacionBase
   const total = precioUnitario * cantidad
 
   function cambiarModo(nuevoModo: Modo) {
@@ -177,6 +191,14 @@ export function TradePanel({
             <span>Total</span>
             <strong>{formatMoney(total)}</strong>
           </div>
+
+          {modo === 'vender' && (
+            <p className={styles.hint}>
+              El sistema paga un {DESCUENTO_VENTA_SISTEMA * 100}% menos que la
+              cotización vigente ({formatMoney(cotizacionBase)}). Para elegir tu
+              propio precio, publicá una oferta P2P con el botón de arriba.
+            </p>
+          )}
 
           {mutation.error != null && (
             <p role="alert" className={styles.error}>

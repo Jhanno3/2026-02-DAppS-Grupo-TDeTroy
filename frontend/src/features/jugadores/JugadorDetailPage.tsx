@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { listarCotizaciones, obtenerJugador } from '../../api/jugadores'
 import { ApiError } from '../../api/client'
 import { Avatar } from '../../shared/components/Avatar'
+import { LinkButton } from '../../shared/components/LinkButton'
 import { CotizacionChart } from './CotizacionChart'
 import { TradePanel } from './TradePanel'
 import styles from './JugadorDetailPage.module.css'
@@ -64,15 +65,26 @@ export function JugadorDetailPage() {
                 <Avatar src={data.fotoUrl} nombre={data.nombre} size="large" />
                 <h1 className={styles.nombre}>{data.nombre}</h1>
               </div>
-              <span
-                className={`${styles.badge} ${
-                  data.estado === 'ACTIVO'
-                    ? styles.badgeActivo
-                    : styles.badgeInactivo
-                }`}
-              >
-                {data.estado}
-              </span>
+              <div className={styles.headerRight}>
+                <span
+                  className={`${styles.badge} ${
+                    data.estado === 'ACTIVO'
+                      ? styles.badgeActivo
+                      : styles.badgeInactivo
+                  }`}
+                >
+                  {data.estado}
+                </span>
+                {data.estado === 'ACTIVO' && (
+                  <LinkButton
+                    to={`/jugadores/${data.id}/p2p`}
+                    variant="secondary"
+                    small
+                  >
+                    Oferta P2P
+                  </LinkButton>
+                )}
+              </div>
             </div>
 
             <dl className={styles.datos}>

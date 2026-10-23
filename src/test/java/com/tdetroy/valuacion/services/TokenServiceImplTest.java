@@ -50,6 +50,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class TokenServiceImplTest {
 
     private static final BigDecimal VALOR_INICIAL = new BigDecimal("100.00");
+    private static final BigDecimal DESCUENTO_VENTA_SISTEMA = new BigDecimal("0.15");
     private static final String EMAIL = "persona@example.com";
     private static final String PASSWORD_HASH = "hash-bcrypt";
     private static final String NOMBRE = "Leonel Messi";
@@ -80,7 +81,8 @@ class TokenServiceImplTest {
                         tenenciaTokenRepository,
                         cotizacionHistoricaRepository,
                         movimientoRepository,
-                        VALOR_INICIAL);
+                        VALOR_INICIAL,
+                        DESCUENTO_VENTA_SISTEMA);
     }
 
     /** Sólo la necesitan los tests que llegan a registrar el {@link Movimiento} final. */
@@ -285,10 +287,11 @@ class TokenServiceImplTest {
 
         Movimiento movimiento = service.vender(usuarioId, jugadorId, 4);
 
+        // Precio con el 15% de descuento sobre la cotización vigente (UC-10): 20.00 × 0.85 = 17.00.
         assertThat(movimiento.getTipo()).isEqualTo(TipoMovimiento.VENTA_SISTEMA);
         assertThat(movimiento.getCantidad()).isEqualTo(4);
-        assertThat(movimiento.getPrecioUnitario()).isEqualByComparingTo("20.00");
-        assertThat(movimiento.getMontoTotal()).isEqualByComparingTo("80.00");
+        assertThat(movimiento.getPrecioUnitario()).isEqualByComparingTo("17.00");
+        assertThat(movimiento.getMontoTotal()).isEqualByComparingTo("68.00");
 
         ArgumentCaptor<TenenciaTokenEntity> tenenciaCaptor =
                 ArgumentCaptor.forClass(TenenciaTokenEntity.class);
@@ -298,11 +301,24 @@ class TokenServiceImplTest {
         ArgumentCaptor<UsuarioEntity> usuarioCaptor = ArgumentCaptor.forClass(UsuarioEntity.class);
         verify(usuarioRepository).save(usuarioCaptor.capture());
         assertThat(usuarioCaptor.getValue().aModelo().getSaldoVirtual())
-                .isEqualByComparingTo("80.00");
+                .isEqualByComparingTo("68.00");
 
         ArgumentCaptor<JugadorEntity> jugadorCaptor = ArgumentCaptor.forClass(JugadorEntity.class);
         verify(jugadorRepository).save(jugadorCaptor.capture());
         assertThat(jugadorCaptor.getValue().aModelo().getTokensEmitidos()).isEqualTo(6);
+    }
+
+    @Test
+    void vender_pagaUn15PorCientoMenosQueLaCotizacionVigente_aDiferenciaDeComprar() {
+        stubUsuarioConSaldo(BigDecimal.ZERO);
+        stubJugadorConEmision(10);
+        stubTenenciaConReserva(10, 0);
+        stubCotizacionVigente(new BigDecimal("100.00"));
+        stubMovimientoGuardado();
+
+        Movimiento movimiento = service.vender(usuarioId, jugadorId, 1);
+
+        assertThat(movimiento.getPrecioUnitario()).isEqualByComparingTo("85.00");
     }
 
     @Test

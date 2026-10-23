@@ -5,10 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CarteraPage } from './CarteraPage'
 import * as portfolioApi from '../../api/portfolio'
 import * as jugadoresApi from '../../api/jugadores'
+import * as movimientosApi from '../../api/movimientos'
 import * as authContext from '../auth/AuthContext'
 
 vi.mock('../../api/portfolio')
 vi.mock('../../api/jugadores')
+vi.mock('../../api/movimientos')
 vi.mock('../auth/AuthContext', async (importOriginal) => {
   const actual = await importOriginal<typeof authContext>()
   return { ...actual, useAuth: vi.fn() }
@@ -36,6 +38,7 @@ describe('CarteraPage', () => {
       login: vi.fn(),
       logout: vi.fn(),
     })
+    vi.mocked(movimientosApi.listarMisMovimientos).mockResolvedValue([])
   })
 
   it('cartera vacía, muestra el mensaje con link al mercado', async () => {
@@ -90,7 +93,109 @@ describe('CarteraPage', () => {
     expect(await screen.findByText('$ 5.000,00')).toBeInTheDocument()
     expect(screen.getByText('$ 4.908,64')).toBeInTheDocument()
     expect(screen.getByText('Leonel Messi')).toBeInTheDocument()
-    expect(screen.getByText('Inter Miami CF')).toBeInTheDocument()
+    expect(screen.getByText(/Inter Miami CF/)).toBeInTheDocument()
+  })
+
+  it('calcula el costo promedio de compra ponderado por cantidad, ignorando ventas/recargas/compensaciones', async () => {
+    vi.mocked(portfolioApi.obtenerPortfolio).mockResolvedValue({
+      saldoVirtual: '0.00',
+      tenencias: [
+        {
+          jugadorId: 'j1',
+          cantidad: 10,
+          cotizacionVigente: '150.00',
+          valor: '1500.00',
+        },
+      ],
+      valorTotal: '1500.00',
+    })
+    vi.mocked(jugadoresApi.listarJugadores).mockResolvedValue([
+      {
+        id: 'j1',
+        nombre: 'Leonel Messi',
+        club: 'Inter Miami CF',
+        posicion: 'Delantero',
+        fechaNacimiento: '1987-06-24',
+        nacionalidad: 'Argentina',
+        liga: 'Major League Soccer',
+        estado: 'ACTIVO',
+        tokensDisponibles: 57,
+        fechaUltimaActualizacionRendimiento: null,
+        fotoUrl: null,
+      },
+    ])
+    vi.mocked(movimientosApi.listarMisMovimientos).mockResolvedValue([
+      // (5 × 100) + (5 × 120) = 1100 / 10 = costo promedio $110,00 -- la venta, la recarga y
+      // la compensación no cuentan para el promedio de compra.
+      {
+        id: 'm1',
+        jugadorId: 'j1',
+        tipo: 'COMPRA_SISTEMA',
+        cantidad: 5,
+        precioUnitario: '100.00',
+        montoTotal: '500.00',
+        contraparteUsuarioId: null,
+        fecha: '2026-02-01T00:00:00Z',
+      },
+      {
+        id: 'm2',
+        jugadorId: 'j1',
+        tipo: 'COMPRA_P2P',
+        cantidad: 5,
+        precioUnitario: '120.00',
+        montoTotal: '600.00',
+        contraparteUsuarioId: 'u2',
+        fecha: '2026-02-02T00:00:00Z',
+      },
+      {
+        id: 'm3',
+        jugadorId: 'j1',
+        tipo: 'VENTA_SISTEMA',
+        cantidad: 2,
+        precioUnitario: '140.00',
+        montoTotal: '280.00',
+        contraparteUsuarioId: null,
+        fecha: '2026-02-03T00:00:00Z',
+      },
+      {
+        id: 'm4',
+        jugadorId: 'j1',
+        tipo: 'RECARGA_SALDO',
+        cantidad: 0,
+        precioUnitario: '0',
+        montoTotal: '1000.00',
+        contraparteUsuarioId: null,
+        fecha: '2026-02-04T00:00:00Z',
+      },
+    ])
+
+    renderCartera()
+
+    expect(await screen.findByText('$ 110,00')).toBeInTheDocument()
+  })
+
+  it('sin compras registradas para el jugador, muestra "—" en vez de un costo promedio', async () => {
+    vi.mocked(portfolioApi.obtenerPortfolio).mockResolvedValue({
+      saldoVirtual: '0.00',
+      tenencias: [
+        {
+          jugadorId: 'j1',
+          cantidad: 10,
+          cotizacionVigente: '150.00',
+          valor: '1500.00',
+        },
+      ],
+      valorTotal: '1500.00',
+    })
+    vi.mocked(jugadoresApi.listarJugadores).mockResolvedValue([])
+    vi.mocked(movimientosApi.listarMisMovimientos).mockResolvedValue([])
+
+    renderCartera()
+
+    expect(
+      await screen.findByText('Costo promedio de compra'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
   })
 
   it('una tenencia de un jugador que ya no está en el catálogo, no revienta la página', async () => {

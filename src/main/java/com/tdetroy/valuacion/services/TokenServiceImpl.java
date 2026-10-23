@@ -36,6 +36,7 @@ public class TokenServiceImpl implements TokenService {
     private final CotizacionHistoricaRepository cotizacionHistoricaRepository;
     private final MovimientoRepository movimientoRepository;
     private final BigDecimal valorInicial;
+    private final BigDecimal descuentoVentaSistema;
 
     public TokenServiceImpl(
             UsuarioRepository usuarioRepository,
@@ -43,13 +44,15 @@ public class TokenServiceImpl implements TokenService {
             TenenciaTokenRepository tenenciaTokenRepository,
             CotizacionHistoricaRepository cotizacionHistoricaRepository,
             MovimientoRepository movimientoRepository,
-            @Value("${app.cotizacion.valor-inicial}") BigDecimal valorInicial) {
+            @Value("${app.cotizacion.valor-inicial}") BigDecimal valorInicial,
+            @Value("${app.token.descuento-venta-sistema}") BigDecimal descuentoVentaSistema) {
         this.usuarioRepository = usuarioRepository;
         this.jugadorRepository = jugadorRepository;
         this.tenenciaTokenRepository = tenenciaTokenRepository;
         this.cotizacionHistoricaRepository = cotizacionHistoricaRepository;
         this.movimientoRepository = movimientoRepository;
         this.valorInicial = valorInicial;
+        this.descuentoVentaSistema = descuentoVentaSistema;
     }
 
     @Override
@@ -87,7 +90,8 @@ public class TokenServiceImpl implements TokenService {
 
         tenencia.debitar(cantidad);
         BigDecimal cotizacionVigente = cotizacionVigenteDe(jugadorId);
-        BigDecimal montoTotal = costoDe(cantidad, cotizacionVigente);
+        BigDecimal precioVenta = precioVentaSistemaDe(cotizacionVigente);
+        BigDecimal montoTotal = costoDe(cantidad, precioVenta);
         usuario.acreditarSaldo(montoTotal);
         jugador.liberarTokens(cantidad);
 
@@ -100,7 +104,7 @@ public class TokenServiceImpl implements TokenService {
                 jugadorId,
                 TipoMovimiento.VENTA_SISTEMA,
                 cantidad,
-                cotizacionVigente,
+                precioVenta,
                 montoTotal);
     }
 
@@ -155,5 +159,18 @@ public class TokenServiceImpl implements TokenService {
 
     private static BigDecimal costoDe(int cantidad, BigDecimal cotizacionVigente) {
         return Monetario.escalar(cotizacionVigente.multiply(BigDecimal.valueOf(cantidad)));
+    }
+
+    /**
+     * Precio unitario que paga el sistema al comprarle tokens a un usuario (UC-10): {@code
+     * app.token.descuento-venta-sistema} por debajo de la cotización vigente — nunca la cotización
+     * completa, a diferencia de {@link #comprar} y de toda operación P2P ({@code
+     * OfertaServiceImpl}, UC-17). Redondeado antes de multiplicarlo por la cantidad en {@link
+     * #costoDe}, igual criterio que el resto de los valores monetarios del sistema (constitution.md
+     * §2, {@link Monetario}).
+     */
+    private BigDecimal precioVentaSistemaDe(BigDecimal cotizacionVigente) {
+        return Monetario.escalar(
+                cotizacionVigente.multiply(BigDecimal.ONE.subtract(descuentoVentaSistema)));
     }
 }

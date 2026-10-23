@@ -16,11 +16,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * portfolio, aunque la fila siga existiendo con {@code cantidad = 0}) — mismo criterio que {@link
  * MovimientoRepository} para no anticipar una forma de consulta que todavía no se pidió. La
  * unicidad del par {@code usuarioId}/{@code jugadorId} está protegida a nivel de esquema por la
- * constraint {@code uk_tenencias_token_usuario_jugador} (V6__tenencias_token.sql).
+ * constraint {@code uk_tenencias_token_usuario_jugador} (V6__tenencias_token.sql). {@link
+ * #findByJugadorIdAndCantidadGreaterThan} (T6.6) la agrega {@code JugadorServiceImpl.darDeBaja}
+ * para encontrar, dado un jugador, a todos los usuarios con tenencia a compensar (UC-15) — la
+ * contracara de {@link #findByUsuarioIdAndCantidadGreaterThan}, que recorre por usuario en vez de
+ * por jugador.
  */
 public interface TenenciaTokenRepository extends JpaRepository<TenenciaTokenEntity, UUID> {
 
     Optional<TenenciaTokenEntity> findByUsuarioIdAndJugadorId(UUID usuarioId, UUID jugadorId);
 
     List<TenenciaTokenEntity> findByUsuarioIdAndCantidadGreaterThan(UUID usuarioId, int cantidad);
+
+    List<TenenciaTokenEntity> findByJugadorIdAndCantidadGreaterThan(UUID jugadorId, int cantidad);
 }

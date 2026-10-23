@@ -101,4 +101,16 @@ public class JugadorController {
                         principal.getUsuarioId());
         return JugadorResponse.desde(jugador);
     }
+
+    /**
+     * UC-15. Inactivación + compensación de cada usuario afectado (no es un {@code DELETE} físico,
+     * plan.md §3). {@code actorId} sale del JWT ya validado, nunca del body de la request.
+     */
+    @PostMapping("/{id}/baja")
+    @PreAuthorize("hasRole('ADMIN')")
+    public JugadorResponse darDeBaja(
+            @PathVariable UUID id, @AuthenticationPrincipal UsuarioPrincipal principal) {
+        Jugador jugador = jugadorService.darDeBaja(id, principal.getUsuarioId());
+        return JugadorResponse.desde(jugador);
+    }
 }

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as client from './client'
 import {
   crearJugador,
+  darDeBajaJugador,
   editarJugador,
   listarCotizaciones,
   listarJugadores,
@@ -72,6 +73,15 @@ describe('api/jugadores', () => {
     expect(client.apiFetch).toHaveBeenCalledWith('/jugadores/abc-123', {
       method: 'PUT',
       body: datos,
+      token: 'admin-token',
+    })
+  })
+
+  it('darDeBajaJugador hace POST /jugadores/{id}/baja con el token (UC-15)', async () => {
+    await darDeBajaJugador('abc-123', 'admin-token')
+
+    expect(client.apiFetch).toHaveBeenCalledWith('/jugadores/abc-123/baja', {
+      method: 'POST',
       token: 'admin-token',
     })
   })

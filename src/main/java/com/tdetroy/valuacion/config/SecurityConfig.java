@@ -83,6 +83,15 @@ public class SecurityConfig {
         "/api/v1/jugadores", "/api/v1/jugadores/**"
     };
 
+    /**
+     * {@code OfertaController} (T6.3, UC-17): {@code GET /ofertas?jugadorId={id}} es público, "para
+     * que un comprador elija" (spec.md UC-17) — igual que el listado de jugadores, un visitante sin
+     * cuenta puede ver qué ofertas hay antes de decidir si registrarse. {@code POST}/ {@code
+     * DELETE} quedan fuera a propósito: requieren autenticación (cualquier rol), sin estar
+     * restringidos a ADMIN.
+     */
+    private static final String[] RUTAS_PUBLICAS_OFERTAS_GET = {"/api/v1/ofertas"};
+
     private final ProblemDetailResponseWriter problemDetailResponseWriter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
@@ -147,6 +156,8 @@ public class SecurityConfig {
                                         .permitAll()
                                         .requestMatchers(
                                                 HttpMethod.GET, RUTAS_PUBLICAS_JUGADORES_GET)
+                                        .permitAll()
+                                        .requestMatchers(HttpMethod.GET, RUTAS_PUBLICAS_OFERTAS_GET)
                                         .permitAll()
                                         .anyRequest()
                                         .authenticated())

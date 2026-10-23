@@ -1,7 +1,8 @@
 import { act, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider, useAuth } from './AuthContext'
+import { apiFetch } from '../../api/client'
 
 function token(claims: {
   sub: string
@@ -101,6 +102,45 @@ describe('AuthContext', () => {
 
     expect(result.current.isAuthenticated).toBe(false)
     expect(result.current.user).toBeNull()
+  })
+
+  it('un 401 de cualquier request autenticada cierra la sesión local automáticamente', async () => {
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    act(() =>
+      result.current.login(
+        token({
+          sub: 'user@example.com',
+          usuarioId: 'u1',
+          rol: 'USER',
+          exp: unaHoraEnElFuturo,
+        }),
+      ),
+    )
+    expect(result.current.isAuthenticated).toBe(true)
+
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            JSON.stringify({ detail: 'Se requiere un token válido...' }),
+            { status: 401 },
+          ),
+        ),
+    )
+
+    await act(async () => {
+      await apiFetch('/jugadores/1/ventas', {
+        method: 'POST',
+        token: result.current.token,
+      }).catch(() => {})
+    })
+
+    expect(result.current.isAuthenticated).toBe(false)
+    expect(localStorage.getItem('valuacion.token')).toBeNull()
+
+    vi.unstubAllGlobals()
   })
 
   it('usar useAuth fuera de AuthProvider lanza un error claro', () => {
