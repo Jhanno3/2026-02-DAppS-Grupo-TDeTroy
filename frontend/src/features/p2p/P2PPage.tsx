@@ -79,7 +79,7 @@ export function P2PPage() {
 
   function handleCrearOferta() {
     if (!isAuthenticated) {
-      navigate('/login')
+      void navigate('/login')
       return
     }
     setBusquedaSelector('')
@@ -209,9 +209,11 @@ export function P2PPage() {
           role="dialog"
           aria-modal="true"
           aria-label="Elegí un jugador para publicar una oferta"
-          onClick={cerrarSelector}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) cerrarSelector()
+          }}
         >
-          <div className={styles.selector} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.selector}>
             <div className={styles.selectorHeader}>
               <h2>Elegí un jugador</h2>
               <input
@@ -361,7 +363,7 @@ function TarjetaOferta({
               onCantidadChange(
                 Math.min(
                   oferta.cantidadDisponible,
-                  Math.max(1, parseInt(e.target.value, 10) || 1),
+                  Math.max(1, Number.parseInt(e.target.value, 10) || 1),
                 ),
               )
             }

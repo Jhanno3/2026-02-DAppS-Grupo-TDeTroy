@@ -255,7 +255,10 @@ export function OfertaP2PJugadorPage() {
                         setCantidadAPublicar(
                           Math.min(
                             misCopias,
-                            Math.max(1, parseInt(e.target.value, 10) || 1),
+                            Math.max(
+                              1,
+                              Number.parseInt(e.target.value, 10) || 1,
+                            ),
                           ),
                         )
                       }
@@ -271,7 +274,10 @@ export function OfertaP2PJugadorPage() {
                       value={precioAPublicar}
                       onChange={(e) =>
                         setPrecioAPublicar(
-                          Math.max(0.01, parseFloat(e.target.value) || 0.01),
+                          Math.max(
+                            0.01,
+                            Number.parseFloat(e.target.value) || 0.01,
+                          ),
                         )
                       }
                     />
@@ -285,7 +291,7 @@ export function OfertaP2PJugadorPage() {
                       value={horasAPublicar}
                       onChange={(e) =>
                         setHorasAPublicar(
-                          Math.max(1, parseInt(e.target.value, 10) || 1),
+                          Math.max(1, Number.parseInt(e.target.value, 10) || 1),
                         )
                       }
                     />
@@ -365,7 +371,7 @@ function FilaOferta({
               onCantidadChange(
                 Math.min(
                   oferta.cantidadDisponible,
-                  Math.max(1, parseInt(e.target.value, 10) || 1),
+                  Math.max(1, Number.parseInt(e.target.value, 10) || 1),
                 ),
               )
             }
