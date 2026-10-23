@@ -2,11 +2,13 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from 'react'
 import type { ReactNode } from 'react'
 import { decodeJwt } from './jwt'
+import { registrarManejadorNoAutenticado } from '../../api/client'
 
 const TOKEN_STORAGE_KEY = 'valuacion.token'
 
@@ -52,6 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(TOKEN_STORAGE_KEY)
     setToken(null)
   }, [])
+
+  // Cualquier 401 de una request ya autenticada (token vencido o invalidado) cierra la sesión
+  // local automáticamente, en vez de dejar al usuario viendo el mensaje crudo del backend contra
+  // un formulario que ya no puede completar — ver el javadoc de `registrarManejadorNoAutenticado`.
+  useEffect(() => {
+    registrarManejadorNoAutenticado(logout)
+    return () => registrarManejadorNoAutenticado(null)
+  }, [logout])
 
   const user = useMemo(() => (token ? usuarioDesdeToken(token) : null), [token])
 

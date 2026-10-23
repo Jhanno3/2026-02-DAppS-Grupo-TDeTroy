@@ -178,13 +178,17 @@ OfertaP2P (entidad JPA)
   jugadorId: UUID
   cantidadPublicada: int
   cantidadDisponible: int   -- decrece con cada ejecución parcial/total
+  precioUnitario: BigDecimal  -- fijado libremente por el vendedor al publicar; fijo durante toda la vida de la oferta, nunca recalculado contra la cotización vigente
   estado: enum { ABIERTA, AGOTADA, CANCELADA }
   fechaCreacion: Instant
+  fechaVencimiento: Instant  -- fechaCreacion + horasLimite (fijado por el vendedor al publicar)
 
 Métodos propios:
   ejecutarContra(int cantidadSolicitada) -> int cantidadEjecutada
      - nunca ejecuta más que cantidadDisponible
      - si cantidadDisponible llega a 0, estado = AGOTADA
+  estaVencida(Instant ahora) -> boolean
+     - true si ahora > fechaVencimiento; no muta nada, sólo informa (cancelarla es responsabilidad de OfertaService)
 ```
 
 ### 2.8 `RegistroAuditoria`
@@ -231,8 +235,8 @@ Todos los DTOs de entrada/salida son `record` de Java, ubicados en `dto/request`
 | GET | `/portfolios/me` | USER | UC-11 | `PortfolioController` | tenencias + valor + saldo |
 | GET | `/movimientos/me` | USER | UC-12 | `MovimientoController` | historial propio, incluye P2P y compensaciones identificadas |
 | POST | `/usuarios/{id}/saldo` | ADMIN | UC-14 | `UsuarioController` | recarga, monto > 0 |
-| POST | `/ofertas` | USER | UC-17 | `OfertaController` | vendedor publica cantidad de un jugador que posee |
-| GET | `/ofertas?jugadorId={id}` | público/USER | UC-17 | `OfertaController` | listado de ofertas abiertas (para que un comprador elija) |
+| POST | `/ofertas` | USER | UC-17 | `OfertaController` | vendedor publica cantidad, precio por token y tiempo límite (horas) de un jugador que posee |
+| GET | `/ofertas` | público/USER | UC-17 | `OfertaController` | listado global de ofertas abiertas de todo el catálogo (`jugadorId` opcional filtra a un jugador) |
 | POST | `/ofertas/{id}/compras` | USER | UC-17 | `OfertaController` | comprador ejecuta contra la oferta, hasta la cantidad disponible |
 | DELETE | `/ofertas/{id}` | USER (sólo dueño) | UC-17 | `OfertaController` | el vendedor cancela lo no vendido de su propia oferta; libera la reserva |
 
@@ -254,10 +258,11 @@ Errores: formato `application/problem+json` (constitution §3), traducidos desde
 
 Cada operación multi-entidad es un único método `@Transactional` en el `Service` correspondiente (`services/`):
 
-- **Compra/venta contra el sistema (UC-09/UC-10):** `TokenService.comprar(...)` / `.vender(...)` — debita/acredita saldo, debita/acredita tenencia, emite/libera tokens del jugador, inserta `Movimiento`. Todo o nada.
-- **Publicar oferta P2P (UC-17):** `OfertaService.publicar(...)` — `TenenciaToken.reservar(cantidad)` del vendedor + creación de `OfertaP2P(ABIERTA)`, en una transacción.
-- **Ejecutar compra sobre oferta P2P (UC-17):** `OfertaService.ejecutar(...)` — los 4 movimientos (`TenenciaToken.ejecutarReserva(cantidad)` del vendedor, crédito saldo vendedor, débito saldo comprador, `TenenciaToken.acreditar(cantidad)` del comprador) + 2 registros de `Movimiento` (uno por usuario) + actualización de `cantidadDisponible`/`estado` de la oferta, en una transacción.
+- **Compra/venta contra el sistema (UC-09/UC-10):** `TokenService.comprar(...)` / `.vender(...)` — debita/acredita saldo, debita/acredita tenencia, emite/libera tokens del jugador, inserta `Movimiento`. Todo o nada. `comprar` paga/cobra la cotización vigente sin ajuste; `vender` acredita al usuario `app.token.descuento-venta-sistema` (15% por defecto) por debajo de esa misma cotización — deliberado para incentivar la vía P2P (UC-17, donde el vendedor se queda con el 100% de su propio precio publicado) sobre la venta al sistema.
+- **Publicar oferta P2P (UC-17):** `OfertaService.publicar(vendedorId, jugadorId, cantidad, precioUnitario, horasLimite)` — `TenenciaToken.reservar(cantidad)` del vendedor + creación de `OfertaP2P(ABIERTA)` con `precioUnitario` y `fechaVencimiento = ahora + horasLimite` fijados por el vendedor, en una transacción.
+- **Ejecutar compra sobre oferta P2P (UC-17):** `OfertaService.ejecutar(...)` — siempre a `oferta.getPrecioUnitario()` (nunca a la cotización vigente del jugador); los 4 movimientos (`TenenciaToken.ejecutarReserva(cantidad)` del vendedor, crédito saldo vendedor, débito saldo comprador, `TenenciaToken.acreditar(cantidad)` del comprador) + 2 registros de `Movimiento` (uno por usuario) + actualización de `cantidadDisponible`/`estado` de la oferta, en una transacción.
 - **Cancelar oferta P2P (UC-17):** `OfertaService.cancelar(...)` — `TenenciaToken.liberarReserva(cantidadDisponible)` del vendedor + `OfertaP2P.estado = CANCELADA`, en una transacción. Sin `Movimiento` (no hubo venta sobre esa cantidad).
+- **Cancelación automática por vencimiento (UC-17):** `OfertaVencimientoScheduler` (`config/`, `@Scheduled`, cadencia `app.ofertas.vencimiento-cron`, cada 5 minutos por defecto) invoca `OfertaService.cancelarVencidas()`, que itera `OfertaP2PRepository.findByEstadoAndFechaVencimientoBefore(ABIERTA, ahora)` y delega, vía `self` (mismo patrón `@Lazy` que `CotizacionServiceImpl`), en `cancelarUnaVencida(ofertaId)` por cada una — `@Transactional(REQUIRES_NEW)`, misma lógica de liberar reserva + `CANCELADA` que la cancelación voluntaria, en su propia sub-transacción para que una falla puntual no bloquee cancelar las demás.
 - **Baja de jugador (UC-15):** `JugadorService.darDeBaja(...)`, en este orden dentro de una única transacción: (1) por cada `OfertaP2P` en estado `ABIERTA` de ese jugador, `TenenciaToken.liberarReserva(cantidadDisponible)` de su vendedor y la marca `CANCELADA`; (2) por cada `TenenciaToken` (ya sin reserva pendiente) con `cantidad > 0` de ese jugador: la pone a 0, acredita saldo del usuario a la cotización del día anterior, inserta `Movimiento` tipo `COMPENSACION_BAJA`; (3) marca el jugador `INACTIVO`. Si hay N usuarios afectados (con o sin ofertas abiertas), es una única transacción que cubre a todos — una falla parcial no puede dejar a algunos usuarios compensados/reintegrados y a otros no.
 - **Recálculo de cotización (UC-06/UC-13):** por diseño, cada jugador se calcula y persiste en su propia sub-transacción dentro de `CotizacionService` (no una transacción gigante para los ~cientos de jugadores del catálogo), para que un error puntual en un jugador no revierta el cálculo ya persistido de los demás — pero cada cálculo individual (leer rendimiento, calcular, insertar `CotizacionHistorica`, actualizar puntero de "vigente") sí es atómico.
 
@@ -366,13 +371,13 @@ Esta cadencia ya no es un valor de cron ajustable a discreción técnica: es una
 
 ### 9.1 Publicar oferta
 
-`POST /ofertas` (`OfertaController`) — `OfertaService.publicar` invoca `TenenciaToken.reservar(cantidadPublicada)` del vendedor: si `cantidadPublicada > disponible()` (tenencia total menos lo ya reservado en otras ofertas), se rechaza por completo (`TenenciaInsuficienteException`, `409`). Si la reserva es válida, la cantidad queda **físicamente bloqueada** (no sólo validada de palabra): `cantidadReservada` del vendedor sube de inmediato, así que una venta al sistema (UC-10) o una segunda publicación no pueden tocar esos tokens mientras la oferta siga abierta. Crea `OfertaP2P(cantidadPublicada, cantidadDisponible = cantidadPublicada, estado = ABIERTA)` vía `OfertaP2PRepository`.
+`POST /ofertas` (`OfertaController`) con `{jugadorId, cantidad, precioUnitario, horasLimite}` — `OfertaService.publicar` invoca `TenenciaToken.reservar(cantidad)` del vendedor: si `cantidad > disponible()` (tenencia total menos lo ya reservado en otras ofertas), se rechaza por completo (`TenenciaInsuficienteException`, `409`). Si la reserva es válida, la cantidad queda **físicamente bloqueada** (no sólo validada de palabra): `cantidadReservada` del vendedor sube de inmediato, así que una venta al sistema (UC-10) o una segunda publicación no pueden tocar esos tokens mientras la oferta siga abierta. Crea `OfertaP2P(cantidadPublicada, cantidadDisponible = cantidadPublicada, precioUnitario, estado = ABIERTA, fechaCreacion = ahora, fechaVencimiento = ahora + horasLimite)` vía `OfertaP2PRepository`. `precioUnitario` y `horasLimite` los fija el propio vendedor (`@Positive` en el DTO de request) — no hay lectura de `CotizacionService` en este flujo.
 
 ### 9.2 Ejecutar compra sobre una oferta
 
 `POST /ofertas/{id}/compras` (`OfertaController`) con `{cantidad}`:
 
-1. Validar `cantidad ≤ cantidadDisponible` de la oferta y saldo suficiente del comprador a la cotización vigente **en el momento de la ejecución** (nunca la cotización de cuando se publicó la oferta).
+1. Validar `cantidad ≤ cantidadDisponible` de la oferta y saldo suficiente del comprador a `oferta.precioUnitario` — **el precio fijado por el vendedor al publicar, nunca la cotización vigente del jugador** (que no interviene en ningún punto de este flujo).
 2. Ejecutar la transacción atómica de 4 movimientos (§5): `TenenciaToken.ejecutarReserva(cantidad)` del vendedor (descuenta `cantidad` y `cantidadReservada` a la vez), crédito de saldo al vendedor, débito de saldo al comprador, `TenenciaToken.acreditar(cantidad)` al comprador.
 3. Registrar 2 `Movimiento` (tipo `VENTA_P2P` para el vendedor, `COMPRA_P2P` para el comprador), cruzados por `contraparteUsuarioId`, vía `MovimientoRepository`.
 4. Registrar en `AuditoriaService`.
@@ -382,7 +387,7 @@ Esta cadencia ya no es un valor de cron ajustable a discreción técnica: es una
 
 **Decisión: locking pesimista** (`SELECT ... FOR UPDATE` sobre la fila `OfertaP2P`, vía `@Lock(LockModeType.PESSIMISTIC_WRITE)` en `OfertaP2PRepository`) al leer la oferta dentro de la transacción de ejecución.
 
-Justificación: la constitución exige que "nunca se venda más cantidad que la publicada", con "el primer comprador cuya operación se confirma se la lleva". Con locking optimista (campo `version`), varios compradores concurrentes generarían `OptimisticLockException` y requerirían reintento manual en el cliente/service, complejizando el flujo sin beneficio real acá: las ofertas P2P no son de alta frecuencia de escritura (no es un order book de trading de alta velocidad, está explícitamente prohibido que lo sea), así que el costo de un lock pesimista de fila por unos milisegundos es aceptable y da corrección directa sin lógica de reintento. Se aplica **únicamente sobre la fila de la oferta**, nunca sobre precio (que nunca se negocia ni se toca en esta operación — se lee de `CotizacionService` fuera del lock).
+Justificación: la constitución exige que "nunca se venda más cantidad que la publicada", con "el primer comprador cuya operación se confirma se la lleva". Con locking optimista (campo `version`), varios compradores concurrentes generarían `OptimisticLockException` y requerirían reintento manual en el cliente/service, complejizando el flujo sin beneficio real acá: las ofertas P2P no son de alta frecuencia de escritura (no es un order book de trading de alta velocidad, está explícitamente prohibido que lo sea), así que el costo de un lock pesimista de fila por unos milisegundos es aceptable y da corrección directa sin lógica de reintento. Se aplica **únicamente sobre la fila de la oferta**, nunca sobre precio (que nunca se negocia entre comprador y vendedor — el único valor posible ya quedó fijado por el vendedor al publicar, se lee directamente de `oferta.precioUnitario` dentro del propio lock).
 
 ### 9.4 Retirar oferta
 
@@ -391,6 +396,14 @@ Justificación: la constitución exige que "nunca se venda más cantidad que la 
 ### 9.5 Interacción con la baja de un jugador (UC-15/UC-17)
 
 Si el jugador de una oferta `ABIERTA` es dado de baja, `JugadorService.darDeBaja` cancela esa oferta como parte de su propia transacción (§5): `TenenciaToken.liberarReserva(cantidadDisponible)` del vendedor y `OfertaP2P.estado = CANCELADA`, **antes** de calcular la compensación de ese vendedor — así su tenencia queda completa (incluida la que estaba reservada) al momento de compensarla a la cotización del día anterior. No hay un `Movimiento` de cancelación por separado; la compensación resultante ya cubre esa cantidad.
+
+### 9.6 Cancelación automática por vencimiento (UC-17)
+
+`OfertaVencimientoScheduler` (`config/`, `@Scheduled(cron = "${app.ofertas.vencimiento-cron:0 */5 * * * *}")`, cada 5 minutos por defecto — más frecuente que el recálculo semanal de cotización, porque una oferta vence en horas, no semanas) invoca `OfertaService.cancelarVencidas()` directamente, nunca a través de un Controller (mismo criterio que `CotizacionRecalculoScheduler`). `cancelarVencidas()`:
+
+1. Lee (sin lock) `OfertaP2PRepository.findByEstadoAndFechaVencimientoBefore(ABIERTA, Instant.now())`.
+2. Por cada oferta encontrada, delega — vía `self` inyectado con `@Lazy` (mismo patrón que `CotizacionServiceImpl.recalcular`, necesario para no saltear el proxy AOP de Spring) — en `cancelarUnaVencida(ofertaId)`, anotado `@Transactional(propagation = Propagation.REQUIRES_NEW)`: cada oferta se cancela en su propia sub-transacción, así que una falla puntual (p. ej. un deadlock aislado) no impide cancelar las demás ya vencidas de esa misma pasada. Un fallo se loguea y se continúa con la siguiente.
+3. `cancelarUnaVencida` relee la oferta bajo `@Lock(PESSIMISTIC_WRITE)` (mismo mecanismo que §9.3) y sólo actúa si sigue `ABIERTA` (puede haberse vendido o cancelado entre el paso 1 sin lock y este momento); si sigue abierta, aplica la misma lógica que la cancelación voluntaria (§9.4): `TenenciaToken.liberarReserva(cantidadDisponible)` + `OfertaP2P.estado = CANCELADA`.
 
 ---
 

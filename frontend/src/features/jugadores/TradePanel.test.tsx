@@ -216,6 +216,29 @@ describe('TradePanel', () => {
     )
   })
 
+  it('en modo Vender, muestra el precio con el 15% de descuento sobre la cotización vigente', async () => {
+    vi.mocked(portfolioApi.obtenerPortfolio).mockResolvedValue({
+      saldoVirtual: '1000.00',
+      tenencias: [
+        {
+          jugadorId: JUGADOR_ID,
+          cantidad: 3,
+          cotizacionVigente: '100.00',
+          valor: '300.00',
+        },
+      ],
+      valorTotal: '300.00',
+    })
+    const user = userEvent.setup()
+    renderTradePanel({ cotizacionVigente: 100 })
+
+    await user.click(screen.getByRole('tab', { name: 'Vender' }))
+
+    // 100 × (1 - 0.15) = 85,00 -- a cantidad 1, precio unitario y total coinciden.
+    expect(await screen.findAllByText('$ 85,00')).toHaveLength(2)
+    expect(screen.getByText(/El sistema paga un 15% menos/)).toBeInTheDocument()
+  })
+
   it('si la compra falla, muestra el mensaje de error de la API', async () => {
     vi.mocked(tokensApi.comprarTokens).mockRejectedValue(
       new ApiError(409, 'Saldo insuficiente', 'Conflicto'),

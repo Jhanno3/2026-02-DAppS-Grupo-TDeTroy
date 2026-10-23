@@ -4,6 +4,9 @@ import static org.springframework.test.web.servlet.assertj.MockMvcTester.create;
 
 import com.tdetroy.valuacion.config.JwtService;
 import com.tdetroy.valuacion.model.RolUsuario;
+import com.tdetroy.valuacion.model.Usuario;
+import com.tdetroy.valuacion.services.UsuarioService;
+import java.math.BigDecimal;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +38,7 @@ import tools.jackson.databind.ObjectMapper;
 class JugadorControllerIT {
 
     @Autowired private JwtService jwtService;
+    @Autowired private UsuarioService usuarioService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private MockMvcTester mvc;
@@ -229,5 +233,129 @@ class JugadorControllerIT {
                 .assertThat()
                 .hasStatus(404)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+    }
+
+    // ---- POST /jugadores/{id}/baja (UC-15, ADMIN, tasks.md T6.6) ----
+
+    private Usuario crearUsuarioConSaldo(BigDecimal saldo) {
+        Usuario usuario =
+                usuarioService.registrar(
+                        "test-" + UUID.randomUUID() + "@example.com", "hash-bcrypt");
+        if (saldo.signum() > 0) {
+            usuarioService.recargarSaldo(usuario.getId(), saldo, UUID.randomUUID());
+        }
+        return usuario;
+    }
+
+    private String tokenDe(Usuario usuario) {
+        return jwtService.generarToken(usuario.getId(), usuario.getEmail(), usuario.getRol());
+    }
+
+    @Test
+    void darDeBaja_sinToken_responde401() {
+        String id = crearYObtenerId("Jugador Baja Sin Token " + UUID.randomUUID());
+
+        mvc.post().uri("/api/v1/jugadores/{id}/baja", id).assertThat().hasStatus(401);
+    }
+
+    @Test
+    void darDeBaja_conTokenUser_responde403() {
+        String id = crearYObtenerId("Jugador Baja Rol User " + UUID.randomUUID());
+
+        mvc.post()
+                .uri("/api/v1/jugadores/{id}/baja", id)
+                .header("Authorization", "Bearer " + tokenUser())
+                .assertThat()
+                .hasStatus(403);
+    }
+
+    @Test
+    void darDeBaja_conJugadorInexistente_responde404() {
+        mvc.post()
+                .uri("/api/v1/jugadores/{id}/baja", UUID.randomUUID())
+                .header("Authorization", "Bearer " + tokenAdmin())
+                .assertThat()
+                .hasStatus(404)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+    }
+
+    @Test
+    void darDeBaja_conTokenAdmin_marcaInactivoYResponde200() {
+        String id = crearYObtenerId("Jugador Baja Admin " + UUID.randomUUID());
+
+        mvc.post()
+                .uri("/api/v1/jugadores/{id}/baja", id)
+                .header("Authorization", "Bearer " + tokenAdmin())
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .contains("\"estado\":\"INACTIVO\"");
+
+        mvc.get()
+                .uri("/api/v1/jugadores/{id}", id)
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .contains("\"estado\":\"INACTIVO\"")
+                .contains("\"tokensDisponibles\":0");
+    }
+
+    @Test
+    void darDeBaja_conTenenciaYOfertaAbierta_compensaAAmbosUsuariosYCancelaLaOferta() {
+        String id = crearYObtenerId("Jugador Baja Con Ofertas " + UUID.randomUUID());
+        Usuario comprador = crearUsuarioConSaldo(new BigDecimal("1000.00"));
+        Usuario vendedor = crearUsuarioConSaldo(new BigDecimal("1000.00"));
+
+        // comprador compra 10 al sistema; vendedor compra 10 y publica 6 en una oferta P2P.
+        mvc.post()
+                .uri("/api/v1/jugadores/{id}/compras", id)
+                .header("Authorization", "Bearer " + tokenDe(comprador))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"cantidad\":10}")
+                .assertThat()
+                .hasStatus(201);
+        mvc.post()
+                .uri("/api/v1/jugadores/{id}/compras", id)
+                .header("Authorization", "Bearer " + tokenDe(vendedor))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"cantidad\":10}")
+                .assertThat()
+                .hasStatus(201);
+        mvc.post()
+                .uri("/api/v1/ofertas")
+                .header("Authorization", "Bearer " + tokenDe(vendedor))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                        "{\"jugadorId\":\"%s\",\"cantidad\":6,\"precioUnitario\":20.00,\"horasLimite\":24}"
+                                .formatted(id))
+                .assertThat()
+                .hasStatus(201);
+
+        mvc.post()
+                .uri("/api/v1/jugadores/{id}/baja", id)
+                .header("Authorization", "Bearer " + tokenAdmin())
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .contains("\"estado\":\"INACTIVO\"");
+
+        // Ambos quedan compensados por la totalidad de su tenencia (comprador: 10, vendedor: 10
+        // incluidos los 6 que estaban reservados en la oferta) a la cotización inicial (100.00,
+        // sin cálculo previo), y la oferta queda cancelada.
+        mvc.get()
+                .uri("/api/v1/movimientos/me")
+                .header("Authorization", "Bearer " + tokenDe(comprador))
+                .assertThat()
+                .bodyText()
+                .contains("\"tipo\":\"COMPENSACION_BAJA\"")
+                .contains("\"cantidad\":10");
+        mvc.get()
+                .uri("/api/v1/movimientos/me")
+                .header("Authorization", "Bearer " + tokenDe(vendedor))
+                .assertThat()
+                .bodyText()
+                .contains("\"tipo\":\"COMPENSACION_BAJA\"")
+                .contains("\"cantidad\":10");
+        mvc.get().uri("/api/v1/ofertas?jugadorId={id}", id).assertThat().bodyText().isEqualTo("[]");
     }
 }

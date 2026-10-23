@@ -6,11 +6,34 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
 .title {
   margin: 0;
+}
+
+.headerAcciones {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mensaje {
+  margin: 0 0 1rem;
+  padding: 0.625rem;
+  border-radius: 0.375rem;
+  background: light-dark(#e8f4ea, #1e3324);
+  color: light-dark(#1e5c2c, #8fd9a0);
+  font-size: 0.9rem;
+}
+
+.filaAcciones {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .table {

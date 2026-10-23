@@ -45,11 +45,17 @@ public interface TokenService {
 
     /**
      * Vende {@code cantidad} tokens de {@code jugadorId} que posee {@code usuarioId} de vuelta al
-     * sistema, a la cotización vigente: valida la cantidad <b>disponible</b> de la tenencia (vía
-     * {@code TenenciaToken.disponible()} — nunca se puede vender una cantidad reservada en una
-     * oferta P2P abierta, ver UC-17), descuenta la tenencia, acredita el saldo virtual
-     * correspondiente, libera esa cantidad de vuelta a la emisión disponible del jugador y registra
-     * el {@link Movimiento} correspondiente, tipo {@code VENTA_SISTEMA} (UC-10). Todo o nada.
+     * sistema, a {@code app.token.descuento-venta-sistema} por debajo de la cotización vigente
+     * (nunca la cotización completa, a diferencia de {@link #comprar} y de toda operación P2P —
+     * {@code OfertaServiceImpl}, UC-17 — que sí pagan/cobran la cotización vigente sin descuento):
+     * valida la cantidad <b>disponible</b> de la tenencia (vía {@code TenenciaToken.disponible()} —
+     * nunca se puede vender una cantidad reservada en una oferta P2P abierta, ver UC-17), descuenta
+     * la tenencia, acredita el saldo virtual correspondiente a ese precio con descuento, libera esa
+     * cantidad de vuelta a la emisión disponible del jugador y registra el {@link Movimiento}
+     * correspondiente, tipo {@code VENTA_SISTEMA} (UC-10). Todo o nada. El descuento es deliberado
+     * (spec.md UC-10): hace que vender directamente a otro usuario vía oferta P2P sea siempre más
+     * conveniente que vender al sistema, sin tocar cómo se calcula la cotización en sí — {@code
+     * CotizacionService} sigue siendo el único punto de verdad de ese valor (constitution.md §2).
      *
      * @throws RecursoNoEncontradoException si no existe {@code usuarioId} o {@code jugadorId}
      * @throws TenenciaInsuficienteException si {@code usuarioId} no tiene al menos {@code cantidad}

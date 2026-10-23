@@ -62,6 +62,17 @@ export function editarJugador(
   })
 }
 
+/** UC-15 (ADMIN). Inactivación + compensación de cada usuario afectado, no es un `DELETE` físico. */
+export function darDeBajaJugador(
+  id: string,
+  token: string,
+): Promise<JugadorResponse> {
+  return apiFetch<JugadorResponse>(`/jugadores/${id}/baja`, {
+    method: 'POST',
+    token,
+  })
+}
+
 export interface CotizacionResponse {
   id: string
   semana: string

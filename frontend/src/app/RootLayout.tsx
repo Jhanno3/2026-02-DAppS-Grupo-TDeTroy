@@ -20,6 +20,9 @@ export function RootLayout() {
           <LinkButton to="/mercado" variant="ghost" small>
             Mercado
           </LinkButton>
+          <LinkButton to="/p2p" variant="ghost" small>
+            P2P
+          </LinkButton>
           {isAuthenticated && user ? (
             <>
               <LinkButton to="/cartera" variant="ghost" small>

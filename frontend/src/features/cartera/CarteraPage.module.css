@@ -1,13 +1,53 @@
+.scope {
+  --bg: #0b0f0d;
+  --surface: #151b18;
+  --surface-2: #1a221e;
+  --chip: #1c2420;
+  --line: #26302b;
+  --line-strong: #3a4640;
+  --text: #eef2ee;
+  --text-2: #b4beb8;
+  --muted: #9aa59f;
+  --accent: #c8f25a;
+  --down: #ff9a6b;
+
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100%;
+}
+
 .container {
-  padding: 1.5rem;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .title {
-  margin: 0 0 1rem;
+  margin: 0;
+  font-size: 2.25rem;
+  line-height: 1;
+}
+
+.historialLink {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.historialLink:hover {
+  color: var(--accent);
 }
 
 .kpis {
-  margin: 0 0 1.5rem;
+  margin: 0 0 2rem;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   gap: 1rem;
@@ -15,14 +55,14 @@
 
 .kpis div {
   padding: 1rem;
-  border: 1px solid light-dark(#eaeaea, #333);
-  border-radius: 0.5rem;
-  background: light-dark(#fff, #161616);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
 }
 
 .kpis dt {
   font-size: 0.8rem;
-  color: light-dark(#666, #999);
+  color: var(--muted);
 }
 
 .kpis dd {
@@ -32,60 +72,99 @@
 }
 
 .empty {
-  color: light-dark(#666, #999);
+  color: var(--muted);
 }
 
-.tableScroll {
-  overflow-x: auto;
+.empty a {
+  color: var(--accent);
 }
 
-.table {
-  width: 100%;
-  min-width: 36rem;
-  border-collapse: collapse;
-  font-size: 0.9rem;
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1.25rem;
 }
 
-.table th {
-  text-align: left;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: light-dark(#666, #999);
-  padding: 0.5rem 0;
-}
-
-.table td {
-  padding: 0.625rem 0;
-  border-top: 1px solid light-dark(#eaeaea, #333);
-}
-
-.num {
-  text-align: right;
-}
-
-.jugador {
+.card {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.card:hover {
+  border-color: var(--line-strong);
+}
+
+.cardPhoto {
+  position: relative;
+  height: 11.5rem;
+  background: var(--surface-2);
+}
+
+.cardBody {
+  padding: 0.875rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
 }
 
-.jugador b {
-  display: block;
+.cardName {
+  font-weight: 700;
+  font-size: 1.2rem;
+  line-height: 1.1;
 }
 
-.jugador small {
-  color: light-dark(#666, #999);
+.cardClub {
+  margin-top: 0.25rem;
+  color: var(--text-2);
+  font-size: 0.85rem;
 }
 
-.accion {
-  text-align: right;
+.cardPrice {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: ui-monospace, monospace;
 }
 
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+.cardPrice strong {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.tenencia {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--line);
+}
+
+.tenencia strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.costoPromedio {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.75rem;
+  border-radius: 0.625rem;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
 }

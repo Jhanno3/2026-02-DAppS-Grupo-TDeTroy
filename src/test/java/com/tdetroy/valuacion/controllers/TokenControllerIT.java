@@ -26,10 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
  * TokenService} y {@code GlobalExceptionHandler} quedan bien enganchados.
  *
  * <p>El usuario y el jugador se arman vía {@code UsuarioService}/{@code JugadorService}
- * autowireados directamente (no vía HTTP): no existe todavía un endpoint de recarga de saldo
- * (tasks.md T1.6, {@code UsuarioController}) para llegar a ese estado sólo con {@code MockMvc}. El
- * JWT se emite con el {@code id} real del usuario persistido, igual que lo haría {@code
- * AuthController} en un login real.
+ * autowireados directamente (no vía HTTP, por brevedad — {@code UsuarioControllerIT} ya cubre el
+ * endpoint de recarga de saldo en sí, tasks.md T1.6). El JWT se emite con el {@code id} real del
+ * usuario persistido, igual que lo haría {@code AuthController} en un login real.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

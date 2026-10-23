@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { apiFetch, ApiError } from './client'
+import { apiFetch, ApiError, registrarManejadorNoAutenticado } from './client'
 
 describe('apiFetch', () => {
   beforeEach(() => {
@@ -8,6 +8,7 @@ describe('apiFetch', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    registrarManejadorNoAutenticado(null)
   })
 
   it('en una respuesta OK, devuelve el JSON parseado', async () => {
@@ -39,6 +40,14 @@ describe('apiFetch', () => {
     expect(result).toBeUndefined()
   })
 
+  it('en 202 sin cuerpo, devuelve undefined en vez de intentar parsear JSON', async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 202 }))
+
+    const result = await apiFetch('/cotizaciones/recalculo')
+
+    expect(result).toBeUndefined()
+  })
+
   it('en un error con problem+json, lanza ApiError con el detail del backend', async () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(
@@ -65,6 +74,37 @@ describe('apiFetch', () => {
     await expect(apiFetch('/jugadores')).rejects.toThrow(
       'Ocurrió un error inesperado. Intentá de nuevo en unos minutos.',
     )
+  })
+
+  it('en un 401, invoca el manejador registrado antes de lanzar el ApiError', async () => {
+    const manejador = vi.fn()
+    registrarManejadorNoAutenticado(manejador)
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({ detail: 'Se requiere un token válido...' }),
+        { status: 401 },
+      ),
+    )
+
+    await expect(apiFetch('/portfolios/me')).rejects.toMatchObject({
+      status: 401,
+    })
+
+    expect(manejador).toHaveBeenCalledOnce()
+  })
+
+  it('en un 409 (no 401), nunca invoca el manejador de no autenticado', async () => {
+    const manejador = vi.fn()
+    registrarManejadorNoAutenticado(manejador)
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ detail: 'Conflicto' }), { status: 409 }),
+    )
+
+    await expect(apiFetch('/jugadores/1/compras')).rejects.toMatchObject({
+      status: 409,
+    })
+
+    expect(manejador).not.toHaveBeenCalled()
   })
 
   it('ApiError es instancia de Error con status y title', () => {

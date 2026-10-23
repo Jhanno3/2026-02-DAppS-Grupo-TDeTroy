@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Catálogo de jugadores (plan.md §1, UC-03/UC-04/UC-07). La invariante de máximo 100 tokens
- * emitidos y la baja completa (UC-15, cancelación de ofertas + compensación de tenencias) no son
- * responsabilidad de este Service en su forma actual — {@code darDeBaja()} sobre la propia entidad
- * protege la primera, y la orquestación de la baja llega en T6.6.
+ * Catálogo de jugadores (plan.md §1, UC-03/UC-04/UC-07/UC-15). La invariante de máximo 100 tokens
+ * emitidos la protege {@code Jugador.emitirTokens} sobre la propia entidad; la orquestación
+ * completa de la baja (UC-15: cancelación de ofertas abiertas + compensación de tenencias) vive en
+ * {@link #darDeBaja} (T6.6).
  */
 public interface JugadorService {
 
@@ -57,4 +57,17 @@ public interface JugadorService {
             String nacionalidad,
             String liga,
             UUID actorId);
+
+    /**
+     * Da de baja un jugador (UC-15), en una única transacción: cancela cada oferta P2P {@code
+     * ABIERTA} de ese jugador reintegrando lo reservado a su vendedor, compensa con saldo virtual
+     * (a la cotización vigente al momento de la baja, "del día anterior" en los términos de spec.md
+     * — este sistema no recalcula más de una vez por día) a cada usuario con tenencia {@code > 0}
+     * de ese jugador (incluida la recién reintegrada), retira esos tokens de circulación de forma
+     * permanente, marca el jugador {@code INACTIVO} y audita la operación completa.
+     *
+     * @param actorId quién ejecutó la baja (el ADMIN autenticado)
+     * @throws RecursoNoEncontradoException si no existe un jugador con {@code jugadorId}
+     */
+    Jugador darDeBaja(UUID jugadorId, UUID actorId);
 }
