@@ -325,7 +325,9 @@ class JugadorControllerIT {
                 .uri("/api/v1/ofertas")
                 .header("Authorization", "Bearer " + tokenDe(vendedor))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"jugadorId\":\"%s\",\"cantidad\":6}".formatted(id))
+                .content(
+                        "{\"jugadorId\":\"%s\",\"cantidad\":6,\"precioUnitario\":20.00,\"horasLimite\":24}"
+                                .formatted(id))
                 .assertThat()
                 .hasStatus(201);
 
