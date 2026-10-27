@@ -76,6 +76,7 @@ Sin esto no puede arrancar ninguna entidad de negocio.
 | T4.5 | Scheduling en `config/` (lunes 03:00) invocando `CotizacionServiceImpl.recalcular(AUTOMATICO, null)` directamente, sólo sobre jugadores `ACTIVO`; cada jugador en su propia sub-transacción | T4.4, T3.6 | plan §5, §6.4, spec UC-06 |
 | T4.6 | `CotizacionController`: `POST /cotizaciones/recalculo` (UC-13, ADMIN), invoca el mismo `CotizacionService` sobre todos los jugadores `ACTIVO`, sin parámetro de jugador ni de valor de cotización en el body; audita vía `AuditoriaService` por jugador afectado | T4.5, T1.4, T0.5 | plan §3/§6.4, spec UC-13 |
 | T4.7 | `JugadorController`: `GET /jugadores/{id}/cotizaciones` (UC-08, público), delegando en `CotizacionService`; incluye jugadores dados de baja con su cotización congelada | T4.1, T2.5 | plan §3, spec UC-08 |
+| T4.8 | Patrón Strategy para cotización (`EstrategiaCotizacionCalculator`): `RENDIMIENTO_HISTORICO` (consistencia temporal min-max) y `RENDIMIENTO_ACTUAL` (desempeño absoluto de última semana / momentum). Persistencia en `CotizacionHistorica.estrategia` (migración `V15__cotizaciones_estrategia.sql`). Parámetro opcional en `POST /cotizaciones/recalculo?estrategia=...` y `GET /jugadores/{id}/cotizaciones?estrategia=...` | T4.3, T4.6, T4.7 | plan §6.5, spec UC-06 |
 
 ---
 

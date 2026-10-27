@@ -1,6 +1,7 @@
 package com.tdetroy.valuacion.dto.response;
 
 import com.tdetroy.valuacion.model.CotizacionHistorica;
+import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -11,7 +12,12 @@ import java.util.UUID;
  * historial cronologico de un jugador.
  */
 public record CotizacionResponse(
-        UUID id, String semana, BigDecimal valor, OrigenCotizacion origen, Instant fechaCalculo) {
+        UUID id,
+        String semana,
+        BigDecimal valor,
+        OrigenCotizacion origen,
+        EstrategiaCotizacion estrategia,
+        Instant fechaCalculo) {
 
     public static CotizacionResponse desde(CotizacionHistorica cotizacion) {
         return new CotizacionResponse(
@@ -19,6 +25,7 @@ public record CotizacionResponse(
                 cotizacion.getSemana(),
                 cotizacion.getValor(),
                 cotizacion.getOrigen(),
+                cotizacion.getEstrategia(),
                 cotizacion.getFechaCalculo());
     }
 }

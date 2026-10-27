@@ -146,6 +146,15 @@ class JugadorControllerIT {
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
     }
 
+    @Test
+    void obtenerCotizaciones_conEstrategia_responde200() {
+        String id = crearYObtenerId("Jugador Cotizaciones Estrategia " + UUID.randomUUID());
+        mvc.get()
+                .uri("/api/v1/jugadores/{id}/cotizaciones?estrategia=RENDIMIENTO_ACTUAL", id)
+                .assertThat()
+                .hasStatus(200);
+    }
+
     // ---- POST /jugadores (UC-03, ADMIN) ----
 
     @Test

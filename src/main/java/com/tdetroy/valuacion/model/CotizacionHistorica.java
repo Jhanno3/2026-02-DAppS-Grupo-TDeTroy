@@ -29,6 +29,7 @@ public class CotizacionHistorica {
     private final String semana;
     private final BigDecimal valor;
     private final OrigenCotizacion origen;
+    private final EstrategiaCotizacion estrategia;
     private final Instant fechaCalculo;
 
     private CotizacionHistorica(
@@ -36,8 +37,9 @@ public class CotizacionHistorica {
             String semana,
             BigDecimal valor,
             OrigenCotizacion origen,
+            EstrategiaCotizacion estrategia,
             Instant fechaCalculo) {
-        validarCampos(jugadorId, semana, valor, origen, fechaCalculo);
+        validarCampos(jugadorId, semana, valor, origen, estrategia, fechaCalculo);
         validarSemana(semana);
 
         this.id = UUID.randomUUID();
@@ -45,25 +47,8 @@ public class CotizacionHistorica {
         this.semana = semana;
         this.valor = Monetario.escalar(valor);
         this.origen = origen;
+        this.estrategia = estrategia;
         this.fechaCalculo = fechaCalculo;
-    }
-
-    /** Calcula una cotización con {@code fechaCalculo = Instant.now()} (plan.md §6.1, paso 6). */
-    public static CotizacionHistorica calcular(
-            UUID jugadorId, String semana, BigDecimal valor, OrigenCotizacion origen) {
-        return calcular(jugadorId, semana, valor, origen, Instant.now());
-    }
-
-    /**
-     * Igual que {@link #calcular}, con {@code fechaCalculo} explícita (tests, reproducibilidad).
-     */
-    public static CotizacionHistorica calcular(
-            UUID jugadorId,
-            String semana,
-            BigDecimal valor,
-            OrigenCotizacion origen,
-            Instant fechaCalculo) {
-        return new CotizacionHistorica(jugadorId, semana, valor, origen, fechaCalculo);
     }
 
     private CotizacionHistorica(
@@ -72,19 +57,73 @@ public class CotizacionHistorica {
             String semana,
             BigDecimal valor,
             OrigenCotizacion origen,
+            EstrategiaCotizacion estrategia,
             Instant fechaCalculo) {
         this.id = id;
         this.jugadorId = jugadorId;
         this.semana = semana;
         this.valor = valor;
         this.origen = origen;
+        this.estrategia = estrategia;
         this.fechaCalculo = fechaCalculo;
+    }
+
+    /**
+     * Calcula una cotización con {@code fechaCalculo = Instant.now()} y estrategia por defecto
+     * {@link EstrategiaCotizacion#RENDIMIENTO_HISTORICO}.
+     */
+    public static CotizacionHistorica calcular(
+            UUID jugadorId, String semana, BigDecimal valor, OrigenCotizacion origen) {
+        return calcular(
+                jugadorId,
+                semana,
+                valor,
+                origen,
+                EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                Instant.now());
+    }
+
+    /** Igual que {@link #calcular}, con {@code fechaCalculo} explícita y estrategia por defecto. */
+    public static CotizacionHistorica calcular(
+            UUID jugadorId,
+            String semana,
+            BigDecimal valor,
+            OrigenCotizacion origen,
+            Instant fechaCalculo) {
+        return calcular(
+                jugadorId,
+                semana,
+                valor,
+                origen,
+                EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                fechaCalculo);
+    }
+
+    /** Calcula una cotización con {@code fechaCalculo = Instant.now()} y estrategia explícita. */
+    public static CotizacionHistorica calcular(
+            UUID jugadorId,
+            String semana,
+            BigDecimal valor,
+            OrigenCotizacion origen,
+            EstrategiaCotizacion estrategia) {
+        return calcular(jugadorId, semana, valor, origen, estrategia, Instant.now());
+    }
+
+    /** Calcula una cotización con estrategia y {@code fechaCalculo} explícitas. */
+    public static CotizacionHistorica calcular(
+            UUID jugadorId,
+            String semana,
+            BigDecimal valor,
+            OrigenCotizacion origen,
+            EstrategiaCotizacion estrategia,
+            Instant fechaCalculo) {
+        return new CotizacionHistorica(jugadorId, semana, valor, origen, estrategia, fechaCalculo);
     }
 
     /**
      * Reconstruye una {@code CotizacionHistorica} ya persistida a partir de sus datos crudos (usado
      * por {@code entity/CotizacionHistoricaEntity#aModelo()} en el límite con {@code
-     * repositories/}) — a diferencia de {@link #calcular}, no valida las invariantes de alta.
+     * repositories/}).
      */
     public static CotizacionHistorica reconstruir(
             UUID id,
@@ -92,8 +131,28 @@ public class CotizacionHistorica {
             String semana,
             BigDecimal valor,
             OrigenCotizacion origen,
+            EstrategiaCotizacion estrategia,
             Instant fechaCalculo) {
-        return new CotizacionHistorica(id, jugadorId, semana, valor, origen, fechaCalculo);
+        return new CotizacionHistorica(
+                id, jugadorId, semana, valor, origen, estrategia, fechaCalculo);
+    }
+
+    /** Sobrecarga de reconstrucción con estrategia por defecto para compatibilidad. */
+    public static CotizacionHistorica reconstruir(
+            UUID id,
+            UUID jugadorId,
+            String semana,
+            BigDecimal valor,
+            OrigenCotizacion origen,
+            Instant fechaCalculo) {
+        return reconstruir(
+                id,
+                jugadorId,
+                semana,
+                valor,
+                origen,
+                EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                fechaCalculo);
     }
 
     private static void validarCampos(
@@ -101,11 +160,13 @@ public class CotizacionHistorica {
             String semana,
             BigDecimal valor,
             OrigenCotizacion origen,
+            EstrategiaCotizacion estrategia,
             Instant fechaCalculo) {
         Objects.requireNonNull(jugadorId, "jugadorId no puede ser null");
         Objects.requireNonNull(semana, "semana no puede ser null");
         Objects.requireNonNull(valor, "valor no puede ser null");
         Objects.requireNonNull(origen, "origen no puede ser null");
+        Objects.requireNonNull(estrategia, "estrategia no puede ser null");
         Objects.requireNonNull(fechaCalculo, "fechaCalculo no puede ser null");
         if (valor.signum() <= 0) {
             throw new IllegalArgumentException("valor debe ser mayor a cero, fue " + valor);

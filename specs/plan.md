@@ -313,6 +313,15 @@ Resuelve el punto derivado por `spec.md` (UC-06, flujo alternativo). El jugador 
 - El endpoint **no** acepta ningún campo de tipo cotización/valor en su request body — el DTO de `dto/request` está vacío (sólo dispara), cumpliendo la prohibición explícita de la constitución.
 - Al ser un monolito de una sola instancia en el MVP (constitution §2, sin microservicios/colas sin ADR), no se introduce un distributed lock (ej. ShedLock) para el job — si en el futuro se escala horizontalmente, eso amerita su propio ADR antes de agregarlo.
 
+### 6.5 Estrategias de cotización (Strategy pattern)
+
+El motor de cotización soporta dos estrategias desacopladas vía la interfaz `EstrategiaCotizacionCalculator`:
+
+1. **`RENDIMIENTO_HISTORICO` (default):** evalúa la evolución temporal del propio jugador comparando sus métricas de la semana contra su histórico reciente vía normalización min-max ponderada por `PesoMetrica` (§6.2). Premia regularidad y superación de su propio promedio.
+2. **`RENDIMIENTO_ACTUAL`:** evalúa el desempeño absoluto del jugador en la última semana / partidos recientes frente a referencias estándar del mercado (rating WhoScored centrado en 6.0 y acciones directas destacadas como goles y asistencias). Premia a los jugadores en racha y con picos de rendimiento en el momento presente ("mejores jugadores actuales").
+
+Ambas estrategias aplican el decaimiento por inactividad (§6.3) ante semanas sin partidos y el clamp de variación máxima ($\pm 20\%$). Las cotizaciones persistidas identifican la estrategia utilizada en el campo `estrategia` (`V15__cotizaciones_estrategia.sql`). El administrador puede seleccionar la estrategia en el recálculo manual vía `POST /cotizaciones/recalculo?estrategia=...`, y el historial puede consultarse filtrado por estrategia en `GET /jugadores/{id}/cotizaciones?estrategia=...`.
+
 ---
 
 ## 7. Ranking (UC-16)

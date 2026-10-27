@@ -1,6 +1,7 @@
 package com.tdetroy.valuacion.repositories;
 
 import com.tdetroy.valuacion.entity.CotizacionHistoricaEntity;
+import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,6 +15,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * {@code fechaCalculo} mas reciente para ese {@code jugadorId}; nunca una columna separada que
  * pueda desincronizarse.
  *
+ * <p>{@link #findTopByJugadorIdAndEstrategiaOrderByFechaCalculoDesc} resuelve la cotización vigente
+ * para una estrategia puntual.
+ *
  * <p>{@link #findByJugadorIdOrderByFechaCalculoAsc} (T4.7) trae el historial cronologico completo
  * para {@code GET /jugadores/{id}/cotizaciones} (UC-08) -- incluye jugadores dados de baja: su
  * cotizacion queda congelada en el ultimo registro, pero el historial hasta ese punto sigue siendo
@@ -24,5 +28,11 @@ public interface CotizacionHistoricaRepository
 
     Optional<CotizacionHistoricaEntity> findTopByJugadorIdOrderByFechaCalculoDesc(UUID jugadorId);
 
+    Optional<CotizacionHistoricaEntity> findTopByJugadorIdAndEstrategiaOrderByFechaCalculoDesc(
+            UUID jugadorId, EstrategiaCotizacion estrategia);
+
     List<CotizacionHistoricaEntity> findByJugadorIdOrderByFechaCalculoAsc(UUID jugadorId);
+
+    List<CotizacionHistoricaEntity> findByJugadorIdAndEstrategiaOrderByFechaCalculoAsc(
+            UUID jugadorId, EstrategiaCotizacion estrategia);
 }
