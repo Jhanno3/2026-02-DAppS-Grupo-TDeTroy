@@ -6,6 +6,7 @@ import {
   editarJugador,
   listarCotizaciones,
   listarJugadores,
+  listarMercado,
   obtenerJugador,
 } from './jugadores'
 
@@ -83,6 +84,62 @@ describe('api/jugadores', () => {
     expect(client.apiFetch).toHaveBeenCalledWith('/jugadores/abc-123/baja', {
       method: 'POST',
       token: 'admin-token',
+    })
+  })
+
+  describe('listarMercado', () => {
+    it('pide GET /jugadores/mercado con pagina/tamanio/orden, sin posicion ni busqueda si no vienen', async () => {
+      await listarMercado({ pagina: 0, orden: 'precio-desc' })
+
+      expect(client.apiFetch).toHaveBeenCalledWith(
+        '/jugadores/mercado?pagina=0&tamanio=50&orden=precio-desc',
+      )
+    })
+
+    it('usa el tamanio pedido en vez del default', async () => {
+      await listarMercado({ pagina: 2, tamanio: 20, orden: 'nombre' })
+
+      expect(client.apiFetch).toHaveBeenCalledWith(
+        '/jugadores/mercado?pagina=2&tamanio=20&orden=nombre',
+      )
+    })
+
+    it('incluye posicion cuando no es "Todos"', async () => {
+      await listarMercado({ pagina: 0, orden: 'suba', posicion: 'Arquero' })
+
+      expect(client.apiFetch).toHaveBeenCalledWith(
+        '/jugadores/mercado?pagina=0&tamanio=50&orden=suba&posicion=Arquero',
+      )
+    })
+
+    it('omite posicion cuando es "Todos"', async () => {
+      await listarMercado({
+        pagina: 0,
+        orden: 'precio-desc',
+        posicion: 'Todos',
+      })
+
+      expect(client.apiFetch).toHaveBeenCalledWith(
+        '/jugadores/mercado?pagina=0&tamanio=50&orden=precio-desc',
+      )
+    })
+
+    it('incluye busqueda cuando viene, la omite si viene vacía', async () => {
+      await listarMercado({
+        pagina: 0,
+        orden: 'precio-desc',
+        busqueda: 'Messi',
+      })
+      await listarMercado({ pagina: 0, orden: 'precio-desc', busqueda: '' })
+
+      expect(client.apiFetch).toHaveBeenNthCalledWith(
+        1,
+        '/jugadores/mercado?pagina=0&tamanio=50&orden=precio-desc&busqueda=Messi',
+      )
+      expect(client.apiFetch).toHaveBeenNthCalledWith(
+        2,
+        '/jugadores/mercado?pagina=0&tamanio=50&orden=precio-desc',
+      )
     })
   })
 })

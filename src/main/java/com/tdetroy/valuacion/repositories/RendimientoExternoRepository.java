@@ -1,31 +1,23 @@
 package com.tdetroy.valuacion.repositories;
 
-import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Puerto hacia la fuente de rendimiento detallado por jugador (WhoScored, scraping) — plan.md §8.1,
- * constitution.md §1: el Service que la consuma ({@code RendimientoService}, tasks.md T3.5) nunca
- * conoce el formato de respuesta de WhoScored, sólo esta interfaz, {@link RendimientoCrudo} y la
- * URL de foto que traduce {@link #obtenerFotoUrl}, modelos de transporte que cada implementación
- * traduce desde su propio formato externo.
+ * Puerto hacia la foto de perfil de un jugador en WhoScored (plan.md §8.1). Las métricas de
+ * rendimiento en sí se obtienen ahora vía {@link RendimientoLigaExternoRepository} (ingesta por
+ * liga completa, no por jugador) — este puerto quedó acotado a la foto, que sigue siendo
+ * por-jugador porque la página de liga no la provee.
  *
- * <p>Implementada por {@link WhoScoredRepositoryImpl} (tasks.md T3.3).
+ * <p>Implementada por {@link WhoScoredRepositoryImpl}.
  */
 public interface RendimientoExternoRepository {
 
     /**
-     * Rendimiento detallado de {@code jugadorId} en los partidos que disputó entre {@code desde} y
-     * {@code hasta} (ambos inclusive).
-     */
-    List<RendimientoCrudo> obtenerRendimiento(UUID jugadorId, LocalDate desde, LocalDate hasta);
-
-    /**
      * URL de la foto de perfil de {@code jugadorId} tal como la publica la fuente externa. {@link
      * Optional#empty()} si la fuente no tiene (o no pudo servir) una foto para ese jugador — nunca
-     * lanza, misma política de aislamiento de errores que {@link #obtenerRendimiento}.
+     * lanza, mismo criterio de aislamiento que el resto de los repositories de fuentes externas
+     * (constitution.md §1).
      */
     Optional<String> obtenerFotoUrl(UUID jugadorId);
 }

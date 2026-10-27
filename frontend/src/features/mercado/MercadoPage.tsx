@@ -1,95 +1,57 @@
-import { useMemo, useState } from 'react'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
-  listarCotizaciones,
-  listarJugadores,
+  listarMercado,
+  type JugadorConPrecioResponse,
   type JugadorResponse,
+  type OrdenMercado,
 } from '../../api/jugadores'
 import { Avatar } from '../../shared/components/Avatar'
 import { formatMoney } from '../../shared/format'
 import styles from './MercadoPage.module.css'
 
-type Orden = 'nombre' | 'precio-desc' | 'precio-asc' | 'suba' | 'disponibles'
-
-interface JugadorConPrecio {
-  jugador: JugadorResponse
-  precio: number | null
-  variacion: number | null
-}
+const TAMANIO_PAGINA = 50
 
 /**
- * Catálogo público (UC-07) con la cotización vigente de cada jugador (UC-08) — reemplaza a la
- * antigua pantalla de catálogo. `GET /jugadores` no trae cotización embebida (plan.md: "sin
- * entidad Portfolio propia" aplica el mismo criterio acá), así que se pide una vez por jugador;
- * para el tamaño de catálogo actual es liviano, y react-query cachea cada una por `jugadorId` —
- * el detalle del jugador reutiliza esa misma cache key.
+ * Catálogo público (UC-07) con la cotización vigente de cada jugador (UC-08). Pide una única
+ * página ya filtrada/ordenada/paginada por el backend (`GET /jugadores/mercado`) -- a diferencia
+ * de la versión anterior, que traía el catálogo completo y pedía la cotización jugador por jugador
+ * (cientos/miles de requests, lento con el catálogo real de ~2600 jugadores).
  */
 export function MercadoPage() {
   const [pos, setPos] = useState('Todos')
+  const [busquedaInput, setBusquedaInput] = useState('')
   const [busqueda, setBusqueda] = useState('')
-  const [orden, setOrden] = useState<Orden>('nombre')
+  const [orden, setOrden] = useState<OrdenMercado>('precio-desc')
+  const [pagina, setPagina] = useState(0)
 
-  const jugadoresQuery = useQuery({
-    queryKey: ['jugadores'],
-    queryFn: listarJugadores,
+  // Debounce de la búsqueda: evita pegarle al backend en cada tecla. Vuelve a la primera página
+  // acá mismo (no en un efecto separado reaccionando a `busqueda`) para no encadenar renders.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setBusqueda(busquedaInput.trim())
+      setPagina(0)
+    }, 300)
+    return () => clearTimeout(id)
+  }, [busquedaInput])
+
+  const mercadoQuery = useQuery({
+    queryKey: ['mercado', pagina, orden, pos, busqueda],
+    queryFn: () =>
+      listarMercado({
+        pagina,
+        tamanio: TAMANIO_PAGINA,
+        orden,
+        posicion: pos,
+        busqueda,
+      }),
   })
 
-  const cotizacionesQueries = useQueries({
-    queries: (jugadoresQuery.data ?? []).map((j) => ({
-      queryKey: ['cotizaciones', j.id],
-      queryFn: () => listarCotizaciones(j.id),
-    })),
-  })
-
-  const isLoading =
-    jugadoresQuery.isLoading || cotizacionesQueries.some((q) => q.isLoading)
-  const isError = jugadoresQuery.isError
-
-  const jugadores: JugadorConPrecio[] = useMemo(() => {
-    if (!jugadoresQuery.data) return []
-    return jugadoresQuery.data.map((jugador, i) => {
-      const cotizaciones = cotizacionesQueries[i]?.data ?? []
-      const valores = cotizaciones.map((c) => Number(c.valor))
-      const precio = valores.at(-1) ?? null
-      const variacion =
-        valores.length > 1
-          ? ((valores.at(-1)! - valores.at(0)!) / valores.at(0)!) * 100
-          : null
-      return { jugador, precio, variacion }
-    })
-  }, [jugadoresQuery.data, cotizacionesQueries])
-
-  const posiciones = useMemo(
-    () => [
-      'Todos',
-      ...new Set((jugadoresQuery.data ?? []).map((j) => j.posicion)),
-    ],
-    [jugadoresQuery.data],
-  )
-
-  const visibles = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
-    const filtrados = jugadores.filter(
-      ({ jugador }) =>
-        (pos === 'Todos' || jugador.posicion === pos) &&
-        (!q ||
-          jugador.nombre.toLowerCase().includes(q) ||
-          jugador.club.toLowerCase().includes(q)),
-    )
-    const sorts: Record<
-      Orden,
-      (a: JugadorConPrecio, b: JugadorConPrecio) => number
-    > = {
-      nombre: (a, b) => a.jugador.nombre.localeCompare(b.jugador.nombre),
-      'precio-desc': (a, b) => (b.precio ?? 0) - (a.precio ?? 0),
-      'precio-asc': (a, b) => (a.precio ?? 0) - (b.precio ?? 0),
-      suba: (a, b) => (b.variacion ?? -Infinity) - (a.variacion ?? -Infinity),
-      disponibles: (a, b) =>
-        b.jugador.tokensDisponibles - a.jugador.tokensDisponibles,
-    }
-    return [...filtrados].sort(sorts[orden])
-  }, [jugadores, pos, busqueda, orden])
+  const data = mercadoQuery.data
+  const isLoading = mercadoQuery.isLoading
+  const isError = mercadoQuery.isError
+  const posiciones = ['Todos', ...(data?.posicionesDisponibles ?? [])]
 
   return (
     <div className={styles.scope}>
@@ -107,19 +69,22 @@ export function MercadoPage() {
               <input
                 type="search"
                 placeholder="Jugador o club"
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
+                value={busquedaInput}
+                onChange={(e) => setBusquedaInput(e.target.value)}
               />
             </label>
             <label className={styles.field}>
               Ordenar por
               <select
                 value={orden}
-                onChange={(e) => setOrden(e.target.value as Orden)}
+                onChange={(e) => {
+                  setOrden(e.target.value as OrdenMercado)
+                  setPagina(0)
+                }}
               >
-                <option value="nombre">Nombre</option>
                 <option value="precio-desc">Precio: mayor a menor</option>
                 <option value="precio-asc">Precio: menor a mayor</option>
+                <option value="nombre">Nombre</option>
                 <option value="suba">Mayor suba</option>
                 <option value="disponibles">Más disponibles</option>
               </select>
@@ -139,7 +104,10 @@ export function MercadoPage() {
                 type="button"
                 className={styles.pill}
                 aria-pressed={p === pos}
-                onClick={() => setPos(p)}
+                onClick={() => {
+                  setPos(p)
+                  setPagina(0)
+                }}
               >
                 {p}
               </button>
@@ -154,26 +122,56 @@ export function MercadoPage() {
           </p>
         )}
 
-        {!isLoading && !isError && (
-          <section className={styles.grid} aria-label="Jugadores">
-            {visibles.length === 0 ? (
-              <p className={styles.empty}>
-                No hay jugadores que coincidan con el filtro.
-              </p>
-            ) : (
-              visibles.map((item) => (
-                <Carta key={item.jugador.id} item={item} />
-              ))
+        {!isLoading && !isError && data && (
+          <>
+            <section className={styles.grid} aria-label="Jugadores">
+              {data.contenido.length === 0 ? (
+                <p className={styles.empty}>
+                  No hay jugadores que coincidan con el filtro.
+                </p>
+              ) : (
+                data.contenido.map((item) => (
+                  <Carta key={item.jugador.id} item={item} />
+                ))
+              )}
+            </section>
+
+            {data.totalPaginas > 1 && (
+              <div className={styles.pagination}>
+                <button
+                  type="button"
+                  className={styles.pageBtn}
+                  disabled={pagina === 0}
+                  onClick={() => setPagina((p) => p - 1)}
+                >
+                  ← Anterior
+                </button>
+                <span className={styles.pageInfo}>
+                  Página {data.pagina + 1} de {data.totalPaginas} (
+                  {data.totalElementos} jugadores)
+                </span>
+                <button
+                  type="button"
+                  className={styles.pageBtn}
+                  disabled={data.pagina + 1 >= data.totalPaginas}
+                  onClick={() => setPagina((p) => p + 1)}
+                >
+                  Siguiente →
+                </button>
+              </div>
             )}
-          </section>
+          </>
         )}
       </main>
     </div>
   )
 }
 
-function Carta({ item }: { item: JugadorConPrecio }) {
-  const { jugador, precio, variacion } = item
+function Carta({ item }: { item: JugadorConPrecioResponse }) {
+  const jugador: JugadorResponse = item.jugador
+  const precio = item.precio === null ? null : Number(item.precio)
+  const variacion =
+    item.variacionPorcentual === null ? null : Number(item.variacionPorcentual)
   const sube = (variacion ?? 0) >= 0
   const pct = Math.max(4, jugador.tokensDisponibles)
 

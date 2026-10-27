@@ -2,6 +2,7 @@ package com.tdetroy.valuacion.services;
 
 import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
 import com.tdetroy.valuacion.model.Jugador;
+import com.tdetroy.valuacion.model.PaginaMercado;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -16,6 +17,24 @@ public interface JugadorService {
 
     /** Catálogo completo (UC-07), incluidos los jugadores {@code INACTIVO} (spec.md UC-07). */
     List<Jugador> listar();
+
+    /**
+     * Catálogo paginado con cotización vigente embebida (UC-07, plan.md §3bis) -- pensado para la
+     * pantalla de Mercado: evita traer los ~2600+ jugadores del catálogo completo y pedir la
+     * cotización de a uno (N+1 desde el cliente). Filtra, ordena y pagina en una sola pasada sobre
+     * el catálogo completo (en memoria -- a esta escala no justifica paginación a nivel de consulta
+     * SQL, ver javadoc de {@code JugadorServiceImpl#listarMercado}).
+     *
+     * @param pagina índice de página, 0 en adelante; se acota a 0 si viene negativo
+     * @param tamanio cantidad de resultados por página; se acota a [1, 100]
+     * @param orden criterio de orden tal como lo manda el frontend (ver {@code
+     *     model.OrdenMercado#desde})
+     * @param posicion si no es {@code null}/blanco/"Todos", filtra por posición exacta
+     * @param busqueda si no es {@code null}/blanco, filtra por texto libre (contains,
+     *     case-insensitive) sobre nombre o club
+     */
+    PaginaMercado listarMercado(
+            int pagina, int tamanio, String orden, String posicion, String busqueda);
 
     /**
      * Detalle de un jugador puntual (UC-07).

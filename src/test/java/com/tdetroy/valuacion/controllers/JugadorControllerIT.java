@@ -123,6 +123,69 @@ class JugadorControllerIT {
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
     }
 
+    // ---- GET /jugadores/mercado (UC-07, público, plan.md §3bis) ----
+    //
+    // Este Controller corre contra la base de desarrollo real (no una vacía por test, ver clase),
+    // que a esta altura del proyecto ya tiene un catálogo real de miles de jugadores cargado --
+    // cada test de /mercado filtra con `busqueda` por un nombre único (UUID incluido) para que los
+    // resultados queden acotados a los jugadores que el propio test creó, sin importar cuántos
+    // otros haya en el catálogo real ni en qué página quedarían sin ese filtro.
+
+    @Test
+    void mercado_sinAutenticacion_devuelveElJugadorRecienCreadoConPrecioNull() {
+        String nombre = "Jugador Mercado " + UUID.randomUUID();
+        crearYObtenerId(nombre);
+
+        mvc.get()
+                .uri("/api/v1/jugadores/mercado?busqueda={busqueda}", nombre)
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .contains(nombre)
+                .contains("\"precio\":null")
+                .contains("\"posicionesDisponibles\"");
+    }
+
+    @Test
+    void mercado_conTamanioUno_pagina() {
+        String prefijo = "Jugador Mercado Pagina " + UUID.randomUUID();
+        crearYObtenerId(prefijo + " A");
+        crearYObtenerId(prefijo + " B");
+
+        mvc.get()
+                .uri("/api/v1/jugadores/mercado?pagina=0&tamanio=1&busqueda={busqueda}", prefijo)
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .contains("\"tamanioPagina\":1")
+                .contains("\"totalElementos\":2")
+                .contains("\"totalPaginas\":2");
+    }
+
+    @Test
+    void mercado_filtraPorPosicion() {
+        String sufijo = UUID.randomUUID().toString();
+        String nombreArquero = "Arquero Mercado " + sufijo;
+        String bodyArquero =
+                """
+                {"nombre":"%s","club":"Club","posicion":"Arquero",\
+                "fechaNacimiento":"1990-01-01","nacionalidad":"Argentina",\
+                "liga":"Liga de prueba"}"""
+                        .formatted(nombreArquero);
+        crear(tokenAdmin(), bodyArquero);
+        crearYObtenerId("Delantero Mercado " + sufijo);
+
+        mvc.get()
+                .uri(
+                        "/api/v1/jugadores/mercado?posicion=Arquero&busqueda={busqueda}",
+                        "Mercado " + sufijo)
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .contains(nombreArquero)
+                .doesNotContain("Delantero Mercado " + sufijo);
+    }
+
     // ---- GET /jugadores/{id}/cotizaciones (UC-08, público) ----
 
     @Test

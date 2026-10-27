@@ -25,6 +25,7 @@ import com.tdetroy.valuacion.model.EstadoOferta;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.model.OfertaP2P;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
+import com.tdetroy.valuacion.model.PaginaMercado;
 import com.tdetroy.valuacion.model.TenenciaToken;
 import com.tdetroy.valuacion.model.TipoMovimiento;
 import com.tdetroy.valuacion.model.Usuario;
@@ -34,6 +35,7 @@ import com.tdetroy.valuacion.repositories.MovimientoRepository;
 import com.tdetroy.valuacion.repositories.OfertaP2PRepository;
 import com.tdetroy.valuacion.repositories.TenenciaTokenRepository;
 import com.tdetroy.valuacion.repositories.UsuarioRepository;
+import com.tdetroy.valuacion.repositories.ValorPorJugadorProjection;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -470,5 +472,257 @@ class JugadorServiceImplTest {
         assertThat(movimientoCaptor.getValue().aModelo().getCantidad()).isEqualTo(10);
         assertThat(movimientoCaptor.getValue().aModelo().getMontoTotal())
                 .isEqualByComparingTo("150.00");
+    }
+
+    // ---- listarMercado (UC-07, plan.md §3bis) ----
+
+    private record FilaValor(UUID jugadorId, BigDecimal valor, Instant fechaCalculo)
+            implements ValorPorJugadorProjection {
+        @Override
+        public UUID getJugadorId() {
+            return jugadorId;
+        }
+
+        @Override
+        public BigDecimal getValor() {
+            return valor;
+        }
+
+        @Override
+        public Instant getFechaCalculo() {
+            return fechaCalculo;
+        }
+    }
+
+    private void stubSinCotizaciones() {
+        when(cotizacionHistoricaRepository.findValoresVigentes()).thenReturn(List.of());
+        when(cotizacionHistoricaRepository.findValoresIniciales()).thenReturn(List.of());
+    }
+
+    private JugadorEntity jugadorConPosicion(UUID id, String nombre, String club, String posicion) {
+        Jugador jugador =
+                Jugador.darAlta(nombre, club, posicion, FECHA_NACIMIENTO, NACIONALIDAD, LIGA);
+        JugadorEntity entity = JugadorEntity.desde(jugador);
+        entity.setId(id);
+        return entity;
+    }
+
+    @Test
+    void listarMercado_sinJugadores_devuelvePaginaVaciaSinRomper() {
+        when(jugadorRepository.findAll()).thenReturn(List.of());
+        stubSinCotizaciones();
+
+        PaginaMercado pagina = service.listarMercado(0, 50, "precio-desc", null, null);
+
+        assertThat(pagina.contenido()).isEmpty();
+        assertThat(pagina.totalElementos()).isZero();
+        assertThat(pagina.totalPaginas()).isZero();
+        assertThat(pagina.posicionesDisponibles()).isEmpty();
+    }
+
+    @Test
+    void listarMercado_porDefectoOrdenaPorPrecioDescendente() {
+        UUID idBarato = UUID.randomUUID();
+        UUID idCaro = UUID.randomUUID();
+        when(jugadorRepository.findAll())
+                .thenReturn(
+                        List.of(
+                                jugadorConPosicion(idBarato, "Barato", CLUB, POSICION),
+                                jugadorConPosicion(idCaro, "Caro", CLUB, POSICION)));
+        Instant fecha = Instant.parse("2026-02-16T03:00:00Z");
+        when(cotizacionHistoricaRepository.findValoresVigentes())
+                .thenReturn(
+                        List.of(
+                                new FilaValor(idBarato, new BigDecimal("50.00"), fecha),
+                                new FilaValor(idCaro, new BigDecimal("150.00"), fecha)));
+        when(cotizacionHistoricaRepository.findValoresIniciales())
+                .thenReturn(
+                        List.of(
+                                new FilaValor(idBarato, new BigDecimal("50.00"), fecha),
+                                new FilaValor(idCaro, new BigDecimal("150.00"), fecha)));
+
+        PaginaMercado pagina = service.listarMercado(0, 50, "precio-desc", null, null);
+
+        assertThat(pagina.contenido())
+                .extracting(item -> item.jugador().getNombre())
+                .containsExactly("Caro", "Barato");
+    }
+
+    @Test
+    void listarMercado_jugadorSinCotizacion_quedaConPrecioNullAlFinalDelOrdenDescendente() {
+        UUID idConPrecio = UUID.randomUUID();
+        UUID idSinPrecio = UUID.randomUUID();
+        when(jugadorRepository.findAll())
+                .thenReturn(
+                        List.of(
+                                jugadorConPosicion(idSinPrecio, "SinPrecio", CLUB, POSICION),
+                                jugadorConPosicion(idConPrecio, "ConPrecio", CLUB, POSICION)));
+        Instant fecha = Instant.parse("2026-02-16T03:00:00Z");
+        when(cotizacionHistoricaRepository.findValoresVigentes())
+                .thenReturn(List.of(new FilaValor(idConPrecio, new BigDecimal("80.00"), fecha)));
+        when(cotizacionHistoricaRepository.findValoresIniciales())
+                .thenReturn(List.of(new FilaValor(idConPrecio, new BigDecimal("80.00"), fecha)));
+
+        PaginaMercado pagina = service.listarMercado(0, 50, "precio-desc", null, null);
+
+        assertThat(pagina.contenido())
+                .extracting(item -> item.jugador().getNombre())
+                .containsExactly("ConPrecio", "SinPrecio");
+        assertThat(pagina.contenido().get(1).precio()).isNull();
+    }
+
+    @Test
+    void listarMercado_conUnaSolaCotizacionHistorica_variacionEsNull() {
+        UUID jugadorId = UUID.randomUUID();
+        when(jugadorRepository.findAll())
+                .thenReturn(List.of(jugadorConPosicion(jugadorId, NOMBRE, CLUB, POSICION)));
+        Instant unicaFecha = Instant.parse("2026-02-16T03:00:00Z");
+        when(cotizacionHistoricaRepository.findValoresVigentes())
+                .thenReturn(
+                        List.of(new FilaValor(jugadorId, new BigDecimal("100.00"), unicaFecha)));
+        when(cotizacionHistoricaRepository.findValoresIniciales())
+                .thenReturn(
+                        List.of(new FilaValor(jugadorId, new BigDecimal("100.00"), unicaFecha)));
+
+        PaginaMercado pagina = service.listarMercado(0, 50, "precio-desc", null, null);
+
+        assertThat(pagina.contenido().get(0).variacionPorcentual()).isNull();
+    }
+
+    @Test
+    void listarMercado_conDosCotizaciones_calculaLaVariacionPorcentual() {
+        UUID jugadorId = UUID.randomUUID();
+        when(jugadorRepository.findAll())
+                .thenReturn(List.of(jugadorConPosicion(jugadorId, NOMBRE, CLUB, POSICION)));
+        when(cotizacionHistoricaRepository.findValoresVigentes())
+                .thenReturn(
+                        List.of(
+                                new FilaValor(
+                                        jugadorId,
+                                        new BigDecimal("120.00"),
+                                        Instant.parse("2026-02-16T03:00:00Z"))));
+        when(cotizacionHistoricaRepository.findValoresIniciales())
+                .thenReturn(
+                        List.of(
+                                new FilaValor(
+                                        jugadorId,
+                                        new BigDecimal("100.00"),
+                                        Instant.parse("2026-02-09T03:00:00Z"))));
+
+        PaginaMercado pagina = service.listarMercado(0, 50, "precio-desc", null, null);
+
+        assertThat(pagina.contenido().get(0).variacionPorcentual()).isEqualByComparingTo("20.0000");
+    }
+
+    @Test
+    void listarMercado_filtraPorPosicionExacta() {
+        UUID idDelantero = UUID.randomUUID();
+        UUID idArquero = UUID.randomUUID();
+        when(jugadorRepository.findAll())
+                .thenReturn(
+                        List.of(
+                                jugadorConPosicion(idDelantero, "Delantero1", CLUB, "Delantero"),
+                                jugadorConPosicion(idArquero, "Arquero1", CLUB, "Arquero")));
+        stubSinCotizaciones();
+
+        PaginaMercado pagina = service.listarMercado(0, 50, "precio-desc", "Arquero", null);
+
+        assertThat(pagina.contenido())
+                .extracting(item -> item.jugador().getNombre())
+                .containsExactly("Arquero1");
+    }
+
+    @Test
+    void listarMercado_conPosicionTodos_noFiltra() {
+        when(jugadorRepository.findAll())
+                .thenReturn(
+                        List.of(
+                                jugadorConPosicion(
+                                        UUID.randomUUID(), "Delantero1", CLUB, "Delantero"),
+                                jugadorConPosicion(
+                                        UUID.randomUUID(), "Arquero1", CLUB, "Arquero")));
+        stubSinCotizaciones();
+
+        PaginaMercado pagina = service.listarMercado(0, 50, "precio-desc", "Todos", null);
+
+        assertThat(pagina.contenido()).hasSize(2);
+    }
+
+    @Test
+    void listarMercado_filtraPorBusquedaDeTextoLibreSobreNombreOClub() {
+        when(jugadorRepository.findAll())
+                .thenReturn(
+                        List.of(
+                                jugadorConPosicion(
+                                        UUID.randomUUID(), "Leonel Messi", "Inter Miami", POSICION),
+                                jugadorConPosicion(
+                                        UUID.randomUUID(),
+                                        "Kylian Mbappe",
+                                        "Real Madrid",
+                                        POSICION)));
+        stubSinCotizaciones();
+
+        PaginaMercado pagina = service.listarMercado(0, 50, "precio-desc", null, "messi");
+
+        assertThat(pagina.contenido())
+                .extracting(item -> item.jugador().getNombre())
+                .containsExactly("Leonel Messi");
+    }
+
+    @Test
+    void listarMercado_paginaCorrectamenteYCalculaElTotalDePaginas() {
+        List<JugadorEntity> catalogo =
+                List.of(
+                        jugadorConPosicion(UUID.randomUUID(), "J1", CLUB, POSICION),
+                        jugadorConPosicion(UUID.randomUUID(), "J2", CLUB, POSICION),
+                        jugadorConPosicion(UUID.randomUUID(), "J3", CLUB, POSICION));
+        when(jugadorRepository.findAll()).thenReturn(catalogo);
+        stubSinCotizaciones();
+
+        PaginaMercado primeraPagina = service.listarMercado(0, 2, "nombre", null, null);
+        PaginaMercado segundaPagina = service.listarMercado(1, 2, "nombre", null, null);
+
+        assertThat(primeraPagina.contenido()).hasSize(2);
+        assertThat(primeraPagina.totalElementos()).isEqualTo(3);
+        assertThat(primeraPagina.totalPaginas()).isEqualTo(2);
+        assertThat(segundaPagina.contenido()).hasSize(1);
+    }
+
+    @Test
+    void
+            listarMercado_posicionesDisponibles_reflejaElCatalogoCompletoSinImportarElFiltroAplicado() {
+        when(jugadorRepository.findAll())
+                .thenReturn(
+                        List.of(
+                                jugadorConPosicion(
+                                        UUID.randomUUID(), "Delantero1", CLUB, "Delantero"),
+                                jugadorConPosicion(
+                                        UUID.randomUUID(), "Arquero1", CLUB, "Arquero")));
+        stubSinCotizaciones();
+
+        PaginaMercado pagina = service.listarMercado(0, 50, "precio-desc", "Arquero", null);
+
+        assertThat(pagina.posicionesDisponibles()).containsExactly("Arquero", "Delantero");
+    }
+
+    @Test
+    void listarMercado_ordenaPorDisponiblesDescendente() {
+        Jugador pocosDisponibles =
+                Jugador.darAlta("Pocos", CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD, LIGA);
+        pocosDisponibles.emitirTokens(90);
+        Jugador muchosDisponibles =
+                Jugador.darAlta("Muchos", CLUB, POSICION, FECHA_NACIMIENTO, NACIONALIDAD, LIGA);
+        when(jugadorRepository.findAll())
+                .thenReturn(
+                        List.of(
+                                JugadorEntity.desde(pocosDisponibles),
+                                JugadorEntity.desde(muchosDisponibles)));
+        stubSinCotizaciones();
+
+        PaginaMercado pagina = service.listarMercado(0, 50, "disponibles", null, null);
+
+        assertThat(pagina.contenido())
+                .extracting(item -> item.jugador().getNombre())
+                .containsExactly("Muchos", "Pocos");
     }
 }

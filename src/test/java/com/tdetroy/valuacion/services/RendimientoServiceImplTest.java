@@ -2,23 +2,26 @@ package com.tdetroy.valuacion.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.tdetroy.valuacion.entity.JugadorEntity;
+import com.tdetroy.valuacion.entity.RendimientoAcumuladoWhoScoredEntity;
 import com.tdetroy.valuacion.entity.RendimientoPartidoEntity;
 import com.tdetroy.valuacion.model.EstadoJugador;
 import com.tdetroy.valuacion.model.FuenteResultado;
 import com.tdetroy.valuacion.model.Jugador;
+import com.tdetroy.valuacion.model.RendimientoAcumuladoWhoScored;
 import com.tdetroy.valuacion.model.RendimientoPartido;
 import com.tdetroy.valuacion.repositories.FixtureRepository;
+import com.tdetroy.valuacion.repositories.JugadorRendimientoLigaCrudo;
 import com.tdetroy.valuacion.repositories.JugadorRepository;
 import com.tdetroy.valuacion.repositories.PartidoCrudo;
-import com.tdetroy.valuacion.repositories.RendimientoCrudo;
+import com.tdetroy.valuacion.repositories.RendimientoAcumuladoWhoScoredRepository;
 import com.tdetroy.valuacion.repositories.RendimientoExternoRepository;
+import com.tdetroy.valuacion.repositories.RendimientoLigaExternoRepository;
 import com.tdetroy.valuacion.repositories.RendimientoPartidoRepository;
 import java.time.LocalDate;
 import java.util.List;
@@ -30,22 +33,26 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Cubre {@link RendimientoServiceImpl} (tasks.md T3.5, UC-05): {@code ingestarFixtures} persiste un
- * {@code RendimientoPartido} con métricas vacías por cada jugador {@code ACTIVO} cuyo club disputó
- * un partido confirmado por Football-Data.org; {@code ingestarRendimiento} persiste uno por cada
- * partido devuelto por WhoScored y actualiza la fecha de última actualización de rendimiento del
- * jugador. Ambos aplican la clave de deduplicación (jugadorId + partidoExternoId) y aíslan la falla
- * de un jugador puntual sin interrumpir al resto del catálogo (constitution.md §1).
+ * Cubre {@link RendimientoServiceImpl} (UC-05): {@code ingestarFixtures} persiste un {@code
+ * RendimientoPartido} con métricas vacías por cada jugador {@code ACTIVO} cuyo club disputó un
+ * partido confirmado por Football-Data.org; {@code ingestarRendimiento} refresca la foto de cada
+ * jugador {@code ACTIVO} y, por cada liga presente en el catálogo, resuelve el acumulado de
+ * WhoScored por nombre+club y persiste el delta semanal contra el snapshot previo. Ambos aplican la
+ * clave de deduplicación (jugadorId + partidoExternoId) y aíslan la falla de un jugador/liga
+ * puntual sin interrumpir al resto del catálogo (constitution.md §1).
  */
 @ExtendWith(MockitoExtension.class)
 class RendimientoServiceImplTest {
 
     @Mock private FixtureRepository fixtureRepository;
     @Mock private RendimientoExternoRepository rendimientoExternoRepository;
+    @Mock private RendimientoLigaExternoRepository rendimientoLigaExternoRepository;
     @Mock private RendimientoPartidoRepository rendimientoPartidoRepository;
+    @Mock private RendimientoAcumuladoWhoScoredRepository rendimientoAcumuladoWhoScoredRepository;
     @Mock private JugadorRepository jugadorRepository;
 
     private RendimientoServiceImpl service;
@@ -56,19 +63,20 @@ class RendimientoServiceImplTest {
                 new RendimientoServiceImpl(
                         fixtureRepository,
                         rendimientoExternoRepository,
+                        rendimientoLigaExternoRepository,
                         rendimientoPartidoRepository,
+                        rendimientoAcumuladoWhoScoredRepository,
                         jugadorRepository,
                         new ObjectMapper());
     }
 
     private static Jugador jugadorActivo(String club) {
+        return jugador("Jugador de prueba", club, "Liga de prueba");
+    }
+
+    private static Jugador jugador(String nombre, String club, String liga) {
         return Jugador.darAlta(
-                "Jugador de prueba",
-                club,
-                "Delantero",
-                LocalDate.of(2000, 1, 1),
-                "Argentina",
-                "Liga de prueba");
+                nombre, club, "Delantero", LocalDate.of(2000, 1, 1), "Argentina", liga);
     }
 
     // ---- ingestarFixtures ----
@@ -97,7 +105,7 @@ class RendimientoServiceImplTest {
 
         service.ingestarFixtures();
 
-        RendimientoPartido guardado = capturarGuardado();
+        RendimientoPartido guardado = capturarRendimientoPartidoGuardado();
         assertThat(guardado.getJugadorId()).isEqualTo(jugador.getId());
         assertThat(guardado.getPartidoExternoId()).isEqualTo("111");
         assertThat(guardado.getFechaPartido()).isEqualTo(LocalDate.of(2026, 2, 15));
@@ -165,91 +173,26 @@ class RendimientoServiceImplTest {
         verify(rendimientoPartidoRepository).save(any());
     }
 
-    // ---- ingestarRendimiento ----
+    // ---- ingestarRendimiento: foto de perfil ----
 
     @Test
-    void ingestarRendimiento_sinJugadoresActivos_noConsultaWhoScored() {
+    void ingestarRendimiento_sinJugadoresActivos_noConsultaNadaMas() {
         when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO)).thenReturn(List.of());
 
         service.ingestarRendimiento();
 
-        verifyNoInteractions(rendimientoExternoRepository, rendimientoPartidoRepository);
+        verifyNoInteractions(
+                rendimientoExternoRepository,
+                rendimientoLigaExternoRepository,
+                rendimientoPartidoRepository,
+                rendimientoAcumuladoWhoScoredRepository);
     }
 
     @Test
-    void ingestarRendimiento_conDatosNuevos_persisteYActualizaFechaDelJugador() {
+    void ingestarRendimiento_conFotoNueva_actualizaYPersisteLaFoto() {
         Jugador jugador = jugadorActivo("Club A");
         when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
                 .thenReturn(List.of(JugadorEntity.desde(jugador)));
-        RendimientoCrudo crudo =
-                new RendimientoCrudo("222", LocalDate.of(2026, 2, 15), Map.of("rating", 7.8));
-        when(rendimientoExternoRepository.obtenerRendimiento(eq(jugador.getId()), any(), any()))
-                .thenReturn(List.of(crudo));
-        when(rendimientoPartidoRepository.existsByJugadorIdAndPartidoExternoId(
-                        jugador.getId(), "222"))
-                .thenReturn(false);
-
-        service.ingestarRendimiento();
-
-        RendimientoPartido guardado = capturarGuardado();
-        assertThat(guardado.getMetricas()).contains("\"rating\":7.8");
-        assertThat(guardado.getFuenteResultado()).isEqualTo(FuenteResultado.FOOTBALL_DATA);
-
-        ArgumentCaptor<JugadorEntity> jugadorCaptor = ArgumentCaptor.forClass(JugadorEntity.class);
-        verify(jugadorRepository).save(jugadorCaptor.capture());
-        assertThat(jugadorCaptor.getValue().getFechaUltimaActualizacionRendimiento()).isNotNull();
-    }
-
-    @Test
-    void ingestarRendimiento_conFilaYaIngerida_noPersisteNiActualizaFechaDelJugador() {
-        Jugador jugador = jugadorActivo("Club A");
-        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
-                .thenReturn(List.of(JugadorEntity.desde(jugador)));
-        RendimientoCrudo crudo =
-                new RendimientoCrudo("222", LocalDate.of(2026, 2, 15), Map.of("rating", 7.8));
-        when(rendimientoExternoRepository.obtenerRendimiento(eq(jugador.getId()), any(), any()))
-                .thenReturn(List.of(crudo));
-        when(rendimientoPartidoRepository.existsByJugadorIdAndPartidoExternoId(
-                        jugador.getId(), "222"))
-                .thenReturn(true);
-
-        service.ingestarRendimiento();
-
-        verify(rendimientoPartidoRepository, never()).save(any());
-        verify(jugadorRepository, never()).save(any());
-    }
-
-    @Test
-    void ingestarRendimiento_fallaAlConsultarWhoScoredDeUnJugador_noInterrumpeALosDemas() {
-        Jugador fallido = jugadorActivo("Club A");
-        Jugador exitoso = jugadorActivo("Club B");
-        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
-                .thenReturn(List.of(JugadorEntity.desde(fallido), JugadorEntity.desde(exitoso)));
-        when(rendimientoExternoRepository.obtenerRendimiento(eq(fallido.getId()), any(), any()))
-                .thenThrow(new RuntimeException("whoscored no disponible"));
-        RendimientoCrudo crudo =
-                new RendimientoCrudo("333", LocalDate.of(2026, 2, 15), Map.of("goles", 1));
-        when(rendimientoExternoRepository.obtenerRendimiento(eq(exitoso.getId()), any(), any()))
-                .thenReturn(List.of(crudo));
-        when(rendimientoPartidoRepository.existsByJugadorIdAndPartidoExternoId(
-                        exitoso.getId(), "333"))
-                .thenReturn(false);
-
-        service.ingestarRendimiento();
-
-        verify(rendimientoPartidoRepository).save(any());
-        verify(jugadorRepository).save(any());
-    }
-
-    // ---- ingestarRendimiento: foto de perfil ----
-
-    @Test
-    void ingestarRendimiento_conFotoNuevaYSinRendimiento_actualizaYPersisteLaFoto() {
-        Jugador jugador = jugadorActivo("Club A");
-        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
-                .thenReturn(List.of(JugadorEntity.desde(jugador)));
-        when(rendimientoExternoRepository.obtenerRendimiento(eq(jugador.getId()), any(), any()))
-                .thenReturn(List.of());
         when(rendimientoExternoRepository.obtenerFotoUrl(jugador.getId()))
                 .thenReturn(Optional.of("https://whoscored.test/fotos/1.jpg"));
 
@@ -259,7 +202,6 @@ class RendimientoServiceImplTest {
         verify(jugadorRepository).save(jugadorCaptor.capture());
         assertThat(jugadorCaptor.getValue().getFotoUrl())
                 .isEqualTo("https://whoscored.test/fotos/1.jpg");
-        assertThat(jugadorCaptor.getValue().getFechaUltimaActualizacionRendimiento()).isNull();
     }
 
     @Test
@@ -268,25 +210,8 @@ class RendimientoServiceImplTest {
         jugador.actualizarFoto("https://whoscored.test/fotos/1.jpg");
         when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
                 .thenReturn(List.of(JugadorEntity.desde(jugador)));
-        when(rendimientoExternoRepository.obtenerRendimiento(eq(jugador.getId()), any(), any()))
-                .thenReturn(List.of());
         when(rendimientoExternoRepository.obtenerFotoUrl(jugador.getId()))
                 .thenReturn(Optional.of("https://whoscored.test/fotos/1.jpg"));
-
-        service.ingestarRendimiento();
-
-        verify(jugadorRepository, never()).save(any());
-    }
-
-    @Test
-    void ingestarRendimiento_sinFotoDisponible_noGuardaPorEso() {
-        Jugador jugador = jugadorActivo("Club A");
-        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
-                .thenReturn(List.of(JugadorEntity.desde(jugador)));
-        when(rendimientoExternoRepository.obtenerRendimiento(eq(jugador.getId()), any(), any()))
-                .thenReturn(List.of());
-        when(rendimientoExternoRepository.obtenerFotoUrl(jugador.getId()))
-                .thenReturn(Optional.empty());
 
         service.ingestarRendimiento();
 
@@ -300,44 +225,250 @@ class RendimientoServiceImplTest {
                 .thenReturn(List.of(JugadorEntity.desde(jugador)));
         when(rendimientoExternoRepository.obtenerFotoUrl(jugador.getId()))
                 .thenThrow(new RuntimeException("whoscored no disponible"));
-        RendimientoCrudo crudo =
-                new RendimientoCrudo("444", LocalDate.of(2026, 2, 15), Map.of("goles", 2));
-        when(rendimientoExternoRepository.obtenerRendimiento(eq(jugador.getId()), any(), any()))
-                .thenReturn(List.of(crudo));
-        when(rendimientoPartidoRepository.existsByJugadorIdAndPartidoExternoId(
-                        jugador.getId(), "444"))
+        when(rendimientoLigaExternoRepository.obtenerAcumuladoLiga("Liga de prueba"))
+                .thenReturn(
+                        List.of(
+                                new JugadorRendimientoLigaCrudo(
+                                        jugador.getNombre(),
+                                        jugador.getClub(),
+                                        Map.of("goals", 2))));
+        when(rendimientoAcumuladoWhoScoredRepository.findById(jugador.getId()))
+                .thenReturn(Optional.empty());
+
+        service.ingestarRendimiento();
+
+        verify(rendimientoAcumuladoWhoScoredRepository).save(any());
+    }
+
+    // ---- ingestarRendimiento: acumulado por liga ----
+
+    @Test
+    void
+            ingestarRendimiento_primeraVezParaUnJugador_soloGuardaSnapshotSinPersistirRendimientoPartido() {
+        Jugador jugador = jugadorActivo("Club A");
+        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
+                .thenReturn(List.of(JugadorEntity.desde(jugador)));
+        when(rendimientoLigaExternoRepository.obtenerAcumuladoLiga("Liga de prueba"))
+                .thenReturn(
+                        List.of(
+                                new JugadorRendimientoLigaCrudo(
+                                        jugador.getNombre(),
+                                        jugador.getClub(),
+                                        Map.of("goals", 5, "assists", 2))));
+        when(rendimientoAcumuladoWhoScoredRepository.findById(jugador.getId()))
+                .thenReturn(Optional.empty());
+
+        service.ingestarRendimiento();
+
+        ArgumentCaptor<RendimientoAcumuladoWhoScoredEntity> captor =
+                ArgumentCaptor.forClass(RendimientoAcumuladoWhoScoredEntity.class);
+        verify(rendimientoAcumuladoWhoScoredRepository).save(captor.capture());
+        assertThat(metricasComoMapa(captor.getValue().getMetricas()))
+                .containsEntry("goals", 5)
+                .containsEntry("assists", 2);
+        verify(rendimientoPartidoRepository, never()).save(any());
+        verify(jugadorRepository, never()).save(any());
+    }
+
+    @Test
+    void
+            ingestarRendimiento_conSnapshotPrevioYDeltaPositivo_persisteRendimientoPartidoConElDelta() {
+        Jugador jugador = jugadorActivo("Club A");
+        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
+                .thenReturn(List.of(JugadorEntity.desde(jugador)));
+        when(rendimientoLigaExternoRepository.obtenerAcumuladoLiga("Liga de prueba"))
+                .thenReturn(
+                        List.of(
+                                new JugadorRendimientoLigaCrudo(
+                                        jugador.getNombre(),
+                                        jugador.getClub(),
+                                        Map.of("goals", 8, "assists", 2))));
+        RendimientoAcumuladoWhoScored snapshotPrevio =
+                RendimientoAcumuladoWhoScored.primeraVez(
+                        jugador.getId(), "{\"goals\":5,\"assists\":2}");
+        when(rendimientoAcumuladoWhoScoredRepository.findById(jugador.getId()))
+                .thenReturn(Optional.of(RendimientoAcumuladoWhoScoredEntity.desde(snapshotPrevio)));
+        when(rendimientoPartidoRepository.existsByJugadorIdAndPartidoExternoId(any(), any()))
                 .thenReturn(false);
 
         service.ingestarRendimiento();
 
-        verify(rendimientoPartidoRepository).save(any());
-        ArgumentCaptor<JugadorEntity> jugadorCaptor = ArgumentCaptor.forClass(JugadorEntity.class);
-        verify(jugadorRepository).save(jugadorCaptor.capture());
-        assertThat(jugadorCaptor.getValue().getFotoUrl()).isNull();
+        RendimientoPartido guardado = capturarRendimientoPartidoGuardado();
+        assertThat(guardado.getJugadorId()).isEqualTo(jugador.getId());
+        assertThat(guardado.getPartidoExternoId()).startsWith("WHOSCORED-LIGA-");
+        assertThat(guardado.getFuenteResultado()).isEqualTo(FuenteResultado.WHOSCORED_LIGA);
+        assertThat(metricasComoMapa(guardado.getMetricas()))
+                .containsEntry("goals", 3)
+                .containsEntry("assists", 0);
+
+        ArgumentCaptor<RendimientoAcumuladoWhoScoredEntity> snapshotCaptor =
+                ArgumentCaptor.forClass(RendimientoAcumuladoWhoScoredEntity.class);
+        verify(rendimientoAcumuladoWhoScoredRepository).save(snapshotCaptor.capture());
+        assertThat(metricasComoMapa(snapshotCaptor.getValue().getMetricas()))
+                .containsEntry("goals", 8)
+                .containsEntry("assists", 2);
+
+        verify(jugadorRepository).save(any());
     }
 
     @Test
-    void ingestarRendimiento_fallaAlObtenerRendimientoPeroTraeFotoNueva_persisteLaFoto() {
+    void ingestarRendimiento_contadorMenorAlSnapshotPrevio_elDeltaDeEseCampoEsCero() {
         Jugador jugador = jugadorActivo("Club A");
         when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
                 .thenReturn(List.of(JugadorEntity.desde(jugador)));
-        when(rendimientoExternoRepository.obtenerFotoUrl(jugador.getId()))
-                .thenReturn(Optional.of("https://whoscored.test/fotos/2.jpg"));
-        when(rendimientoExternoRepository.obtenerRendimiento(eq(jugador.getId()), any(), any()))
-                .thenThrow(new RuntimeException("whoscored no disponible"));
+        when(rendimientoLigaExternoRepository.obtenerAcumuladoLiga("Liga de prueba"))
+                .thenReturn(
+                        List.of(
+                                new JugadorRendimientoLigaCrudo(
+                                        jugador.getNombre(),
+                                        jugador.getClub(),
+                                        Map.of("goals", 3, "assists", 5))));
+        RendimientoAcumuladoWhoScored snapshotPrevio =
+                RendimientoAcumuladoWhoScored.primeraVez(
+                        jugador.getId(), "{\"goals\":5,\"assists\":2}");
+        when(rendimientoAcumuladoWhoScoredRepository.findById(jugador.getId()))
+                .thenReturn(Optional.of(RendimientoAcumuladoWhoScoredEntity.desde(snapshotPrevio)));
+        when(rendimientoPartidoRepository.existsByJugadorIdAndPartidoExternoId(any(), any()))
+                .thenReturn(false);
 
         service.ingestarRendimiento();
 
-        ArgumentCaptor<JugadorEntity> jugadorCaptor = ArgumentCaptor.forClass(JugadorEntity.class);
-        verify(jugadorRepository).save(jugadorCaptor.capture());
-        assertThat(jugadorCaptor.getValue().getFotoUrl())
-                .isEqualTo("https://whoscored.test/fotos/2.jpg");
+        RendimientoPartido guardado = capturarRendimientoPartidoGuardado();
+        assertThat(metricasComoMapa(guardado.getMetricas()))
+                .containsEntry("goals", 0)
+                .containsEntry("assists", 3);
     }
 
-    private RendimientoPartido capturarGuardado() {
+    @Test
+    void
+            ingestarRendimiento_sinCambiosRespectoDelSnapshot_actualizaSnapshotPeroNoPersisteRendimientoPartido() {
+        Jugador jugador = jugadorActivo("Club A");
+        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
+                .thenReturn(List.of(JugadorEntity.desde(jugador)));
+        when(rendimientoLigaExternoRepository.obtenerAcumuladoLiga("Liga de prueba"))
+                .thenReturn(
+                        List.of(
+                                new JugadorRendimientoLigaCrudo(
+                                        jugador.getNombre(),
+                                        jugador.getClub(),
+                                        Map.of("goals", 5))));
+        RendimientoAcumuladoWhoScored snapshotPrevio =
+                RendimientoAcumuladoWhoScored.primeraVez(jugador.getId(), "{\"goals\":5}");
+        when(rendimientoAcumuladoWhoScoredRepository.findById(jugador.getId()))
+                .thenReturn(Optional.of(RendimientoAcumuladoWhoScoredEntity.desde(snapshotPrevio)));
+
+        service.ingestarRendimiento();
+
+        verify(rendimientoAcumuladoWhoScoredRepository).save(any());
+        verify(rendimientoPartidoRepository, never()).save(any());
+        verify(jugadorRepository, never()).save(any());
+    }
+
+    @Test
+    void ingestarRendimiento_metricaNoPermitida_seFiltraYNoLlegaAlSnapshot() {
+        Jugador jugador = jugadorActivo("Club A");
+        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
+                .thenReturn(List.of(JugadorEntity.desde(jugador)));
+        when(rendimientoLigaExternoRepository.obtenerAcumuladoLiga("Liga de prueba"))
+                .thenReturn(
+                        List.of(
+                                new JugadorRendimientoLigaCrudo(
+                                        jugador.getNombre(),
+                                        jugador.getClub(),
+                                        Map.of("goals", 5, "rating", 7.8))));
+        when(rendimientoAcumuladoWhoScoredRepository.findById(jugador.getId()))
+                .thenReturn(Optional.empty());
+
+        service.ingestarRendimiento();
+
+        ArgumentCaptor<RendimientoAcumuladoWhoScoredEntity> captor =
+                ArgumentCaptor.forClass(RendimientoAcumuladoWhoScoredEntity.class);
+        verify(rendimientoAcumuladoWhoScoredRepository).save(captor.capture());
+        assertThat(metricasComoMapa(captor.getValue().getMetricas())).doesNotContainKey("rating");
+    }
+
+    @Test
+    void ingestarRendimiento_sinMatchDeNombreClub_seIgnoraLaFilaYNoPersisteNada() {
+        Jugador jugador = jugadorActivo("Club A");
+        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
+                .thenReturn(List.of(JugadorEntity.desde(jugador)));
+        when(rendimientoLigaExternoRepository.obtenerAcumuladoLiga("Liga de prueba"))
+                .thenReturn(
+                        List.of(
+                                new JugadorRendimientoLigaCrudo(
+                                        "Alguien Completamente Distinto",
+                                        "Otro Club",
+                                        Map.of("goals", 5))));
+
+        service.ingestarRendimiento();
+
+        verifyNoInteractions(rendimientoAcumuladoWhoScoredRepository);
+        verify(rendimientoPartidoRepository, never()).save(any());
+    }
+
+    @Test
+    void ingestarRendimiento_filaYaIngeridaEnLaSemana_noVuelveAPersistirRendimientoPartido() {
+        Jugador jugador = jugadorActivo("Club A");
+        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
+                .thenReturn(List.of(JugadorEntity.desde(jugador)));
+        when(rendimientoLigaExternoRepository.obtenerAcumuladoLiga("Liga de prueba"))
+                .thenReturn(
+                        List.of(
+                                new JugadorRendimientoLigaCrudo(
+                                        jugador.getNombre(),
+                                        jugador.getClub(),
+                                        Map.of("goals", 8))));
+        RendimientoAcumuladoWhoScored snapshotPrevio =
+                RendimientoAcumuladoWhoScored.primeraVez(jugador.getId(), "{\"goals\":5}");
+        when(rendimientoAcumuladoWhoScoredRepository.findById(jugador.getId()))
+                .thenReturn(Optional.of(RendimientoAcumuladoWhoScoredEntity.desde(snapshotPrevio)));
+        when(rendimientoPartidoRepository.existsByJugadorIdAndPartidoExternoId(any(), any()))
+                .thenReturn(true);
+
+        service.ingestarRendimiento();
+
+        verify(rendimientoPartidoRepository, never()).save(any());
+        verify(jugadorRepository, never()).save(any());
+    }
+
+    @Test
+    void ingestarRendimiento_fallaAlObtenerUnaLiga_noInterrumpeLaIngestaDeOtrasLigas() {
+        Jugador deLigaConFalla = jugador("Jugador A", "Club A", "Liga con falla");
+        Jugador deOtraLiga = jugador("Jugador B", "Club B", "Otra liga");
+        when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
+                .thenReturn(
+                        List.of(
+                                JugadorEntity.desde(deLigaConFalla),
+                                JugadorEntity.desde(deOtraLiga)));
+        when(rendimientoLigaExternoRepository.obtenerAcumuladoLiga("Liga con falla"))
+                .thenThrow(new RuntimeException("whoscored no disponible"));
+        when(rendimientoLigaExternoRepository.obtenerAcumuladoLiga("Otra liga"))
+                .thenReturn(
+                        List.of(
+                                new JugadorRendimientoLigaCrudo(
+                                        deOtraLiga.getNombre(),
+                                        deOtraLiga.getClub(),
+                                        Map.of("goals", 4))));
+        when(rendimientoAcumuladoWhoScoredRepository.findById(deOtraLiga.getId()))
+                .thenReturn(Optional.empty());
+
+        service.ingestarRendimiento();
+
+        verify(rendimientoAcumuladoWhoScoredRepository).save(any());
+    }
+
+    private RendimientoPartido capturarRendimientoPartidoGuardado() {
         ArgumentCaptor<RendimientoPartidoEntity> captor =
                 ArgumentCaptor.forClass(RendimientoPartidoEntity.class);
         verify(rendimientoPartidoRepository).save(captor.capture());
         return captor.getValue().aModelo();
+    }
+
+    private static Map<String, Object> metricasComoMapa(String json) {
+        try {
+            return new ObjectMapper().readValue(json, new TypeReference<Map<String, Object>>() {});
+        } catch (RuntimeException ex) {
+            throw new AssertionError("JSON invalido: " + json, ex);
+        }
     }
 }

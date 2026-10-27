@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
@@ -19,9 +18,11 @@ import org.junit.jupiter.api.Test;
  * Test del constructor {@code @Autowired} de {@link WhoScoredRepositoryImpl}: es el único que arma
  * {@code urlEfectiva} (ruteo opcional por el sidecar {@code app.whoscored.fetcher-url}), algo que
  * {@link WhoScoredRepositoryImplTest} no ejercita porque reemplaza el {@link
- * WhoScoredRepositoryImpl.DocumentoFetcher} entero via el constructor paquete-privado. Usa un
- * {@link HttpServer} embebido en localhost (sin red real, constitution.md §4) para verificar qué
- * URL arma Jsoup realmente en cada caso.
+ * WhoScoredRepositoryImpl.DocumentoFetcher} entero via el constructor paquete-privado. Ejercita
+ * este mecanismo a través de {@code obtenerFotoUrl} (el único método que le queda a esta clase) —
+ * el armado de {@code urlEfectiva} es el mismo sin importar qué método lo dispare. Usa un {@link
+ * HttpServer} embebido en localhost (sin red real, constitution.md §4) para verificar qué URL arma
+ * Jsoup realmente en cada caso.
  */
 class WhoScoredRepositoryImplFetcherTest {
 
@@ -43,14 +44,9 @@ class WhoScoredRepositoryImplFetcherTest {
         WhoScoredRepositoryImpl repository = new WhoScoredRepositoryImpl(baseUrl, "");
 
         UUID jugadorId = UUID.randomUUID();
-        LocalDate desde = LocalDate.of(2026, 2, 9);
-        LocalDate hasta = LocalDate.of(2026, 2, 15);
-        repository.obtenerRendimiento(jugadorId, desde, hasta);
+        repository.obtenerFotoUrl(jugadorId);
 
-        assertThat(rutaRecibida.get())
-                .isEqualTo(
-                        "/jugadores/%s/rendimiento?desde=%s&hasta=%s"
-                                .formatted(jugadorId, desde, hasta));
+        assertThat(rutaRecibida.get()).isEqualTo("/jugadores/%s/perfil".formatted(jugadorId));
     }
 
     @Test
@@ -62,10 +58,9 @@ class WhoScoredRepositoryImplFetcherTest {
         WhoScoredRepositoryImpl repository = new WhoScoredRepositoryImpl(baseUrl, "   ");
 
         UUID jugadorId = UUID.randomUUID();
-        repository.obtenerRendimiento(
-                jugadorId, LocalDate.of(2026, 2, 9), LocalDate.of(2026, 2, 15));
+        repository.obtenerFotoUrl(jugadorId);
 
-        assertThat(rutaRecibida.get()).startsWith("/jugadores/%s/rendimiento".formatted(jugadorId));
+        assertThat(rutaRecibida.get()).isEqualTo("/jugadores/%s/perfil".formatted(jugadorId));
     }
 
     @Test
@@ -77,10 +72,9 @@ class WhoScoredRepositoryImplFetcherTest {
         WhoScoredRepositoryImpl repository = new WhoScoredRepositoryImpl(baseUrl, (String) null);
 
         UUID jugadorId = UUID.randomUUID();
-        repository.obtenerRendimiento(
-                jugadorId, LocalDate.of(2026, 2, 9), LocalDate.of(2026, 2, 15));
+        repository.obtenerFotoUrl(jugadorId);
 
-        assertThat(rutaRecibida.get()).startsWith("/jugadores/%s/rendimiento".formatted(jugadorId));
+        assertThat(rutaRecibida.get()).isEqualTo("/jugadores/%s/perfil".formatted(jugadorId));
     }
 
     @Test
@@ -93,13 +87,9 @@ class WhoScoredRepositoryImplFetcherTest {
         WhoScoredRepositoryImpl repository = new WhoScoredRepositoryImpl(baseUrl, fetcherUrl);
 
         UUID jugadorId = UUID.randomUUID();
-        LocalDate desde = LocalDate.of(2026, 2, 9);
-        LocalDate hasta = LocalDate.of(2026, 2, 15);
-        repository.obtenerRendimiento(jugadorId, desde, hasta);
+        repository.obtenerFotoUrl(jugadorId);
 
-        String urlOriginalEsperada =
-                "%s/jugadores/%s/rendimiento?desde=%s&hasta=%s"
-                        .formatted(baseUrl, jugadorId, desde, hasta);
+        String urlOriginalEsperada = "%s/jugadores/%s/perfil".formatted(baseUrl, jugadorId);
         assertThat(rutaRecibida.get()).startsWith("/fetch?url=");
         String queryCodificada = rutaRecibida.get().substring("/fetch?url=".length());
         assertThat(URLDecoder.decode(queryCodificada, StandardCharsets.UTF_8))

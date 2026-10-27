@@ -1,11 +1,18 @@
 package com.tdetroy.valuacion.model;
 
 /**
- * Fuente que aportó el resultado/alineación/fixture de un {@link RendimientoPartido} (plan.md
- * §2.3). Sólo Football-Data.org resuelve esa parte de la ingesta (tasks.md T3.4); WhoScored
- * (tasks.md T3.3) aporta las métricas de rendimiento en sí ({@code metricas}), no esta marca de
- * fuente.
+ * Fuente que aportó un {@link RendimientoPartido} (plan.md §2.3/§8.1).
+ *
+ * <ul>
+ *   <li>{@code FOOTBALL_DATA}: resultado/alineación/fixture confirmado por Football-Data.org, con
+ *       {@code metricas} vacío (ver {@code RendimientoServiceImpl#ingestarFixtures}).
+ *   <li>{@code WHOSCORED_LIGA}: delta semanal de métricas acumuladas de temporada, resuelto desde
+ *       la página pública de estadísticas de liga de WhoScored (ver {@code
+ *       RendimientoServiceImpl#ingestarRendimiento}) — reemplaza al scraping por jugador que
+ *       existía antes de esta fuente.
+ * </ul>
  */
 public enum FuenteResultado {
-    FOOTBALL_DATA
+    FOOTBALL_DATA,
+    WHOSCORED_LIGA
 }
