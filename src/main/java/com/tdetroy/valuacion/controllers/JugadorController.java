@@ -1,10 +1,11 @@
-package com.tdetroy.valuacion.controllers;
+﻿package com.tdetroy.valuacion.controllers;
 
 import com.tdetroy.valuacion.config.UsuarioPrincipal;
 import com.tdetroy.valuacion.dto.request.CrearJugadorRequest;
 import com.tdetroy.valuacion.dto.request.EditarJugadorRequest;
 import com.tdetroy.valuacion.dto.response.CotizacionResponse;
 import com.tdetroy.valuacion.dto.response.JugadorResponse;
+import com.tdetroy.valuacion.dto.response.PaginaMercadoResponse;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.services.CotizacionService;
@@ -46,6 +47,25 @@ public class JugadorController {
     @GetMapping
     public List<JugadorResponse> listar() {
         return jugadorService.listar().stream().map(JugadorResponse::desde).toList();
+    }
+
+    /**
+     * UC-07: catálogo paginado con cotización vigente embebida (plan.md §3bis) -- la pantalla de
+     * Mercado usa este endpoint, no {@link #listar}, justamente para no tener que pedir la
+     * cotización de a un jugador por vez. {@code orden} acepta los mismos valores que ya ofrecía el
+     * filtro del frontend ({@code nombre}/{@code precio-desc}/{@code precio-asc}/{@code suba}/
+     * {@code disponibles}); cualquier otro valor (incluido ausente) cae en {@code precio-desc} —
+     * ver {@code model.OrdenMercado#desde}.
+     */
+    @GetMapping("/mercado")
+    public PaginaMercadoResponse mercado(
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "50") int tamanio,
+            @RequestParam(defaultValue = "precio-desc") String orden,
+            @RequestParam(required = false) String posicion,
+            @RequestParam(required = false) String busqueda) {
+        return PaginaMercadoResponse.desde(
+                jugadorService.listarMercado(pagina, tamanio, orden, posicion, busqueda));
     }
 
     /** UC-07: detalle de un jugador puntual; 404 vía {@code RecursoNoEncontradoException}. */

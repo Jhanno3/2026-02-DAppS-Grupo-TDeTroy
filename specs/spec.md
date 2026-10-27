@@ -135,6 +135,8 @@ Cada caso de uso incluye actor, descripción, precondiciones, flujo principal, f
   - No queda asociado rendimiento a un jugador que no existe en el catálogo.
   - La indisponibilidad temporal de una fuente externa no impide que el resto del sistema (catálogo, portfolio, compra/venta, etc.) siga funcionando con normalidad.
 
+> **Nota de revisión posterior (técnica, no de producto):** la ingesta de WhoScored deja de hacerse por jugador y pasa a hacerse **por liga completa**, contra la página pública de estadísticas de liga de esa fuente (lista paginada de todos los jugadores de la liga, filtro "All players"). Esa página sólo expone un **acumulado de temporada** de un conjunto fijo de métricas (apariciones, goles, asistencias, premio a la figura del partido, tarjetas amarilla/roja y minutos jugados) — no hay foto de perfil ni calificación/pases clave/tackles/intercepciones/tiros al arco/dribbles en esta fuente. Por eso, para las métricas que llegan por esta vía específica, "sin curación previa" (regla general de este caso de uso) queda acotado al conjunto que la fuente efectivamente puede proveer de forma agregada — no es una curación de negocio sobre variables disponibles, es el límite real de lo que la página de liga expone. El sistema calcula, semana a semana, cuánto aportó cada jugador sobre el acumulado ya conocido (delta), que es lo que efectivamente participa del cálculo de cotización (ver `plan.md` §8.1.1 para el diseño técnico). El mecanismo central de UC-05 (ingesta automática, periódica, aislada por fuente) no cambia.
+
 ### UC-06 — Cálculo semanal de cotización
 
 - **Actor:** Sistema (automático, sin intervención humana).

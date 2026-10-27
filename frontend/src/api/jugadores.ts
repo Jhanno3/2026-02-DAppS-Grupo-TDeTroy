@@ -28,6 +28,56 @@ export function obtenerJugador(id: string): Promise<JugadorResponse> {
   return apiFetch<JugadorResponse>(`/jugadores/${id}`)
 }
 
+export type OrdenMercado =
+  'nombre' | 'precio-desc' | 'precio-asc' | 'suba' | 'disponibles'
+
+export interface JugadorConPrecioResponse {
+  jugador: JugadorResponse
+  precio: string | null
+  variacionPorcentual: string | null
+}
+
+export interface PaginaMercadoResponse {
+  contenido: JugadorConPrecioResponse[]
+  pagina: number
+  tamanioPagina: number
+  totalElementos: number
+  totalPaginas: number
+  posicionesDisponibles: string[]
+}
+
+export interface ParametrosMercado {
+  pagina: number
+  tamanio?: number
+  orden: OrdenMercado
+  posicion?: string
+  busqueda?: string
+}
+
+/**
+ * UC-07: catálogo paginado con cotización vigente embebida, ya filtrado/ordenado en el backend —
+ * reemplaza a {@link listarJugadores} + N llamadas a {@link listarCotizaciones} en la pantalla de
+ * Mercado (ese patrón tardaba segundos con ~2600 jugadores, uno por cada request de cotización).
+ */
+export function listarMercado(
+  params: ParametrosMercado,
+): Promise<PaginaMercadoResponse> {
+  const query = new URLSearchParams({
+    pagina: String(params.pagina),
+    tamanio: String(params.tamanio ?? 50),
+    orden: params.orden,
+  })
+  if (params.posicion && params.posicion !== 'Todos') {
+    query.set('posicion', params.posicion)
+  }
+  if (params.busqueda) {
+    query.set('busqueda', params.busqueda)
+  }
+  return apiFetch<PaginaMercadoResponse>(
+    `/jugadores/mercado?${query.toString()}`,
+  )
+}
+
 export interface DatosIdentificatoriosJugador {
   nombre: string
   club: string
