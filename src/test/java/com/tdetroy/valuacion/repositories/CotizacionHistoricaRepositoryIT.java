@@ -8,6 +8,7 @@ import com.tdetroy.valuacion.model.OrigenCotizacion;
 import com.tdetroy.valuacion.repositories.support.PostgresIntegrationTest;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,5 +85,56 @@ class CotizacionHistoricaRepositoryIT extends PostgresIntegrationTest {
                 .isEqualByComparingTo(new BigDecimal("100.00"));
         assertThat(cotizacionHistoricaRepository.findById(segunda.getId()).orElseThrow().getValor())
                 .isEqualByComparingTo(new BigDecimal("105.50"));
+    }
+
+    // ---- findValoresVigentes / findValoresIniciales (plan.md §3bis, listado de Mercado) ----
+
+    @Test
+    void findValoresVigentes_conVariosJugadoresYVariosCalculosCadaUno_devuelveSoloElMasReciente() {
+        UUID jugadorA = UUID.randomUUID();
+        UUID jugadorB = UUID.randomUUID();
+        guardar(jugadorA, "2026-W06", "100.00", Instant.parse("2026-02-09T03:00:00Z"));
+        guardar(jugadorA, "2026-W07", "105.50", Instant.parse("2026-02-16T03:00:00Z"));
+        guardar(jugadorB, "2026-W07", "80.00", Instant.parse("2026-02-16T03:00:00Z"));
+        entityManager.clear();
+
+        List<ValorPorJugadorProjection> vigentes =
+                cotizacionHistoricaRepository.findValoresVigentes();
+
+        assertThat(vigentes).hasSize(2);
+        assertThat(valorDe(vigentes, jugadorA)).isEqualByComparingTo("105.50");
+        assertThat(valorDe(vigentes, jugadorB)).isEqualByComparingTo("80.00");
+    }
+
+    @Test
+    void findValoresIniciales_conVariosCalculosDelMismoJugador_devuelveElMasAntiguo() {
+        UUID jugadorA = UUID.randomUUID();
+        guardar(jugadorA, "2026-W06", "100.00", Instant.parse("2026-02-09T03:00:00Z"));
+        guardar(jugadorA, "2026-W07", "105.50", Instant.parse("2026-02-16T03:00:00Z"));
+        entityManager.clear();
+
+        List<ValorPorJugadorProjection> iniciales =
+                cotizacionHistoricaRepository.findValoresIniciales();
+
+        assertThat(valorDe(iniciales, jugadorA)).isEqualByComparingTo("100.00");
+    }
+
+    private void guardar(UUID jugadorId, String semana, String valor, Instant fechaCalculo) {
+        cotizacionHistoricaRepository.saveAndFlush(
+                CotizacionHistoricaEntity.desde(
+                        CotizacionHistorica.calcular(
+                                jugadorId,
+                                semana,
+                                new BigDecimal(valor),
+                                OrigenCotizacion.AUTOMATICO,
+                                fechaCalculo)));
+    }
+
+    private static BigDecimal valorDe(List<ValorPorJugadorProjection> filas, UUID jugadorId) {
+        return filas.stream()
+                .filter(f -> f.getJugadorId().equals(jugadorId))
+                .findFirst()
+                .orElseThrow()
+                .getValor();
     }
 }

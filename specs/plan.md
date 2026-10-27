@@ -114,6 +114,17 @@ RendimientoPartido (entidad JPA)
 
 `metricas` se modela como **JSONB** (no columnas fijas) porque la spec (UC-05) exige incorporar "todas las métricas que efectivamente provee el proceso de scraping de WhoScored... sin curación previa de un subconjunto acotado de variables de negocio". Una tabla de columnas fijas violaría eso apenas WhoScored agregue/quite un campo. El motor de cotización (§6) sabe interpretar las claves conocidas dentro del JSON; claves nuevas no rompen la ingesta, sólo no participan del cálculo hasta que se las incorpore explícitamente a los pesos.
 
+### 2.3bis `RendimientoAcumuladoWhoScored` (snapshot de la ingesta por liga, §8.1.1)
+
+```
+RendimientoAcumuladoWhoScored (entidad JPA, NO append-only -- a diferencia de RendimientoPartido)
+  jugadorId: UUID   (clave primaria -- snapshot 1:1 por jugador)
+  metricas: JSONB   -- último acumulado de temporada conocido (Apps/Goals/Assists/ManOfTheMatch/YellowCard/RedCard/MinsPlayed)
+  fechaActualizacion: Instant
+```
+
+Guarda únicamente el último valor conocido, nunca historial: cada ingesta semanal reemplaza por completo el snapshot del jugador (`actualizarSnapshot`). Es el punto de comparación contra el que `RendimientoServiceImpl` calcula el delta semanal (§8.1.1) que efectivamente se persiste como `RendimientoPartido`.
+
 ### 2.4 `CotizacionHistorica`
 
 ```
@@ -222,7 +233,8 @@ Todos los DTOs de entrada/salida son `record` de Java, ubicados en `dto/request`
 |---|---|---|---|---|---|
 | POST | `/auth/registro` | público | UC-01 | `AuthController` | crea cuenta USER, saldo 0 |
 | POST | `/auth/login` | público | UC-02 | `AuthController` | devuelve JWT; error genérico sin indicar campo |
-| GET | `/jugadores` | público | UC-07 | `JugadorController` | listado + cotización vigente de cada uno |
+| GET | `/jugadores` | público | UC-07 | `JugadorController` | listado completo, sin cotización embebida (ver §3bis sobre por qué) |
+| GET | `/jugadores/mercado?pagina=&tamanio=&orden=&posicion=&busqueda=` | público | UC-07 | `JugadorController` | listado paginado con cotización vigente embebida, filtrado/ordenado en el backend — ver §3bis |
 | GET | `/jugadores/{id}` | público | UC-07 | `JugadorController` | detalle + tokens disponibles + fecha última actualización de rendimiento |
 | POST | `/jugadores` | ADMIN | UC-03 | `JugadorController` | alta |
 | PUT | `/jugadores/{id}` | ADMIN | UC-04 | `JugadorController` | edición identificatoria, nunca toca cotización ni límite de tokens |
@@ -241,6 +253,17 @@ Todos los DTOs de entrada/salida son `record` de Java, ubicados en `dto/request`
 | DELETE | `/ofertas/{id}` | USER (sólo dueño) | UC-17 | `OfertaController` | el vendedor cancela lo no vendido de su propia oferta; libera la reserva |
 
 Errores: formato `application/problem+json` (constitution §3), traducidos desde excepciones de negocio lanzadas en el Service (constitution §2) por un manejador global (`@RestControllerAdvice`). `400` para validación de forma, `409 Conflict` para saldo/tenencia/emisión insuficiente, `403` para rol incorrecto, `404` para entidad inexistente.
+
+### 3bis. `GET /jugadores/mercado` — catálogo paginado (pantalla de Mercado)
+
+La pantalla de Mercado del frontend mostraba el catálogo completo (del orden de miles de jugadores, tras cargar La Liga + las otras 4 grandes ligas europeas via football-data.org, §8.1.1): pedía `GET /jugadores` y después `GET /jugadores/{id}/cotizaciones` **una vez por jugador** para poder ordenar por precio — un N+1 de miles de requests desde el cliente, lento en la práctica. `GET /jugadores/mercado` resuelve esto con un único request:
+
+- **Filtra, ordena y pagina del lado del backend** (`JugadorServiceImpl#listarMercado`): trae el catálogo completo (`JugadorRepository#findAll`) y el valor vigente/inicial de *todos* los jugadores en sólo 2 consultas más (`CotizacionHistoricaRepository#findValoresVigentes`/`#findValoresIniciales`, cada una un `DISTINCT ON (jugador_id)` de Postgres) — nunca una consulta de cotización por jugador. El filtro (posición exacta, búsqueda de texto libre sobre nombre/club), el orden y el recorte de página se resuelven en memoria sobre esas listas ya traídas: al tamaño actual del catálogo (miles, no millones, de filas) es trabajo trivial para el proceso Java, y evita tener que expresar "orden por cotización vigente + filtro + `LIMIT`/`OFFSET`" como una única consulta SQL contra una cotización que vive en una tabla separada. Si el catálogo creciera a un volumen donde esto deje de ser trivial, el siguiente paso sería mover filtro+orden+paginado a SQL — no antes.
+- **`orden`** acepta los mismos valores que ya ofrecía el filtro del frontend (`nombre`, `precio-desc`, `precio-asc`, `suba`, `disponibles`); cualquier valor ausente o no reconocido cae en `precio-desc` por defecto — pedido explícito de producto: lo relevante al navegar el mercado es la cotización, no el orden alfabético (antes era `nombre`). Nunca rechaza la request con 400 por un `orden` inválido, mismo criterio de tolerancia que `posicion`/`busqueda` (ambos opcionales).
+- **`variacionPorcentual`** (para el orden `suba` y el badge ▲/▼ de cada tarjeta) es `(valorVigente - valorInicial) / valorInicial * 100`, igual fórmula que antes calculaba el frontend con el historial completo — `null` si el jugador nunca tuvo cotización, o si tuvo exactamente una (no hay desde dónde medir variación; se detecta comparando el `fechaCalculo` de la fila vigente y la inicial: si coinciden, es la misma única fila).
+- **`posicionesDisponibles`** en la respuesta siempre refleja el catálogo completo, nunca el filtro de esta consulta puntual — así las pills de filtro del frontend no aparecen/desaparecen según lo que ya esté filtrado.
+- **`tamanio`** se acota a `[1, 100]` en el Service (el default pedido por producto es 50) para que un cliente no pueda pedir una página arbitrariamente grande y reintroducir el mismo problema de performance.
+- `GET /jugadores` (sin paginar, sin cotización) se mantiene intacto para los demás consumidores que sí necesitan el catálogo completo tal cual (Admin, P2P, Cartera, detalle de jugador) — ninguno de ellos tiene el mismo problema de escala que Mercado, así que no se tocaron.
 
 ---
 
@@ -341,27 +364,50 @@ Dos estrategias iniciales (registradas como beans, seleccionables por `clave`):
 
 ```
 repositories/
-  RendimientoExternoRepository (interfaz)      -- obtenerRendimiento(jugador, rangoFechas) -> List<RendimientoCrudo>
-                                                -- obtenerFotoUrl(jugador) -> Optional<String>
+  RendimientoExternoRepository (interfaz)      -- obtenerFotoUrl(jugador) -> Optional<String>
+  RendimientoLigaExternoRepository (interfaz)  -- obtenerAcumuladoLiga(liga) -> List<JugadorRendimientoLigaCrudo>
   FixtureRepository (interfaz)                 -- obtenerPartidosDisputados(rangoFechas) -> List<PartidoCrudo>
   WhoScoredRepositoryImpl implements RendimientoExternoRepository
+  WhoScoredLigaRepositoryImpl implements RendimientoLigaExternoRepository
   FootballDataRepositoryImpl implements FixtureRepository
   RendimientoPartidoRepository                 -- Spring Data JPA, persistencia sobre model/RendimientoPartido
+  RendimientoAcumuladoWhoScoredRepository      -- Spring Data JPA, snapshot 1:1 sobre model/RendimientoAcumuladoWhoScored
 ```
 
-`RendimientoService` sólo conoce las interfaces `RendimientoExternoRepository`/`FixtureRepository` y el modelo interno (`RendimientoPartido`); nunca el formato de respuesta de WhoScored ni de Football-Data.org (constitution §1/§2). Cada implementación traduce y aísla sus propios errores (try/catch interno + logging), nunca propaga una excepción que tumbe al otro flujo.
+`RendimientoService` sólo conoce las interfaces `RendimientoExternoRepository`/`RendimientoLigaExternoRepository`/`FixtureRepository` y el modelo interno (`RendimientoPartido`); nunca el formato de respuesta de WhoScored ni de Football-Data.org (constitution §1/§2). Cada implementación traduce y aísla sus propios errores (try/catch interno + logging), nunca propaga una excepción que tumbe al otro flujo.
 
 `obtenerFotoUrl` no es rendimiento deportivo (no genera `RendimientoPartido`): es la URL de la foto de perfil del jugador, scrapeada de la misma fuente (WhoScored) y aplicada sobre `Jugador.fotoUrl` (plan §2.2) por `RendimientoServiceImpl.ingestarRendimiento()`, reutilizando su misma ventana e isolation de errores en vez de un job propio. `Optional.empty()` cuando la fuente no tiene foto para ese jugador — nunca bloquea al resto de la ingesta.
+
+#### 8.1.1 Ingesta de rendimiento por liga (reemplaza el scraping por jugador)
+
+**Decisión/revisión técnica posterior:** la ingesta de métricas de rendimiento de WhoScored dejó de ser por jugador (una request por jugador, ver históricamente `RendimientoExternoRepository#obtenerRendimiento`/`RendimientoCrudo`, ambos eliminados) y pasó a ser **por liga completa**: WhoScored publica una única página pública de estadísticas por liga que lista, paginada de a 10, el acumulado de temporada de todos sus jugadores (filtro "All players" para no separar por posición). Una sola request por liga reemplaza N requests por jugador, y la fuente sólo expone un acumulado de temporada (no un detalle partido por partido), lo que cambia también el modelo de persistencia (ver más abajo).
+
+**Set de métricas (curado, a diferencia de la ingesta "sin curar" original de UC-05):** esta página sólo expone `Apps`, `Goals`, `Assists`, `ManOfTheMatch`, `YellowCard`, `RedCard`, `MinsPlayed` (no hay foto de perfil, `Rating`, `KeyPasses`, `TotalTackles`, `Interceptions`, `ShotsOnTarget` ni `Dribbles` en esta fuente). `RendimientoServiceImpl` filtra explícitamente a este conjunto fijo (`apps`/`goals`/`assists`/`manOfTheMatch`/`yellowCard`/`redCard`/`minsPlayed`) al traducir cada fila — a diferencia del resto de `RendimientoPartido.metricas`, acá sí hay curación previa, porque es lo único que esta fuente puede proveer.
+
+**Estructura de HTML (verificada contra la página pública real de estadísticas de liga, no un contrato inventado):** las filas de jugador viven en `tbody#player-table-statistics-body > tr`; dentro de cada fila, `td.grid-ghost-cell` trae el nombre (`a.player-link`) y el club (`a.player-meta-data span.team-name`, con una coma al final que se recorta), y las métricas curadas viven en celdas con clase propia que coincide casi literal con las claves internas (`minsPlayed`/`yellowCard`/`redCard`/`manOfTheMatch` iguales; `goal`→`goals` y `assistTotal`→`assists` sólo cambian de nombre). `apps` no tiene clase propia (3ª celda de la fila) y puede venir como `"N"` o `"N(M)"` (titular+suplente, se suman); un valor en `"-"` es 0. WhoScored no publica esto como una API versionada — un cambio de maquetación real puede romper estos selectores sin aviso (riesgo ya documentado en plan.md §11), mitigado con el mismo aislamiento de errores que el resto de la clase. La paginación y el click en el filtro "All players" ocurren en el sidecar de Playwright (`scraper-service`, endpoint `GET /fetch-liga`), que devuelve `{"pages": ["<html>...", ...]}` con el HTML ya renderizado de cada página recorrida (clickea el control "All players" y el control "next" por texto visible, más resistente a cambios de id/clase que un selector exacto; corta al llegar a un tope de seguridad de 50 páginas o cuando "next" ya no existe/está deshabilitado). `WhoScoredLigaRepositoryImpl` sólo traduce ese HTML — nunca navega el sitio ella misma.
+
+**Config liga → URL** (aparte de la lógica de scraping, `WhoScoredLigaProperties`, prefijo `app.whoscored.liga-urls`): la clave es el nombre de la liga normalizado (sin acentos, minúsculas, espacios por guiones — `common.Textos#normalizar`), ej. `la-liga` para `Jugador.liga = "La Liga"`. Agregar una liga nueva es sólo una entrada de configuración más. Hoy sólo está completa `la-liga`; el valor por defecto queda vacío a propósito (mismo criterio que `app.football-data.api-key`) hasta tener la URL real verificada, sin bloquear nada: los tests nunca dependen de este valor.
+
+**Resolución de jugador (nombre + club):** `RendimientoServiceImpl` agrupa a los jugadores `ACTIVO` del catálogo por `liga`, pide el acumulado de esa liga completa en una sola llamada, y resuelve cada fila cruda contra los candidatos de esa misma liga vía `NombreClubMatcher` (`services/`, package-private). Club **no** exige igualdad de texto: WhoScored publica el nombre corto y usual del club ("Barcelona", "Atletico Madrid", "Osasuna"), mientras que la fuente del catálogo (football-data.org) usa el nombre social completo ("FC Barcelona", "Club Atlético de Madrid", "CA Osasuna") — comprobado contra los 20 clubes reales de La Liga, el nombre corto es siempre, token por token, un subconjunto del nombre completo una vez descartadas las siglas de forma societaria (`cf`/`fc`/`rc`/`rcd`/`ud`/`cd`/`sd`/`ca`/`club`) y preposiciones (`de`/`la`). Dos clubes coinciden si, tras normalizar (acentos/mayúsculas/espacios) y descartar esas stopwords, el conjunto de palabras de uno es subconjunto del otro en cualquier sentido. Nombre tolera dos variaciones, comprobadas contra casos reales: (a) nombre y apellido en orden invertido entre fuentes (ej. WhoScored "Djené Dakonam" vs football-data.org "Dakonam Djené") — se compara el conjunto de palabras del nombre sin importar el orden —, y (b) un typo o variación menor vía distancia de Levenshtein ≤2 tras normalizar. Un apodo sustancialmente distinto del nombre completo (ej. "Álex Balde" vs "Alejandro Balde") excede esa tolerancia a propósito y la fila se ignora en vez de asumir una coincidencia dudosa. Cero o más de un candidato igualmente válido ⇒ la fila se ignora y se loguea (constitution §1: aislamiento de errores), nunca bloquea el resto de la liga.
+
+**Snapshot + delta semanal (plan.md §2.3, nueva entidad `RendimientoAcumuladoWhoScored`):** a diferencia de `RendimientoPartido` (append-only, una fila por partido), el acumulado de liga es un snapshot **1:1 por jugador** (`jugadorId` es la PK, tabla `rendimientos_acumulados_whoscored`): cada ingesta reemplaza por completo el valor anterior, nunca conserva historial propio. Por cada jugador resuelto:
+
+1. **Sin snapshot previo:** se persiste el acumulado recibido como snapshot base. No se genera ningún `RendimientoPartido` — todavía no hay punto de comparación para un delta.
+2. **Con snapshot previo:** se calcula, métrica por métrica, `delta = max(0, actual - anterior)` (nunca negativo: un contador que bajara respecto del snapshot anterior, por ejemplo por un dato corregido en la fuente, aporta 0, nunca resta), se reemplaza el snapshot por el nuevo acumulado, y — sólo si al menos una métrica tuvo delta positivo — ese delta es lo que se persiste como el `RendimientoPartido` de la semana en curso (`fuenteResultado = WHOSCORED_LIGA`, `metricas` = el delta serializado, `partidoExternoId` sintético `"WHOSCORED-LIGA-{semanaCalculo}"` para deduplicar frente a una reingesta del mismo ciclo, igual mecanismo que el resto de las fuentes). Un delta íntegramente en cero (sin partidos nuevos esa semana) deliberadamente **no** persiste fila: así el jugador cae en el mismo camino de "sin rendimiento esta semana" (decaimiento leve, §6.3) que ya maneja `CotizacionServiceImpl`, en vez de aportar un puntaje neutro distinto.
+
+Reusar `RendimientoPartido`/`RendimientoPartidoRepository` para el delta (en vez de una tabla nueva) es deliberado: `CotizacionServiceImpl` ya suma y pondera por `semanaCalculo` sin conocer la fuente, así que el delta de liga participa del cálculo de cotización sin tocar el motor (§6.2) — sólo hace falta que alguien le asigne un `PesoMetrica` activo a cada una de las siete claves (ver §6.2, seed en `DevDataSeeder`).
+
+**Limitación conocida heredada (no introducida por esta decisión):** la normalización min-max de `CotizacionServiceImpl` (§6.2) asume "valor alto = mejor". Con un peso positivo (único signo que admite `PesoMetrica`), más tarjetas (`yellowCard`/`redCard`) en una semana puntúa hacia arriba, no hacia abajo. Corregirlo requeriría un atributo de "sentido" en `PesoMetrica`, fuera de alcance de esta decisión — documentado como limitación pendiente, no resuelto.
 
 ### 8.2 Frecuencia de ingesta (constitution §1, decisión firme)
 
 `constitution.md` §1 fija que ambas ingestas corren con la **misma cadencia semanal** que el job de recotización, completándose **antes** de que este corra dentro del mismo ciclo — nunca diaria ni bajo ninguna otra frecuencia mayor. El job de cotización corre los lunes 03:00 (§6.4), así que ambas ingestas se programan el domingo anterior, invocando `RendimientoService` directamente desde un componente de scheduling en `config/` (mismo patrón que §6.4: sin Controller de por medio, el trigger no es HTTP):
 
 - `FootballDataRepositoryImpl` (fixtures/resultados/alineaciones), vía `RendimientoService.ingestarFixtures()`: `@Scheduled(cron = "0 0 1 * * SUN")` (domingo 01:00).
-- `WhoScoredRepositoryImpl` (rendimiento detallado), vía `RendimientoService.ingestarRendimiento()`: `@Scheduled(cron = "0 0 2 * * SUN")` (domingo 02:00, una hora después), para scrapear el detalle sólo de partidos ya confirmados por Football-Data en el paso anterior — reduce scraping innecesario sobre partidos que todavía no se jugaron.
+- `RendimientoService.ingestarRendimiento()`: `@Scheduled(cron = "0 0 2 * * SUN")` (domingo 02:00, una hora después) — refresca la foto de perfil de cada jugador `ACTIVO` (`WhoScoredRepositoryImpl`) y, por cada liga del catálogo, resuelve el acumulado de WhoScored y persiste el delta semanal (`WhoScoredLigaRepositoryImpl`, §8.1.1).
 - Queda un margen de una hora (02:00 a 03:00) entre el fin de la ventana de ingesta y el inicio del cálculo semanal, y de 2 horas entre ambas fuentes.
 - Ambos jobs corren **desacoplados del job de cotización** (constitution §1: nunca síncrono a un request de usuario; §2: el job de cotización sólo lee lo ya persistido, nunca dispara la ingesta él mismo).
-- Reintentos: si una fuente falla en su ventana semanal, el dato de ese partido no aporta al puntaje de esa semana (§6.3); no hay cola de reintentos dedicada en el MVP — un fallo puntual se resuelve recién en el ciclo semanal siguiente.
+- Reintentos: si una fuente falla en su ventana semanal, el dato de esa semana no aporta al puntaje (§6.3); no hay cola de reintentos dedicada en el MVP — un fallo puntual se resuelve recién en el ciclo semanal siguiente (el snapshot de liga no se actualiza, así que el próximo ciclo recupera el delta completo acumulado entre ambos).
 
 Esta cadencia ya no es un valor de cron ajustable a discreción técnica: es una regla fija de `constitution.md` §1. Un cambio de frecuencia requiere reabrir la constitución con el dueño del producto, no sólo tocar el `@Scheduled`.
 
@@ -454,6 +500,8 @@ Toda operación que dispare un `Movimiento` de tipo `COMPRA_P2P`/`VENTA_P2P`/`CO
 8. Ingesta semanal (domingo), alineada y previa al job de cotización (lunes) — cadencia fija por `constitution.md` §1, no ajustable por decisión técnica (§8.2).
 9. `CotizacionHistorica` es append-only; "vigente" es siempre el último registro por fecha, nunca una tabla mutable en paralelo.
 10. Publicar una oferta P2P reserva físicamente la cantidad (`TenenciaToken.cantidadReservada`), no sólo la valida — el vendedor puede cancelar lo no vendido, y la baja de un jugador cancela automáticamente sus ofertas abiertas y reintegra la reserva antes de compensar (§2.5, §9).
+11. Ingesta de rendimiento de WhoScored por liga completa (no por jugador, §8.1.1) — reemplaza el scraping por jugador original; set de métricas curado (único que esta fuente provee de forma agregada), snapshot 1:1 por jugador (`RendimientoAcumuladoWhoScored`) y delta semanal reutilizando `RendimientoPartido`/`CotizacionServiceImpl` sin tocar el motor de cotización.
+12. `GET /jugadores/mercado` (§3bis) filtra/ordena/pagina en memoria sobre 3 consultas totales (catálogo + valores vigentes/iniciales bulk), no con SQL `LIMIT`/`OFFSET` — evita el N+1 real que tenía la pantalla de Mercado (una cotización por jugador) sin anticipar paginación a nivel de consulta antes de que el volumen la justifique; orden por defecto `precio-desc`, no `nombre` (pedido explícito de producto).
 
 ---
 
