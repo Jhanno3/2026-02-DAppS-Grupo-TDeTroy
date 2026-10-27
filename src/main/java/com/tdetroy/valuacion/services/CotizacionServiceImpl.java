@@ -27,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -72,6 +73,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     private final long ventanaHistoricoSemanas;
     private final EstrategiaCotizacion estrategiaDefault;
 
+    @Autowired
     public CotizacionServiceImpl(
             RendimientoPartidoRepository rendimientoPartidoRepository,
             CotizacionHistoricaRepository cotizacionHistoricaRepository,
@@ -112,6 +114,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     }
 
     /** Constructor de conveniencia para tests sin inyección de calculadores explícita. */
+    @Autowired
     public CotizacionServiceImpl(
             RendimientoPartidoRepository rendimientoPartidoRepository,
             CotizacionHistoricaRepository cotizacionHistoricaRepository,
