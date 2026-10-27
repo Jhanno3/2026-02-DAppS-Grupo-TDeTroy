@@ -1,4 +1,4 @@
-﻿package com.tdetroy.valuacion.controllers;
+package com.tdetroy.valuacion.controllers;
 
 import com.tdetroy.valuacion.config.UsuarioPrincipal;
 import com.tdetroy.valuacion.dto.request.CrearJugadorRequest;

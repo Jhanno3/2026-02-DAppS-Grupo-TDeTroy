@@ -1,4 +1,4 @@
-﻿package com.tdetroy.valuacion.repositories;
+package com.tdetroy.valuacion.repositories;
 
 import com.tdetroy.valuacion.entity.CotizacionHistoricaEntity;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;

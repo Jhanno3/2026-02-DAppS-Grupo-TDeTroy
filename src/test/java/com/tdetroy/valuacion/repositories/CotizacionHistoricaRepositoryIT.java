@@ -1,4 +1,4 @@
-﻿package com.tdetroy.valuacion.repositories;
+package com.tdetroy.valuacion.repositories;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -121,7 +121,7 @@ class CotizacionHistoricaRepositoryIT extends PostgresIntegrationTest {
 
         var listaHistorica =
                 cotizacionHistoricaRepository.findByJugadorIdAndEstrategiaOrderByFechaCalculoAsc(
-                                jugadorId, EstrategiaCotizacion.RENDIMIENTO_HISTORICO);
+                        jugadorId, EstrategiaCotizacion.RENDIMIENTO_HISTORICO);
         assertThat(listaHistorica).hasSize(1);
         assertThat(listaHistorica.get(0).getValor()).isEqualByComparingTo(new BigDecimal("100.00"));
     }
