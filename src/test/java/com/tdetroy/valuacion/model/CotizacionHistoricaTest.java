@@ -14,8 +14,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 /**
  * Cubre la invariante propia de {@link CotizacionHistorica} (plan.md §2.4): campos siempre
  * obligatorios, formato ISO week de {@code semana}, {@code valor} siempre positivo y escalado vía
- * {@link com.tdetroy.valuacion.common.Monetario}, y que dos cálculos sucesivos nunca colisionan en
- * id (append-only, nunca sobrescribe el registro anterior).
+ * {@link com.tdetroy.valuacion.common.Monetario}, estrategia de valuación y que dos cálculos
+ * sucesivos nunca colisionan en id (append-only, nunca sobrescribe el registro anterior).
  */
 class CotizacionHistoricaTest {
 
@@ -28,14 +28,44 @@ class CotizacionHistoricaTest {
     void cotizacionValida_construyeCorrectamenteYGettersDevuelvenLoEsperado() {
         CotizacionHistorica cotizacion =
                 CotizacionHistorica.calcular(
-                        JUGADOR_ID, SEMANA, VALOR, OrigenCotizacion.AUTOMATICO, FECHA_CALCULO_FIJA);
+                        JUGADOR_ID,
+                        SEMANA,
+                        VALOR,
+                        OrigenCotizacion.AUTOMATICO,
+                        EstrategiaCotizacion.RENDIMIENTO_ACTUAL,
+                        FECHA_CALCULO_FIJA);
 
         assertThat(cotizacion.getId()).isNotNull();
         assertThat(cotizacion.getJugadorId()).isEqualTo(JUGADOR_ID);
         assertThat(cotizacion.getSemana()).isEqualTo(SEMANA);
         assertThat(cotizacion.getValor()).isEqualByComparingTo(VALOR);
         assertThat(cotizacion.getOrigen()).isEqualTo(OrigenCotizacion.AUTOMATICO);
+        assertThat(cotizacion.getEstrategia()).isEqualTo(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
         assertThat(cotizacion.getFechaCalculo()).isEqualTo(FECHA_CALCULO_FIJA);
+    }
+
+    @Test
+    void calcularSinEstrategiaExplicita_asumeRendimientoHistorico() {
+        CotizacionHistorica cotizacion =
+                CotizacionHistorica.calcular(
+                        JUGADOR_ID, SEMANA, VALOR, OrigenCotizacion.AUTOMATICO, FECHA_CALCULO_FIJA);
+
+        assertThat(cotizacion.getEstrategia())
+                .isEqualTo(EstrategiaCotizacion.RENDIMIENTO_HISTORICO);
+    }
+
+    @Test
+    void estrategiaNula_lanzaExcepcion() {
+        assertThatNullPointerException()
+                .isThrownBy(
+                        () ->
+                                CotizacionHistorica.calcular(
+                                        JUGADOR_ID,
+                                        SEMANA,
+                                        VALOR,
+                                        OrigenCotizacion.AUTOMATICO,
+                                        null,
+                                        FECHA_CALCULO_FIJA));
     }
 
     @Test
@@ -138,7 +168,7 @@ class CotizacionHistoricaTest {
                                         SEMANA,
                                         VALOR,
                                         OrigenCotizacion.AUTOMATICO,
-                                        null));
+                                        (Instant) null));
     }
 
     @Test

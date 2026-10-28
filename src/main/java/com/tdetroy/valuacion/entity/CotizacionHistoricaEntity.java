@@ -1,6 +1,7 @@
 package com.tdetroy.valuacion.entity;
 
 import com.tdetroy.valuacion.model.CotizacionHistorica;
+import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -42,6 +43,10 @@ public class CotizacionHistoricaEntity {
     @Column(nullable = false, updatable = false, length = 20)
     private OrigenCotizacion origen;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, updatable = false, length = 30)
+    private EstrategiaCotizacion estrategia;
+
     @Column(nullable = false, updatable = false)
     private Instant fechaCalculo;
 
@@ -53,12 +58,14 @@ public class CotizacionHistoricaEntity {
         entity.semana = cotizacion.getSemana();
         entity.valor = cotizacion.getValor();
         entity.origen = cotizacion.getOrigen();
+        entity.estrategia = cotizacion.getEstrategia();
         entity.fechaCalculo = cotizacion.getFechaCalculo();
         return entity;
     }
 
     /** Reconstruye el objeto de dominio a partir de esta fila ya persistida. */
     public CotizacionHistorica aModelo() {
-        return CotizacionHistorica.reconstruir(id, jugadorId, semana, valor, origen, fechaCalculo);
+        return CotizacionHistorica.reconstruir(
+                id, jugadorId, semana, valor, origen, estrategia, fechaCalculo);
     }
 }

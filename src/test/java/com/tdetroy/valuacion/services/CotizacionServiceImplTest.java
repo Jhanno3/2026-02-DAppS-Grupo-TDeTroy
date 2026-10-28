@@ -16,6 +16,7 @@ import com.tdetroy.valuacion.entity.PesoMetricaEntity;
 import com.tdetroy.valuacion.entity.RendimientoPartidoEntity;
 import com.tdetroy.valuacion.model.CotizacionHistorica;
 import com.tdetroy.valuacion.model.EstadoJugador;
+import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.FuenteResultado;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
@@ -91,11 +92,13 @@ class CotizacionServiceImplTest {
                 jugadorRepository,
                 auditoriaService,
                 new ObjectMapper(),
+                List.of(new RendimientoHistoricoCalculator(), new RendimientoActualCalculator()),
                 self,
                 VALOR_INICIAL,
                 sensibilidad,
                 DECAY_INACTIVIDAD,
-                VENTANA_HISTORICO_SEMANAS);
+                VENTANA_HISTORICO_SEMANAS,
+                "RENDIMIENTO_HISTORICO");
     }
 
     private static Jugador jugadorActivoCon(UUID id) {
@@ -306,8 +309,18 @@ class CotizacionServiceImplTest {
 
         service.recalcular(OrigenCotizacion.AUTOMATICO, actorId);
 
-        verify(self).calcularCotizacion(uno.getId(), OrigenCotizacion.AUTOMATICO, actorId);
-        verify(self).calcularCotizacion(otro.getId(), OrigenCotizacion.AUTOMATICO, actorId);
+        verify(self)
+                .calcularCotizacion(
+                        uno.getId(),
+                        OrigenCotizacion.AUTOMATICO,
+                        EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                        actorId);
+        verify(self)
+                .calcularCotizacion(
+                        otro.getId(),
+                        OrigenCotizacion.AUTOMATICO,
+                        EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                        actorId);
     }
 
     @Test
@@ -316,12 +329,21 @@ class CotizacionServiceImplTest {
         Jugador exitoso = jugadorActivoCon(UUID.randomUUID());
         when(jugadorRepository.findByEstado(EstadoJugador.ACTIVO))
                 .thenReturn(List.of(JugadorEntity.desde(fallido), JugadorEntity.desde(exitoso)));
-        when(self.calcularCotizacion(eq(fallido.getId()), eq(OrigenCotizacion.AUTOMATICO), any()))
+        when(self.calcularCotizacion(
+                        eq(fallido.getId()),
+                        eq(OrigenCotizacion.AUTOMATICO),
+                        eq(EstrategiaCotizacion.RENDIMIENTO_HISTORICO),
+                        any()))
                 .thenThrow(new RuntimeException("fallo inesperado"));
 
         service.recalcular(OrigenCotizacion.AUTOMATICO, null);
 
-        verify(self).calcularCotizacion(exitoso.getId(), OrigenCotizacion.AUTOMATICO, null);
+        verify(self)
+                .calcularCotizacion(
+                        exitoso.getId(),
+                        OrigenCotizacion.AUTOMATICO,
+                        EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                        null);
     }
 
     // ---- obtenerHistorial ----
@@ -356,6 +378,57 @@ class CotizacionServiceImplTest {
                 .thenReturn(List.of());
 
         assertThat(service.obtenerHistorial(jugadorId)).isEmpty();
+    }
+
+    @Test
+    void calcularCotizacion_conEstrategiaRendimientoActual_aplicaPuntajeAbsoluto() {
+        stubJugadorExistente();
+        when(rendimientoPartidoRepository.findByJugadorIdAndSemanaCalculoGreaterThanEqual(
+                        any(), any()))
+                .thenReturn(List.of(rendimientoDe(semanaActualEsperada(), "{\"rating\":10.0}")));
+        when(pesoMetricaRepository.findByActivoTrue())
+                .thenReturn(List.of(pesoDe("rating", "1.0000")));
+        when(cotizacionHistoricaRepository.findTopByJugadorIdAndEstrategiaOrderByFechaCalculoDesc(
+                        jugadorId, EstrategiaCotizacion.RENDIMIENTO_ACTUAL))
+                .thenReturn(Optional.of(cotizacionAnteriorDe(new BigDecimal("100.00"))));
+
+        CotizacionHistorica cotizacion =
+                service.calcularCotizacion(
+                        jugadorId,
+                        OrigenCotizacion.MANUAL,
+                        EstrategiaCotizacion.RENDIMIENTO_ACTUAL,
+                        actorId);
+
+        // rating 10.0 -> puntaje 1.0 * sensibilidad 0.20 = +0.20 -> 100 * 1.20 = 120.00
+        assertThat(cotizacion.getValor()).isEqualByComparingTo(new BigDecimal("120.00"));
+        assertThat(cotizacion.getEstrategia()).isEqualTo(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
+    }
+
+    @Test
+    void obtenerHistorial_conEstrategia_delegaEnRepositorioFiltrado() {
+        when(jugadorRepository.existsById(jugadorId)).thenReturn(true);
+        when(cotizacionHistoricaRepository.findByJugadorIdAndEstrategiaOrderByFechaCalculoAsc(
+                        jugadorId, EstrategiaCotizacion.RENDIMIENTO_ACTUAL))
+                .thenReturn(List.of(cotizacionAnteriorDe(new BigDecimal("120.00"))));
+
+        List<CotizacionHistorica> historial =
+                service.obtenerHistorial(jugadorId, EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
+
+        assertThat(historial).hasSize(1);
+        assertThat(historial.get(0).getValor()).isEqualByComparingTo(new BigDecimal("120.00"));
+    }
+
+    @Test
+    void obtenerVigente_conEstrategia_retornaCotizacionVigente() {
+        when(cotizacionHistoricaRepository.findTopByJugadorIdAndEstrategiaOrderByFechaCalculoDesc(
+                        jugadorId, EstrategiaCotizacion.RENDIMIENTO_ACTUAL))
+                .thenReturn(Optional.of(cotizacionAnteriorDe(new BigDecimal("120.00"))));
+
+        Optional<CotizacionHistorica> vigente =
+                service.obtenerVigente(jugadorId, EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
+
+        assertThat(vigente).isPresent();
+        assertThat(vigente.get().getValor()).isEqualByComparingTo(new BigDecimal("120.00"));
     }
 
     private void verificarPersistenciaYPunteroDelJugador(CotizacionHistorica cotizacionEsperada) {
@@ -413,6 +486,7 @@ class CotizacionServiceImplTest {
         entity.setSemana("2026-W01");
         entity.setValor(valor);
         entity.setOrigen(OrigenCotizacion.AUTOMATICO);
+        entity.setEstrategia(EstrategiaCotizacion.RENDIMIENTO_HISTORICO);
         entity.setFechaCalculo(Instant.now());
         return entity;
     }

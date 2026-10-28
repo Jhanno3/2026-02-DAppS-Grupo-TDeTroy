@@ -6,6 +6,7 @@ import com.tdetroy.valuacion.dto.request.EditarJugadorRequest;
 import com.tdetroy.valuacion.dto.response.CotizacionResponse;
 import com.tdetroy.valuacion.dto.response.JugadorResponse;
 import com.tdetroy.valuacion.dto.response.PaginaMercadoResponse;
+import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.services.CotizacionService;
 import com.tdetroy.valuacion.services.JugadorService;
@@ -26,9 +27,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Catálogo de jugadores (plan.md §3, UC-03/UC-04/UC-07). {@code GET} es público (UC-07, ver {@code
- * config/SecurityConfig}); {@code POST}/{@code PUT} quedan restringidos a {@code ADMIN} vía {@link
- * PreAuthorize}, nunca con un chequeo de rol a mano (constitution.md §4).
+ * Catálogo de jugadores (plan.md §3, UC-03/UC-04/UC-07/UC-08/UC-15). {@code GET} es público (UC-07/
+ * UC-08, ver {@code config/SecurityConfig}); {@code POST}/{@code PUT}/baja quedan restringidos a
+ * {@code ADMIN} vía {@link PreAuthorize}, nunca con un chequeo de rol a mano (constitution.md §4).
  */
 @RestController
 @RequestMapping("/api/v1/jugadores")
@@ -76,13 +77,18 @@ public class JugadorController {
     /**
      * UC-08: historial cronológico de cotizaciones de un jugador puntual, incluidos los dados de
      * baja (su cotización queda congelada en el último registro, UC-15). 404 vía {@code
-     * RecursoNoEncontradoException} si el jugador no existe.
+     * RecursoNoEncontradoException} si el jugador no existe. Permite filtrar opcionalmente por
+     * {@link EstrategiaCotizacion} vía {@code ?estrategia=...}.
      */
     @GetMapping("/{id}/cotizaciones")
-    public List<CotizacionResponse> obtenerCotizaciones(@PathVariable UUID id) {
-        return cotizacionService.obtenerHistorial(id).stream()
-                .map(CotizacionResponse::desde)
-                .toList();
+    public List<CotizacionResponse> obtenerCotizaciones(
+            @PathVariable UUID id,
+            @RequestParam(required = false) EstrategiaCotizacion estrategia) {
+        List<com.tdetroy.valuacion.model.CotizacionHistorica> historial =
+                estrategia != null
+                        ? cotizacionService.obtenerHistorial(id, estrategia)
+                        : cotizacionService.obtenerHistorial(id);
+        return historial.stream().map(CotizacionResponse::desde).toList();
     }
 
     /** UC-03. {@code actorId} sale del JWT ya validado, nunca del body de la request. */

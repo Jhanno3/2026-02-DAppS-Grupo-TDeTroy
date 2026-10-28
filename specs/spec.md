@@ -144,7 +144,7 @@ Cada caso de uso incluye actor, descripción, precondiciones, flujo principal, f
 - **Precondiciones:** Corresponde el ciclo semanal de recálculo.
 - **Flujo principal:**
   1. El sistema toma el rendimiento registrado de cada jugador durante la semana.
-  2. El sistema calcula la nueva cotización de cada jugador utilizando como entrada el conjunto de métricas de rendimiento que efectivamente provee el proceso de scraping de WhoScored (ver UC-05): no hay una selección acotada de variables de negocio elegidas a mano, se parte de todo el dato disponible que la fuente entrega. **Nota para diseño técnico (`tecnico`):** cómo se pondera y combina cada métrica dentro de la fórmula de cálculo es un detalle técnico que corresponde definir en esa etapa, no en esta especificación de producto.
+  2. El sistema calcula la nueva cotización de cada jugador utilizando como entrada el conjunto de métricas de rendimiento que efectivamente provee el proceso de scraping de WhoScored (ver UC-05): no hay una selección acotada de variables de negocio elegidas a mano, se parte de todo el dato disponible que la fuente entrega. El cálculo soporta dos estrategias algorítmicas: `RENDIMIENTO_HISTORICO` (por defecto, evalúa la evolución temporal del propio jugador comparando sus métricas contra su histórico reciente vía min-max ponderado) y `RENDIMIENTO_ACTUAL` (evalúa el desempeño absoluto reciente / rating y métricas directas para destacar el momento actual).
   3. El sistema persiste la nueva cotización como la vigente y conserva la anterior como parte del historial.
   4. El valor de las tenencias en los portfolios de los usuarios se actualiza en base a la nueva cotización.
 - **Flujos alternativos:**
@@ -179,7 +179,7 @@ Cada caso de uso incluye actor, descripción, precondiciones, flujo principal, f
 - **Flujo principal:**
   1. El actor selecciona un jugador.
   2. El actor accede a la vista de cotización histórica.
-  3. El sistema muestra los valores de cotización de ese jugador en cada ciclo semanal pasado.
+  3. El sistema muestra los valores de cotización de ese jugador en cada ciclo semanal pasado (opcionalmente filtrados por la estrategia utilizada).
 - **Criterios de aceptación:**
   - Dado un jugador con varias cotizaciones calculadas a lo largo del tiempo, cuando el actor consulta su historial, entonces ve cada valor de cotización junto con la semana a la que corresponde, en orden cronológico, sin necesidad de tener una cuenta.
   - Un jugador recién dado de alta, sin cotización calculada todavía, se muestra sin historial (no es un error).
@@ -259,7 +259,7 @@ Cada caso de uso incluye actor, descripción, precondiciones, flujo principal, f
 - **Descripción:** Un administrador dispara manualmente, fuera del ciclo semanal automático, el mismo cálculo algorítmico de cotización que ejecuta el sistema cada semana (UC-06). Está pensado para necesidades operativas — por ejemplo, validar una corrección o resolver una incidencia — nunca para fijar un valor de cotización a mano. **El disparo manual recalcula la totalidad de los jugadores activos del catálogo, exactamente el mismo alcance que el ciclo semanal automático: no existe una opción para seleccionar un jugador puntual y recalcular sólo ése de forma aislada.** (Confirmado por el dueño del producto: "se recalculan todos los jugadores del sistema de forma semanal automática, y cada vez que el admin lo haga de forma manual, hace lo mismo".)
 - **Precondiciones:** El administrador está autenticado con rol ADMIN.
 - **Flujo principal:**
-  1. El administrador solicita el disparo manual del recálculo de cotización.
+  1. El administrador solicita el disparo manual del recálculo de cotización, indicando opcionalmente la estrategia deseada (`RENDIMIENTO_HISTORICO` o `RENDIMIENTO_ACTUAL`, por defecto `RENDIMIENTO_HISTORICO`).
   2. El sistema ejecuta exactamente el mismo cálculo algorítmico que utiliza el ciclo semanal automático (UC-06), sobre todos los jugadores activos del catálogo, tomando el rendimiento disponible en ese momento.
   3. El sistema persiste la nueva cotización resultante como la vigente para cada uno de esos jugadores, conservando la anterior en el historial de cada uno, igual que en el ciclo semanal.
   4. El sistema deja registro en el log de auditoría de quién disparó el recálculo, cuándo, y los valores antes/después de cada jugador activo.

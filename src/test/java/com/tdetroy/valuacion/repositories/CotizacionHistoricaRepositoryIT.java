@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tdetroy.valuacion.entity.CotizacionHistoricaEntity;
 import com.tdetroy.valuacion.model.CotizacionHistorica;
+import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
 import com.tdetroy.valuacion.repositories.support.PostgresIntegrationTest;
 import java.math.BigDecimal;
@@ -85,6 +86,44 @@ class CotizacionHistoricaRepositoryIT extends PostgresIntegrationTest {
                 .isEqualByComparingTo(new BigDecimal("100.00"));
         assertThat(cotizacionHistoricaRepository.findById(segunda.getId()).orElseThrow().getValor())
                 .isEqualByComparingTo(new BigDecimal("105.50"));
+    }
+
+    @Test
+    void buscarPorJugadorYEstrategia_filtraCorrectamente() {
+        UUID jugadorId = UUID.randomUUID();
+        CotizacionHistorica historica =
+                CotizacionHistorica.calcular(
+                        jugadorId,
+                        "2026-W06",
+                        new BigDecimal("100.00"),
+                        OrigenCotizacion.AUTOMATICO,
+                        EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                        Instant.parse("2026-02-09T03:00:00Z"));
+        CotizacionHistorica actual =
+                CotizacionHistorica.calcular(
+                        jugadorId,
+                        "2026-W06",
+                        new BigDecimal("115.00"),
+                        OrigenCotizacion.AUTOMATICO,
+                        EstrategiaCotizacion.RENDIMIENTO_ACTUAL,
+                        Instant.parse("2026-02-09T03:00:00Z"));
+
+        cotizacionHistoricaRepository.saveAndFlush(CotizacionHistoricaEntity.desde(historica));
+        cotizacionHistoricaRepository.saveAndFlush(CotizacionHistoricaEntity.desde(actual));
+        entityManager.clear();
+
+        var vigenteActual =
+                cotizacionHistoricaRepository
+                        .findTopByJugadorIdAndEstrategiaOrderByFechaCalculoDesc(
+                                jugadorId, EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
+        assertThat(vigenteActual).isPresent();
+        assertThat(vigenteActual.get().getValor()).isEqualByComparingTo(new BigDecimal("115.00"));
+
+        var listaHistorica =
+                cotizacionHistoricaRepository.findByJugadorIdAndEstrategiaOrderByFechaCalculoAsc(
+                        jugadorId, EstrategiaCotizacion.RENDIMIENTO_HISTORICO);
+        assertThat(listaHistorica).hasSize(1);
+        assertThat(listaHistorica.get(0).getValor()).isEqualByComparingTo(new BigDecimal("100.00"));
     }
 
     // ---- findValoresVigentes / findValoresIniciales (plan.md §3bis, listado de Mercado) ----

@@ -8,6 +8,7 @@ import com.tdetroy.valuacion.entity.PesoMetricaEntity;
 import com.tdetroy.valuacion.entity.RendimientoPartidoEntity;
 import com.tdetroy.valuacion.model.CotizacionHistorica;
 import com.tdetroy.valuacion.model.EstadoJugador;
+import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
 import com.tdetroy.valuacion.repositories.CotizacionHistoricaRepository;
@@ -15,10 +16,9 @@ import com.tdetroy.valuacion.repositories.JugadorRepository;
 import com.tdetroy.valuacion.repositories.PesoMetricaRepository;
 import com.tdetroy.valuacion.repositories.RendimientoPartidoRepository;
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.time.LocalDate;
 import java.time.temporal.IsoFields;
-import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -38,32 +39,15 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * {@inheritDoc}
  *
- * <p><b>Normalización del puntaje de rendimiento (plan.md §6.2, asunción técnica de esta
- * implementación):</b> por cada {@code PesoMetrica} activo presente en la semana en curso, el valor
- * se normaliza min-max sobre su propio histórico reciente ({@code
- * app.cotizacion.ventana-historico-semanas}) a un rango <b>centrado en 0</b>, {@code [-1, 1]}
- * (mínimo histórico → -1, máximo histórico → +1), en vez de {@code [0, 1]}: así una métrica en su
- * punto histórico más bajo resta en vez de sumar siempre un poco, que es lo que exige un {@code
- * factorAjuste} que puede ser tanto positivo como negativo. Si el jugador tuvo múltiples {@code
- * RendimientoPartido} en la misma semana, cada métrica se <b>suma</b> entre esos partidos antes de
- * normalizar (ej. {@code minutosJugados} de dos partidos se acumula) — una simplificación uniforme
- * documentada acá; distinguir métricas que deberían promediarse en vez de sumarse (ej. {@code
- * rating}) queda fuera de alcance de esta tarea. El puntaje final es el <b>promedio ponderado</b>
- * (no la suma cruda) de esas normalizaciones — se auto-normaliza frente a cómo estén calibrados los
- * pesos entre sí, así {@code app.cotizacion.sensibilidad} no depende de cuántas métricas activas
- * haya ni de la escala relativa de sus pesos.
+ * <p>Motor de cálculo de cotización que soporta múltiples estrategias (Strategy pattern) vía {@link
+ * EstrategiaCotizacionCalculator}:
  *
- * <p>Si una métrica activa no tiene al menos dos semanas de histórico propio (incluida la semana en
- * curso) para calcular un rango, o ese rango es cero (el jugador repitió exactamente el mismo valor
- * toda la ventana), esa métrica aporta 0 (neutro) a la normalización en vez de participar con un
- * valor arbitrario.
- *
- * <p><b>self (tasks.md T4.5):</b> {@link #recalcular} nunca llama a {@code
- * this.calcularCotizacion(...)} directamente -- una auto-invocacion asi saltea el proxy AOP de
- * Spring y el {@code @Transactional(REQUIRES_NEW)} de {@link #calcularCotizacion} quedaria sin
- * efecto (corriendo sin transaccion propia en vez de una sub-transaccion aislada por jugador,
- * plan.md S5). Se inyecta la propia interfaz via {@code @Lazy} (constructor, no atributo --
- * constitution.md S2) para forzar el paso por el proxy real.
+ * <ul>
+ *   <li>{@link EstrategiaCotizacion#RENDIMIENTO_HISTORICO}: min-max relativo al histórico del
+ *       jugador.
+ *   <li>{@link EstrategiaCotizacion#RENDIMIENTO_ACTUAL}: valuación absoluta del rendimiento
+ *       reciente.
+ * </ul>
  */
 @Service
 public class CotizacionServiceImpl implements CotizacionService {
@@ -74,7 +58,6 @@ public class CotizacionServiceImpl implements CotizacionService {
     private static final String ACCION_RECALCULO = "RECALCULO_COTIZACION";
     private static final BigDecimal CLAMP_MAXIMO = new BigDecimal("0.20");
     private static final BigDecimal CLAMP_MINIMO = CLAMP_MAXIMO.negate();
-    private static final BigDecimal DOS = BigDecimal.valueOf(2);
 
     private final RendimientoPartidoRepository rendimientoPartidoRepository;
     private final CotizacionHistoricaRepository cotizacionHistoricaRepository;
@@ -82,12 +65,15 @@ public class CotizacionServiceImpl implements CotizacionService {
     private final JugadorRepository jugadorRepository;
     private final AuditoriaService auditoriaService;
     private final ObjectMapper objectMapper;
+    private final Map<EstrategiaCotizacion, EstrategiaCotizacionCalculator> calculadores;
     private final CotizacionService self;
     private final BigDecimal valorInicial;
     private final BigDecimal sensibilidad;
     private final BigDecimal decayInactividad;
     private final long ventanaHistoricoSemanas;
+    private final EstrategiaCotizacion estrategiaDefault;
 
+    @Autowired
     public CotizacionServiceImpl(
             RendimientoPartidoRepository rendimientoPartidoRepository,
             CotizacionHistoricaRepository cotizacionHistoricaRepository,
@@ -95,11 +81,14 @@ public class CotizacionServiceImpl implements CotizacionService {
             JugadorRepository jugadorRepository,
             AuditoriaService auditoriaService,
             ObjectMapper objectMapper,
+            List<EstrategiaCotizacionCalculator> calculadoresList,
             @Lazy CotizacionService self,
             @Value("${app.cotizacion.valor-inicial}") BigDecimal valorInicial,
             @Value("${app.cotizacion.sensibilidad}") BigDecimal sensibilidad,
             @Value("${app.cotizacion.decay-inactividad}") BigDecimal decayInactividad,
-            @Value("${app.cotizacion.ventana-historico-semanas}") long ventanaHistoricoSemanas) {
+            @Value("${app.cotizacion.ventana-historico-semanas}") long ventanaHistoricoSemanas,
+            @Value("${app.cotizacion.estrategia-default:RENDIMIENTO_HISTORICO}")
+                    String estrategiaDefaultStr) {
         this.rendimientoPartidoRepository = rendimientoPartidoRepository;
         this.cotizacionHistoricaRepository = cotizacionHistoricaRepository;
         this.pesoMetricaRepository = pesoMetricaRepository;
@@ -111,14 +100,46 @@ public class CotizacionServiceImpl implements CotizacionService {
         this.sensibilidad = sensibilidad;
         this.decayInactividad = decayInactividad;
         this.ventanaHistoricoSemanas = ventanaHistoricoSemanas;
+
+        EstrategiaCotizacion parsedDefault = EstrategiaCotizacion.RENDIMIENTO_HISTORICO;
+        if (estrategiaDefaultStr != null && !estrategiaDefaultStr.isBlank()) {
+            try {
+                parsedDefault = EstrategiaCotizacion.valueOf(estrategiaDefaultStr.trim());
+            } catch (IllegalArgumentException ex) {
+                log.warn(
+                        "Estrategia default '{}' no reconocida, usando {}",
+                        estrategiaDefaultStr,
+                        parsedDefault);
+            }
+        }
+        this.estrategiaDefault = parsedDefault;
+
+        this.calculadores = new EnumMap<>(EstrategiaCotizacion.class);
+        if (calculadoresList != null) {
+            for (EstrategiaCotizacionCalculator calc : calculadoresList) {
+                this.calculadores.put(calc.getEstrategia(), calc);
+            }
+        }
     }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CotizacionHistorica calcularCotizacion(
             UUID jugadorId, OrigenCotizacion origen, UUID actorId) {
+        return calcularCotizacion(jugadorId, origen, estrategiaDefault, actorId);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public CotizacionHistorica calcularCotizacion(
+            UUID jugadorId,
+            OrigenCotizacion origen,
+            EstrategiaCotizacion estrategia,
+            UUID actorId) {
         Objects.requireNonNull(jugadorId, "jugadorId no puede ser null");
         Objects.requireNonNull(origen, "origen no puede ser null");
+        EstrategiaCotizacion estrategiaEfectiva =
+                estrategia != null ? estrategia : estrategiaDefault;
 
         JugadorEntity jugadorEntity =
                 jugadorRepository
@@ -137,27 +158,49 @@ public class CotizacionServiceImpl implements CotizacionService {
         Map<String, BigDecimal> metricasSemanaActual =
                 metricasPorSemana.getOrDefault(semanaActual, Map.of());
 
-        BigDecimal factorAjuste =
-                metricasSemanaActual.isEmpty()
-                        ? decayInactividad.negate()
-                        : clamp(
-                                calcularPuntajeRendimiento(metricasPorSemana, metricasSemanaActual)
-                                        .multiply(sensibilidad));
+        BigDecimal factorAjuste;
+        if (metricasSemanaActual.isEmpty()) {
+            factorAjuste = decayInactividad.negate();
+        } else {
+            EstrategiaCotizacionCalculator calculator =
+                    calculadores.getOrDefault(
+                            estrategiaEfectiva,
+                            calculadores.get(EstrategiaCotizacion.RENDIMIENTO_HISTORICO));
+            if (calculator == null) {
+                calculator = new RendimientoHistoricoCalculator();
+            }
+            List<PesoMetricaEntity> pesosActivos = pesoMetricaRepository.findByActivoTrue();
+            BigDecimal puntaje =
+                    calculator.calcularPuntaje(
+                            metricasPorSemana, metricasSemanaActual, pesosActivos);
+            factorAjuste = clamp(puntaje.multiply(sensibilidad));
+        }
 
         Optional<CotizacionHistoricaEntity> cotizacionVigente =
-                cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(jugadorId);
+                cotizacionHistoricaRepository
+                        .findTopByJugadorIdAndEstrategiaOrderByFechaCalculoDesc(
+                                jugadorId, estrategiaEfectiva)
+                        .or(
+                                () ->
+                                        cotizacionHistoricaRepository
+                                                .findTopByJugadorIdOrderByFechaCalculoDesc(
+                                                        jugadorId));
         BigDecimal cotizacionAnterior =
                 cotizacionVigente.map(CotizacionHistoricaEntity::getValor).orElse(valorInicial);
         BigDecimal cotizacionNueva =
                 Monetario.escalar(cotizacionAnterior.multiply(BigDecimal.ONE.add(factorAjuste)));
 
         CotizacionHistorica cotizacion =
-                CotizacionHistorica.calcular(jugadorId, semanaActual, cotizacionNueva, origen);
+                CotizacionHistorica.calcular(
+                        jugadorId, semanaActual, cotizacionNueva, origen, estrategiaEfectiva);
         cotizacionHistoricaRepository.save(CotizacionHistoricaEntity.desde(cotizacion));
 
-        Jugador jugador = jugadorEntity.aModelo();
-        jugador.actualizarCotizacionVigente(cotizacion.getId());
-        jugadorRepository.save(JugadorEntity.desde(jugador));
+        if (estrategiaEfectiva == estrategiaDefault
+                || jugadorEntity.getCotizacionVigenteId() == null) {
+            Jugador jugador = jugadorEntity.aModelo();
+            jugador.actualizarCotizacionVigente(cotizacion.getId());
+            jugadorRepository.save(JugadorEntity.desde(jugador));
+        }
 
         auditoriaService.registrar(
                 actorId,
@@ -172,20 +215,24 @@ public class CotizacionServiceImpl implements CotizacionService {
 
     @Override
     public void recalcular(OrigenCotizacion origen, UUID actorId) {
+        recalcular(origen, estrategiaDefault, actorId);
+    }
+
+    @Override
+    public void recalcular(OrigenCotizacion origen, EstrategiaCotizacion estrategia, UUID actorId) {
         Objects.requireNonNull(origen, "origen no puede ser null");
+        EstrategiaCotizacion estrategiaEfectiva =
+                estrategia != null ? estrategia : estrategiaDefault;
 
         for (JugadorEntity jugadorEntity : jugadorRepository.findByEstado(EstadoJugador.ACTIVO)) {
             UUID jugadorId = jugadorEntity.getId();
             try {
-                // Vía `self` (proxy de Spring): asegura que @Transactional(REQUIRES_NEW) de
-                // calcularCotizacion efectivamente abra una sub-transacción propia por jugador
-                // (plan.md §5) -- una auto-invocación `this.calcularCotizacion(...)` saltearía el
-                // proxy AOP y correría sin transacción propia.
-                self.calcularCotizacion(jugadorId, origen, actorId);
+                self.calcularCotizacion(jugadorId, origen, estrategiaEfectiva, actorId);
             } catch (RuntimeException ex) {
                 log.error(
-                        "Fallo al recalcular la cotización del jugador {}: {}",
+                        "Fallo al recalcular la cotización del jugador {} con estrategia {}: {}",
                         jugadorId,
+                        estrategiaEfectiva,
                         ex.getMessage(),
                         ex);
             }
@@ -205,53 +252,45 @@ public class CotizacionServiceImpl implements CotizacionService {
                 .toList();
     }
 
-    /**
-     * Puntaje en [-1, 1]: promedio ponderado de la normalización min-max de cada métrica activa.
-     */
-    private BigDecimal calcularPuntajeRendimiento(
-            Map<String, Map<String, BigDecimal>> metricasPorSemana,
-            Map<String, BigDecimal> metricasSemanaActual) {
-        List<PesoMetricaEntity> pesosActivos = pesoMetricaRepository.findByActivoTrue();
-
-        BigDecimal sumaPonderada = BigDecimal.ZERO;
-        BigDecimal sumaPesos = BigDecimal.ZERO;
-        for (PesoMetricaEntity pesoMetrica : pesosActivos) {
-            BigDecimal valorActual = metricasSemanaActual.get(pesoMetrica.getClave());
-            if (valorActual == null) {
-                continue;
-            }
-            List<BigDecimal> historicoDeLaClave =
-                    metricasPorSemana.values().stream()
-                            .map(
-                                    metricasDeEsaSemana ->
-                                            metricasDeEsaSemana.get(pesoMetrica.getClave()))
-                            .filter(Objects::nonNull)
-                            .toList();
-            BigDecimal normalizado = normalizarMinMax(valorActual, historicoDeLaClave);
-            sumaPonderada = sumaPonderada.add(pesoMetrica.getPeso().multiply(normalizado));
-            sumaPesos = sumaPesos.add(pesoMetrica.getPeso());
+    @Override
+    public List<CotizacionHistorica> obtenerHistorial(
+            UUID jugadorId, EstrategiaCotizacion estrategia) {
+        Objects.requireNonNull(jugadorId, "jugadorId no puede ser null");
+        if (!jugadorRepository.existsById(jugadorId)) {
+            throw new RecursoNoEncontradoException(ENTIDAD_JUGADOR, jugadorId);
         }
-
-        return sumaPesos.signum() == 0
-                ? BigDecimal.ZERO
-                : sumaPonderada.divide(sumaPesos, MathContext.DECIMAL64);
+        if (estrategia == null) {
+            return obtenerHistorial(jugadorId);
+        }
+        return cotizacionHistoricaRepository
+                .findByJugadorIdAndEstrategiaOrderByFechaCalculoAsc(jugadorId, estrategia)
+                .stream()
+                .map(CotizacionHistoricaEntity::aModelo)
+                .toList();
     }
 
-    private static BigDecimal normalizarMinMax(BigDecimal valorActual, List<BigDecimal> historico) {
-        if (historico.size() < 2) {
-            return BigDecimal.ZERO;
-        }
-        BigDecimal min = historico.stream().min(Comparator.naturalOrder()).orElseThrow();
-        BigDecimal max = historico.stream().max(Comparator.naturalOrder()).orElseThrow();
-        BigDecimal rango = max.subtract(min);
-        if (rango.signum() == 0) {
-            return BigDecimal.ZERO;
-        }
-        BigDecimal posicion = valorActual.subtract(min).divide(rango, MathContext.DECIMAL64);
-        return posicion.multiply(DOS).subtract(BigDecimal.ONE);
+    @Override
+    public Optional<CotizacionHistorica> obtenerVigente(
+            UUID jugadorId, EstrategiaCotizacion estrategia) {
+        Objects.requireNonNull(jugadorId, "jugadorId no puede ser null");
+        EstrategiaCotizacion estrategiaEfectiva =
+                estrategia != null ? estrategia : estrategiaDefault;
+        return cotizacionHistoricaRepository
+                .findTopByJugadorIdAndEstrategiaOrderByFechaCalculoDesc(
+                        jugadorId, estrategiaEfectiva)
+                .map(CotizacionHistoricaEntity::aModelo);
     }
 
-    /** {@code semanaCalculo -> (clave de métrica -> suma de esa métrica en esa semana)}. */
+    private static BigDecimal clamp(BigDecimal factorAjuste) {
+        if (factorAjuste.compareTo(CLAMP_MAXIMO) > 0) {
+            return CLAMP_MAXIMO;
+        }
+        if (factorAjuste.compareTo(CLAMP_MINIMO) < 0) {
+            return CLAMP_MINIMO;
+        }
+        return factorAjuste;
+    }
+
     private Map<String, Map<String, BigDecimal>> agruparPorSemana(
             List<RendimientoPartidoEntity> historico) {
         Map<String, Map<String, BigDecimal>> metricasPorSemana = new HashMap<>();
@@ -279,25 +318,15 @@ public class CotizacionServiceImpl implements CotizacionService {
                 }
             }
             return numericas;
-        } catch (RuntimeException ex) {
-            log.error("Fallo al parsear metricas '{}': {}", metricasJson, ex.getMessage(), ex);
+        } catch (Exception ex) {
+            log.warn("No se pudieron parsear las métricas JSON: {}", metricasJson, ex);
             return Map.of();
         }
     }
 
-    private static BigDecimal clamp(BigDecimal valor) {
-        if (valor.compareTo(CLAMP_MAXIMO) > 0) {
-            return CLAMP_MAXIMO;
-        }
-        if (valor.compareTo(CLAMP_MINIMO) < 0) {
-            return CLAMP_MINIMO;
-        }
-        return valor;
-    }
-
     private static String semanaIsoDe(LocalDate fecha) {
-        int semana = fecha.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
         int anio = fecha.get(IsoFields.WEEK_BASED_YEAR);
+        int semana = fecha.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
         return "%04d-W%02d".formatted(anio, semana);
     }
 }

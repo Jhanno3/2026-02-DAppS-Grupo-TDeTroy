@@ -65,4 +65,13 @@ class CotizacionControllerIT {
                 .assertThat()
                 .hasStatus(202);
     }
+
+    @Test
+    void recalcular_conTokenAdminYEstrategia_responde202() {
+        mvc.post()
+                .uri("/api/v1/cotizaciones/recalculo?estrategia=RENDIMIENTO_ACTUAL")
+                .header("Authorization", "Bearer " + tokenAdmin())
+                .assertThat()
+                .hasStatus(202);
+    }
 }
