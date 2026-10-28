@@ -92,11 +92,13 @@ class CotizacionServiceImplTest {
                 jugadorRepository,
                 auditoriaService,
                 new ObjectMapper(),
+                List.of(new RendimientoHistoricoCalculator(), new RendimientoActualCalculator()),
                 self,
                 VALOR_INICIAL,
                 sensibilidad,
                 DECAY_INACTIVIDAD,
-                VENTANA_HISTORICO_SEMANAS);
+                VENTANA_HISTORICO_SEMANAS,
+                "RENDIMIENTO_HISTORICO");
     }
 
     private static Jugador jugadorActivoCon(UUID id) {

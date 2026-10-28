@@ -88,7 +88,7 @@ public class CotizacionServiceImpl implements CotizacionService {
             @Value("${app.cotizacion.decay-inactividad}") BigDecimal decayInactividad,
             @Value("${app.cotizacion.ventana-historico-semanas}") long ventanaHistoricoSemanas,
             @Value("${app.cotizacion.estrategia-default:RENDIMIENTO_HISTORICO}")
-                    EstrategiaCotizacion estrategiaDefault) {
+                    String estrategiaDefaultStr) {
         this.rendimientoPartidoRepository = rendimientoPartidoRepository;
         this.cotizacionHistoricaRepository = cotizacionHistoricaRepository;
         this.pesoMetricaRepository = pesoMetricaRepository;
@@ -100,10 +100,19 @@ public class CotizacionServiceImpl implements CotizacionService {
         this.sensibilidad = sensibilidad;
         this.decayInactividad = decayInactividad;
         this.ventanaHistoricoSemanas = ventanaHistoricoSemanas;
-        this.estrategiaDefault =
-                estrategiaDefault != null
-                        ? estrategiaDefault
-                        : EstrategiaCotizacion.RENDIMIENTO_HISTORICO;
+
+        EstrategiaCotizacion parsedDefault = EstrategiaCotizacion.RENDIMIENTO_HISTORICO;
+        if (estrategiaDefaultStr != null && !estrategiaDefaultStr.isBlank()) {
+            try {
+                parsedDefault = EstrategiaCotizacion.valueOf(estrategiaDefaultStr.trim());
+            } catch (IllegalArgumentException ex) {
+                log.warn(
+                        "Estrategia default '{}' no reconocida, usando {}",
+                        estrategiaDefaultStr,
+                        parsedDefault);
+            }
+        }
+        this.estrategiaDefault = parsedDefault;
 
         this.calculadores = new EnumMap<>(EstrategiaCotizacion.class);
         if (calculadoresList != null) {
@@ -111,36 +120,6 @@ public class CotizacionServiceImpl implements CotizacionService {
                 this.calculadores.put(calc.getEstrategia(), calc);
             }
         }
-    }
-
-    /** Constructor de conveniencia para tests sin inyección de calculadores explícita. */
-    @Autowired
-    public CotizacionServiceImpl(
-            RendimientoPartidoRepository rendimientoPartidoRepository,
-            CotizacionHistoricaRepository cotizacionHistoricaRepository,
-            PesoMetricaRepository pesoMetricaRepository,
-            JugadorRepository jugadorRepository,
-            AuditoriaService auditoriaService,
-            ObjectMapper objectMapper,
-            CotizacionService self,
-            BigDecimal valorInicial,
-            BigDecimal sensibilidad,
-            BigDecimal decayInactividad,
-            long ventanaHistoricoSemanas) {
-        this(
-                rendimientoPartidoRepository,
-                cotizacionHistoricaRepository,
-                pesoMetricaRepository,
-                jugadorRepository,
-                auditoriaService,
-                objectMapper,
-                List.of(new RendimientoHistoricoCalculator(), new RendimientoActualCalculator()),
-                self,
-                valorInicial,
-                sensibilidad,
-                decayInactividad,
-                ventanaHistoricoSemanas,
-                EstrategiaCotizacion.RENDIMIENTO_HISTORICO);
     }
 
     @Override
@@ -187,6 +166,9 @@ public class CotizacionServiceImpl implements CotizacionService {
                     calculadores.getOrDefault(
                             estrategiaEfectiva,
                             calculadores.get(EstrategiaCotizacion.RENDIMIENTO_HISTORICO));
+            if (calculator == null) {
+                calculator = new RendimientoHistoricoCalculator();
+            }
             List<PesoMetricaEntity> pesosActivos = pesoMetricaRepository.findByActivoTrue();
             BigDecimal puntaje =
                     calculator.calcularPuntaje(
