@@ -134,12 +134,22 @@ public class CotizacionServiceImpl implements CotizacionService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CotizacionHistorica calcularCotizacion(
             UUID jugadorId, OrigenCotizacion origen, UUID actorId) {
-        return calcularCotizacion(jugadorId, origen, obtenerEstrategiaPorDefecto(), actorId);
+        return calcular(jugadorId, origen, null, actorId);
     }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CotizacionHistorica calcularCotizacion(
+            UUID jugadorId,
+            OrigenCotizacion origen,
+            EstrategiaCotizacion estrategia,
+            UUID actorId) {
+        return calcular(jugadorId, origen, estrategia, actorId);
+    }
+
+    // Sin @Transactional: corre dentro de la transacción que abre cada overload público vía el
+    // proxy. Una overload llamando a la otra con "this." saltearía el proxy y su REQUIRES_NEW.
+    private CotizacionHistorica calcular(
             UUID jugadorId,
             OrigenCotizacion origen,
             EstrategiaCotizacion estrategia,
