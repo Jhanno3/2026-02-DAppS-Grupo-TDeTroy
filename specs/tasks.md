@@ -60,7 +60,7 @@ Sin esto no puede arrancar ninguna entidad de negocio.
 | T3.3 | `WhoScoredRepositoryImpl implements RendimientoExternoRepository`: scraping, traducción a modelo interno, aislamiento de errores (no propaga fallas a otros flujos); tests contra fixtures propios, nunca red real | T3.2 | plan §8.1, constitution §1/§4 |
 | T3.4 | `FootballDataRepositoryImpl implements FixtureRepository`: consumo de API oficial, traducción a modelo interno, aislamiento de errores; tests contra fixtures propios, nunca red real | T3.2 | plan §8.1, constitution §1/§4 |
 | T3.5 | `RendimientoService`/`RendimientoServiceImpl`: `ingestarFixtures()`/`ingestarRendimiento()`, orquesta las dos interfaces y persiste `RendimientoPartido` asociado a jugador y semana ISO | T3.3, T3.4, T3.1 | plan §1, §8.1 |
-| T3.6 | Scheduling en `config/` (domingo 01:00 fixtures, domingo 02:00 rendimiento) invocando `RendimientoServiceImpl` directamente — sin Controller de por medio, el trigger no es HTTP | T3.5 | plan §8.2 |
+| T3.6 | Scheduling en `config/` (lunes 00:00 fixtures, lunes 01:00 rendimiento, antes de la cotización de las 03:00) invocando `RendimientoServiceImpl` directamente — sin Controller de por medio, el trigger no es HTTP | T3.5 | plan §8.2 |
 | T3.7 | `Jugador.fotoUrl` (+ `actualizarFoto`) y `RendimientoExternoRepository#obtenerFotoUrl`; `WhoScoredRepositoryImpl` lo implementa scrapeando la página de perfil; `RendimientoServiceImpl.ingestarRendimiento()` la aplica por jugador, aislando errores igual que el resto de la ingesta; expuesto en `JugadorResponse` (UC-07) | T3.5, T2.5 | plan §2.2, §8.1 |
 
 ---
@@ -76,7 +76,8 @@ Sin esto no puede arrancar ninguna entidad de negocio.
 | T4.5 | Scheduling en `config/` (lunes 03:00) invocando `CotizacionServiceImpl.recalcular(AUTOMATICO, null)` directamente, sólo sobre jugadores `ACTIVO`; cada jugador en su propia sub-transacción | T4.4, T3.6 | plan §5, §6.4, spec UC-06 |
 | T4.6 | `CotizacionController`: `POST /cotizaciones/recalculo` (UC-13, ADMIN), invoca el mismo `CotizacionService` sobre todos los jugadores `ACTIVO`, sin parámetro de jugador ni de valor de cotización en el body; audita vía `AuditoriaService` por jugador afectado | T4.5, T1.4, T0.5 | plan §3/§6.4, spec UC-13 |
 | T4.7 | `JugadorController`: `GET /jugadores/{id}/cotizaciones` (UC-08, público), delegando en `CotizacionService`; incluye jugadores dados de baja con su cotización congelada | T4.1, T2.5 | plan §3, spec UC-08 |
-| T4.8 | Patrón Strategy para cotización (`EstrategiaCotizacionCalculator`): `RENDIMIENTO_HISTORICO` (consistencia temporal min-max) y `RENDIMIENTO_ACTUAL` (desempeño absoluto de última semana / momentum). Persistencia en `CotizacionHistorica.estrategia` (migración `V15__cotizaciones_estrategia.sql`). Parámetro opcional en `POST /cotizaciones/recalculo?estrategia=...` y `GET /jugadores/{id}/cotizaciones?estrategia=...` | T4.3, T4.6, T4.7 | plan §6.5, spec UC-06 |
+| T4.8 | Patrón Strategy para cotización (`EstrategiaCotizacionCalculator`): `RENDIMIENTO_TEMPORADA` (consistencia temporal min-max) y `RENDIMIENTO_ACTUAL` (desempeño absoluto de última semana / momentum). Persistencia en `CotizacionHistorica.estrategia` (migración `V15__cotizaciones_estrategia.sql`). Parámetro opcional en `POST /cotizaciones/recalculo?estrategia=...` y `GET /jugadores/{id}/cotizaciones?estrategia=...` | T4.3, T4.6, T4.7 | plan §6.5, spec UC-06 |
+| T4.9 | Estrategia por defecto configurable en runtime: `PUT /cotizaciones/estrategia?estrategia=...` (`ADMIN`, desplegable en Swagger), persistida en `configuracion_cotizacion` (`V19__configuracion_cotizacion.sql`) y auditada; `GET /jugadores/{id}/cotizaciones/{semana}` para la cotización de una semana ISO puntual | T4.8 | plan §6.5 |
 
 ---
 

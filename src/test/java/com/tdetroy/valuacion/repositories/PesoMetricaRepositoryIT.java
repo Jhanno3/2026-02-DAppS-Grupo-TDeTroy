@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tdetroy.valuacion.entity.PesoMetricaEntity;
 import com.tdetroy.valuacion.model.PesoMetrica;
+import com.tdetroy.valuacion.model.SentidoMetrica;
 import com.tdetroy.valuacion.repositories.support.PostgresIntegrationTest;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,9 @@ class PesoMetricaRepositoryIT extends PostgresIntegrationTest {
 
     @Test
     void guardarPesoMetricaValido_persisteYSeLeeDeVueltaConLosValoresEsperados() {
-        PesoMetrica pesoMetrica = PesoMetrica.configurar("rating", new BigDecimal("1.5000"), true);
+        PesoMetrica pesoMetrica =
+                PesoMetrica.configurar(
+                        "rating", new BigDecimal("1.5000"), true, SentidoMetrica.POSITIVO);
 
         pesoMetricaRepository.saveAndFlush(PesoMetricaEntity.desde(pesoMetrica));
         entityManager.clear();
@@ -39,12 +42,14 @@ class PesoMetricaRepositoryIT extends PostgresIntegrationTest {
         assertThat(leido.getClave()).isEqualTo("rating");
         assertThat(leido.getPeso()).isEqualByComparingTo(new BigDecimal("1.5000"));
         assertThat(leido.isActivo()).isTrue();
+        assertThat(leido.getSentido()).isEqualTo(SentidoMetrica.POSITIVO);
     }
 
     @Test
     void actualizarPesoYEstadoActivo_persisteSobreLaMismaFila() {
         PesoMetrica pesoMetrica =
-                PesoMetrica.configurar("asistencias", new BigDecimal("1.0000"), true);
+                PesoMetrica.configurar(
+                        "asistencias", new BigDecimal("1.0000"), true, SentidoMetrica.POSITIVO);
         pesoMetricaRepository.saveAndFlush(PesoMetricaEntity.desde(pesoMetrica));
         entityManager.clear();
 

@@ -45,7 +45,7 @@ config/        # seguridad, CORS, OpenAPI, scheduling
 |---|---|---|
 | `UsuarioService` | registro, autenticación, saldo virtual (débito/crédito), recarga por ADMIN | `UsuarioRepository` |
 | `JugadorService` | catálogo (alta/edición/baja), invariante de 100 tokens emitidos, orquesta la baja (cancela ofertas abiertas y compensa tenencias) | `JugadorRepository`, `TenenciaTokenRepository`, `OfertaP2PRepository`, `MovimientoRepository` |
-| `RendimientoService` | orquesta la ingesta semanal desde las fuentes externas y persiste el rendimiento crudo | `RendimientoExternoRepository`, `FixtureRepository`, `RendimientoPartidoRepository` |
+| `RendimientoService` | orquesta la ingesta semanal desde las fuentes externas y persiste el rendimiento crudo | `RendimientoLigaExternoRepository`, `FixtureRepository`, `RendimientoPartidoRepository` |
 | `CotizacionService` | motor de cálculo de cotización (job semanal + disparo manual), historial | `CotizacionHistoricaRepository`, `PesoMetricaRepository`, `RendimientoPartidoRepository`, `JugadorRepository` |
 | `TokenService` | compra/venta de tokens contra el sistema | `JugadorRepository`, `TenenciaTokenRepository`, `UsuarioRepository`, `MovimientoRepository` |
 | `PortfolioService` | vista de lectura del portfolio de un usuario | `TenenciaTokenRepository`, `CotizacionHistoricaRepository`, `UsuarioRepository` |
@@ -88,7 +88,7 @@ Jugador (entidad JPA)
   tokensEmitidos: int  (0..100, invariante propia de la entidad)
   cotizacionVigenteId: referencia a la última CotizacionHistorica (puede ser null hasta el primer cálculo)
   fechaUltimaActualizacionRendimiento: Instant (nullable)
-  fotoUrl: String (nullable; la fija RendimientoServiceImpl via WhoScoredRepositoryImpl#obtenerFotoUrl, ver §8.1 — nunca el alta/edición de UC-03/UC-04)
+  fotoUrl: String (nullable; la fija RendimientoServiceImpl desde la fila de liga de WhoScoredLigaRepositoryImpl, ver §8.1 — nunca el alta/edición de UC-03/UC-04)
 
 Métodos propios:
   emitirTokens(int cantidad)   -> throws EmisionMaximaSuperadaException si tokensEmitidos + cantidad > 100
@@ -340,10 +340,14 @@ Resuelve el punto derivado por `spec.md` (UC-06, flujo alternativo). El jugador 
 
 El motor de cotización soporta dos estrategias desacopladas vía la interfaz `EstrategiaCotizacionCalculator`:
 
-1. **`RENDIMIENTO_HISTORICO` (default):** evalúa la evolución temporal del propio jugador comparando sus métricas de la semana contra su histórico reciente vía normalización min-max ponderada por `PesoMetrica` (§6.2). Premia regularidad y superación de su propio promedio.
-2. **`RENDIMIENTO_ACTUAL`:** evalúa el desempeño absoluto del jugador en la última semana / partidos recientes frente a referencias estándar del mercado (rating WhoScored centrado en 6.0 y acciones directas destacadas como goles y asistencias). Premia a los jugadores en racha y con picos de rendimiento en el momento presente ("mejores jugadores actuales").
+1. **`RENDIMIENTO_TEMPORADA`:** evalúa la evolución temporal del propio jugador comparando sus métricas de la semana contra su histórico reciente vía normalización min-max ponderada por `PesoMetrica` (§6.2). Premia regularidad y superación de su propio promedio.
+2. **`RENDIMIENTO_ACTUAL` (default de `app.cotizacion.estrategia-default`):** evalúa el desempeño absoluto del jugador en la última semana / partidos recientes frente a referencias estándar del mercado (rating WhoScored centrado en 6.0 y acciones directas destacadas como goles y asistencias). Premia a los jugadores en racha y con picos de rendimiento en el momento presente ("mejores jugadores actuales").
 
 Ambas estrategias aplican el decaimiento por inactividad (§6.3) ante semanas sin partidos y el clamp de variación máxima ($\pm 20\%$). Las cotizaciones persistidas identifican la estrategia utilizada en el campo `estrategia` (`V15__cotizaciones_estrategia.sql`). El administrador puede seleccionar la estrategia en el recálculo manual vía `POST /cotizaciones/recalculo?estrategia=...`, y el historial puede consultarse filtrado por estrategia en `GET /jugadores/{id}/cotizaciones?estrategia=...`.
+
+**Estrategia por defecto configurable en runtime:** `PUT /cotizaciones/estrategia?estrategia=...` (`ADMIN`) fija la estrategia con la que calculan el job semanal y el recálculo manual sin `?estrategia=`. Va como query param para que Swagger UI la muestre como desplegable. Se persiste en `configuracion_cotizacion` (registro único, `V19__configuracion_cotizacion.sql`) para que sobreviva a reinicios; mientras nadie la cambie no hay fila y vale `app.cotizacion.estrategia-default`. Cada cambio queda en la auditoría (`CAMBIO_ESTRATEGIA_COTIZACION`, valores antes/después, constitution §4). No recalcula nada: aplica desde el próximo cálculo.
+
+**Cotización de una semana puntual:** `GET /jugadores/{id}/cotizaciones/{semana}` (público, semana ISO `yyyy-Www`, ej. `2026-W44`) devuelve la cotización que resultó del rendimiento de esa semana; si se calculó más de una vez (recálculos manuales), la última. `?estrategia=` opcional. 400 si la semana no tiene ese formato, 404 si el jugador no existe o no tiene cotización en esa semana.
 
 ---
 
@@ -373,19 +377,17 @@ Dos estrategias iniciales (registradas como beans, seleccionables por `clave`):
 
 ```
 repositories/
-  RendimientoExternoRepository (interfaz)      -- obtenerFotoUrl(jugador) -> Optional<String>
-  RendimientoLigaExternoRepository (interfaz)  -- obtenerAcumuladoLiga(liga) -> List<JugadorRendimientoLigaCrudo>
+  RendimientoLigaExternoRepository (interfaz)  -- obtenerAcumuladoLiga(liga) -> List<JugadorRendimientoLigaCrudo> (incluye fotoUrl)
   FixtureRepository (interfaz)                 -- obtenerPartidosDisputados(rangoFechas) -> List<PartidoCrudo>
-  WhoScoredRepositoryImpl implements RendimientoExternoRepository
   WhoScoredLigaRepositoryImpl implements RendimientoLigaExternoRepository
   FootballDataRepositoryImpl implements FixtureRepository
   RendimientoPartidoRepository                 -- Spring Data JPA, persistencia sobre model/RendimientoPartido
   RendimientoAcumuladoWhoScoredRepository      -- Spring Data JPA, snapshot 1:1 sobre model/RendimientoAcumuladoWhoScored
 ```
 
-`RendimientoService` sólo conoce las interfaces `RendimientoExternoRepository`/`RendimientoLigaExternoRepository`/`FixtureRepository` y el modelo interno (`RendimientoPartido`); nunca el formato de respuesta de WhoScored ni de Football-Data.org (constitution §1/§2). Cada implementación traduce y aísla sus propios errores (try/catch interno + logging), nunca propaga una excepción que tumbe al otro flujo.
+`RendimientoService` sólo conoce las interfaces `RendimientoLigaExternoRepository`/`FixtureRepository` y el modelo interno (`RendimientoPartido`); nunca el formato de respuesta de WhoScored ni de Football-Data.org (constitution §1/§2). Cada implementación traduce y aísla sus propios errores (try/catch interno + logging), nunca propaga una excepción que tumbe al otro flujo.
 
-`obtenerFotoUrl` no es rendimiento deportivo (no genera `RendimientoPartido`): es la URL de la foto de perfil del jugador, scrapeada de la misma fuente (WhoScored) y aplicada sobre `Jugador.fotoUrl` (plan §2.2) por `RendimientoServiceImpl.ingestarRendimiento()`, reutilizando su misma ventana e isolation de errores en vez de un job propio. `Optional.empty()` cuando la fuente no tiene foto para ese jugador — nunca bloquea al resto de la ingesta.
+La foto de perfil no es rendimiento deportivo (no genera `RendimientoPartido`): es la URL de la foto del jugador en la misma fuente (WhoScored) y aplicada sobre `Jugador.fotoUrl` (plan §2.2) por `RendimientoServiceImpl.ingestarRendimiento()`. No hay scraping por jugador: el link de cada fila de la página de liga (`/players/{id}/show/...`) trae el id de WhoScored del jugador, y la foto vive en el CDN de imágenes de WhoScored como `{app.whoscored.imagenes-url}players/{id}.jpg` — `WhoScoredLigaRepositoryImpl` la arma al traducir la fila (`JugadorRendimientoLigaCrudo.fotoUrl`). La implementación anterior (`WhoScoredRepositoryImpl`, una request por jugador a un perfil armado con el UUID interno del catálogo) nunca encontraba la foto y demoraba horas cada ingesta; se eliminó. Una fila sin id en el link queda con `fotoUrl = null` y el jugador conserva la foto que ya tenía.
 
 #### 8.1.1 Ingesta de rendimiento por liga (reemplaza el scraping por jugador)
 
@@ -402,7 +404,7 @@ repositories/
 **Snapshot + delta semanal (plan.md §2.3, nueva entidad `RendimientoAcumuladoWhoScored`):** a diferencia de `RendimientoPartido` (append-only, una fila por partido), el acumulado de liga es un snapshot **1:1 por jugador** (`jugadorId` es la PK, tabla `rendimientos_acumulados_whoscored`): cada ingesta reemplaza por completo el valor anterior, nunca conserva historial propio. Por cada jugador resuelto:
 
 1. **Sin snapshot previo:** se persiste el acumulado recibido como snapshot base. No se genera ningún `RendimientoPartido` — todavía no hay punto de comparación para un delta.
-2. **Con snapshot previo:** se calcula, métrica por métrica, `delta = max(0, actual - anterior)` (nunca negativo: un contador que bajara respecto del snapshot anterior, por ejemplo por un dato corregido en la fuente, aporta 0, nunca resta), se reemplaza el snapshot por el nuevo acumulado, y — sólo si al menos una métrica tuvo delta positivo — ese delta es lo que se persiste como el `RendimientoPartido` de la semana en curso (`fuenteResultado = WHOSCORED_LIGA`, `metricas` = el delta serializado, `partidoExternoId` sintético `"WHOSCORED-LIGA-{semanaCalculo}"` para deduplicar frente a una reingesta del mismo ciclo, igual mecanismo que el resto de las fuentes). Un delta íntegramente en cero (sin partidos nuevos esa semana) deliberadamente **no** persiste fila: así el jugador cae en el mismo camino de "sin rendimiento esta semana" (decaimiento leve, §6.3) que ya maneja `CotizacionServiceImpl`, en vez de aportar un puntaje neutro distinto.
+2. **Con snapshot previo:** se calcula, métrica por métrica, `delta = max(0, actual - anterior)` (nunca negativo: un contador que bajara respecto del snapshot anterior, por ejemplo por un dato corregido en la fuente, aporta 0, nunca resta), se reemplaza el snapshot por el nuevo acumulado, y — sólo si al menos una métrica tuvo delta positivo — ese delta es lo que se persiste como el `RendimientoPartido` de la semana en curso (`fuenteResultado = WHOSCORED_LIGA`, `metricas` = el delta serializado, `partidoExternoId` sintético `"WHOSCORED-LIGA-{semanaCalculo}-{corrida}"`, uno por corrida y no por semana: una reingesta no duplica datos porque el snapshot ya se actualizó y su delta da cero, y una segunda corrida con partidos nuevos en la misma semana suma su propio delta — con un id por semana, esa segunda corrida se descartaba después de pisar el snapshot y el delta se perdía). Un delta íntegramente en cero (sin partidos nuevos esa semana) deliberadamente **no** persiste fila: así el jugador cae en el mismo camino de "sin rendimiento esta semana" (decaimiento leve, §6.3) que ya maneja `CotizacionServiceImpl`, en vez de aportar un puntaje neutro distinto.
 
 Reusar `RendimientoPartido`/`RendimientoPartidoRepository` para el delta (en vez de una tabla nueva) es deliberado: `CotizacionServiceImpl` ya suma y pondera por `semanaCalculo` sin conocer la fuente, así que el delta de liga participa del cálculo de cotización sin tocar el motor (§6.2) — sólo hace falta que alguien le asigne un `PesoMetrica` activo a cada una de las siete claves (ver §6.2, seed en `DevDataSeeder`).
 
@@ -410,11 +412,12 @@ Reusar `RendimientoPartido`/`RendimientoPartidoRepository` para el delta (en vez
 
 ### 8.2 Frecuencia de ingesta (constitution §1, decisión firme)
 
-`constitution.md` §1 fija que ambas ingestas corren con la **misma cadencia semanal** que el job de recotización, completándose **antes** de que este corra dentro del mismo ciclo — nunca diaria ni bajo ninguna otra frecuencia mayor. El job de cotización corre los lunes 03:00 (§6.4), así que ambas ingestas se programan el domingo anterior, invocando `RendimientoService` directamente desde un componente de scheduling en `config/` (mismo patrón que §6.4: sin Controller de por medio, el trigger no es HTTP):
+`constitution.md` §1 fija que ambas ingestas corren con la **misma cadencia semanal** que el job de recotización, completándose **antes** de que este corra dentro del mismo ciclo — nunca diaria ni bajo ninguna otra frecuencia mayor. El job de cotización corre los lunes 03:00 (§6.4), así que ambas ingestas se programan esa misma madrugada del lunes, antes que él y después de los partidos del domingo, invocando `RendimientoService` directamente desde un componente de scheduling en `config/` (mismo patrón que §6.4: sin Controller de por medio, el trigger no es HTTP):
 
-- `FootballDataRepositoryImpl` (fixtures/resultados/alineaciones), vía `RendimientoService.ingestarFixtures()`: `@Scheduled(cron = "0 0 1 * * SUN")` (domingo 01:00).
-- `RendimientoService.ingestarRendimiento()`: `@Scheduled(cron = "0 0 2 * * SUN")` (domingo 02:00, una hora después) — refresca la foto de perfil de cada jugador `ACTIVO` (`WhoScoredRepositoryImpl`) y, por cada liga del catálogo, resuelve el acumulado de WhoScored y persiste el delta semanal (`WhoScoredLigaRepositoryImpl`, §8.1.1).
-- Queda un margen de una hora (02:00 a 03:00) entre el fin de la ventana de ingesta y el inicio del cálculo semanal, y de 2 horas entre ambas fuentes.
+- `FootballDataRepositoryImpl` (fixtures/resultados/alineaciones), vía `RendimientoService.ingestarFixtures()`: `@Scheduled(cron = "0 0 0 * * MON")` (lunes 00:00).
+- `RendimientoService.ingestarRendimiento()`: `@Scheduled(cron = "0 0 1 * * MON")` (lunes 01:00, una hora después) — por cada liga del catálogo, resuelve el acumulado de WhoScored, persiste el delta semanal y actualiza la foto de perfil de cada jugador resuelto (`WhoScoredLigaRepositoryImpl`, §8.1/§8.1.1).
+- **Semana de referencia (`common.SemanaIso`):** las dos ingestas y el cálculo de cotización procesan la semana ISO del día anterior a la corrida — el lunes, la semana que acaba de terminar —, nunca la del día en que corren. Antes, la ingesta corría el domingo y guardaba en su semana, mientras la cotización del lunes buscaba en la semana nueva: nunca encontraba los datos y aplicaba el decaimiento a todo el catálogo. Los partidos del domingo, que con la ingesta del domingo 02:00 quedaban afuera hasta la semana siguiente, ahora entran en su propia semana.
+- Queda un margen de dos horas (01:00 a 03:00) entre el inicio de la ingesta de rendimiento y el cálculo semanal, y de una hora entre ambas fuentes.
 - Ambos jobs corren **desacoplados del job de cotización** (constitution §1: nunca síncrono a un request de usuario; §2: el job de cotización sólo lee lo ya persistido, nunca dispara la ingesta él mismo).
 - Reintentos: si una fuente falla en su ventana semanal, el dato de esa semana no aporta al puntaje (§6.3); no hay cola de reintentos dedicada en el MVP — un fallo puntual se resuelve recién en el ciclo semanal siguiente (el snapshot de liga no se actualiza, así que el próximo ciclo recupera el delta completo acumulado entre ambos).
 
@@ -506,7 +509,7 @@ Toda operación que dispare un `Movimiento` de tipo `COMPRA_P2P`/`VENTA_P2P`/`CO
 5. Ranking vía Strategy pattern, 2 estrategias iniciales (`cotizacion`, `variacion-semanal`), selección resuelta en `RankingService`, nunca en el Controller.
 6. Concurrencia en oferta P2P vía locking pesimista sobre la fila de la oferta — no optimista, no cola.
 7. `Movimiento` (historial de usuario) y `RegistroAuditoria` (auditoría interna) son dos tablas separadas con propósitos distintos, aunque una misma operación escriba en ambas.
-8. Ingesta semanal (domingo), alineada y previa al job de cotización (lunes) — cadencia fija por `constitution.md` §1, no ajustable por decisión técnica (§8.2).
+8. Ingesta semanal (lunes de madrugada), alineada y previa al job de cotización (lunes 03:00) — cadencia fija por `constitution.md` §1, no ajustable por decisión técnica (§8.2).
 9. `CotizacionHistorica` es append-only; "vigente" es siempre el último registro por fecha, nunca una tabla mutable en paralelo.
 10. Publicar una oferta P2P reserva físicamente la cantidad (`TenenciaToken.cantidadReservada`), no sólo la valida — el vendedor puede cancelar lo no vendido, y la baja de un jugador cancela automáticamente sus ofertas abiertas y reintegra la reserva antes de compensar (§2.5, §9).
 11. Ingesta de rendimiento de WhoScored por liga completa (no por jugador, §8.1.1) — reemplaza el scraping por jugador original; set de métricas curado (único que esta fuente provee de forma agregada), snapshot 1:1 por jugador (`RendimientoAcumuladoWhoScored`) y delta semanal reutilizando `RendimientoPartido`/`CotizacionServiceImpl` sin tocar el motor de cotización.

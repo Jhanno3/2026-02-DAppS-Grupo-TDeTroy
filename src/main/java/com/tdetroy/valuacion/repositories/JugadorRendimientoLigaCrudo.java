@@ -13,6 +13,9 @@ import java.util.Map;
  * la curación al conjunto permitido de métricas acumuladas de temporada
  * (Apps/Goals/Assists/ManOfTheMatch/YellowCard/RedCard/MinsPlayed) ocurre en {@code
  * RendimientoServiceImpl}, no acá.
+ *
+ * <p>{@code fotoUrl} es la foto de perfil del jugador en el CDN de WhoScored, armada a partir del
+ * id de WhoScored de su link en la misma fila; {@code null} si la fila no trae ese id.
  */
 public record JugadorRendimientoLigaCrudo(
-        String nombre, String club, Map<String, Object> metricas) {}
+        String nombre, String club, Map<String, Object> metricas, String fotoUrl) {}

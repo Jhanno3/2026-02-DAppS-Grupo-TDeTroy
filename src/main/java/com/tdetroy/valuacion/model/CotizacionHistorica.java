@@ -70,7 +70,7 @@ public class CotizacionHistorica {
 
     /**
      * Calcula una cotización con {@code fechaCalculo = Instant.now()} y estrategia por defecto
-     * {@link EstrategiaCotizacion#RENDIMIENTO_HISTORICO}.
+     * {@link EstrategiaCotizacion#RENDIMIENTO_TEMPORADA}.
      */
     public static CotizacionHistorica calcular(
             UUID jugadorId, String semana, BigDecimal valor, OrigenCotizacion origen) {
@@ -79,7 +79,7 @@ public class CotizacionHistorica {
                 semana,
                 valor,
                 origen,
-                EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                EstrategiaCotizacion.RENDIMIENTO_TEMPORADA,
                 Instant.now());
     }
 
@@ -95,7 +95,7 @@ public class CotizacionHistorica {
                 semana,
                 valor,
                 origen,
-                EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                EstrategiaCotizacion.RENDIMIENTO_TEMPORADA,
                 fechaCalculo);
     }
 
@@ -151,7 +151,7 @@ public class CotizacionHistorica {
                 semana,
                 valor,
                 origen,
-                EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                EstrategiaCotizacion.RENDIMIENTO_TEMPORADA,
                 fechaCalculo);
     }
 

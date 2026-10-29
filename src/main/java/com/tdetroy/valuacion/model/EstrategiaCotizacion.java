@@ -4,7 +4,7 @@ package com.tdetroy.valuacion.model;
  * Estrategias / métodos de cálculo de cotización disponibles (UC-06).
  *
  * <ul>
- *   <li>{@link #RENDIMIENTO_HISTORICO}: valúa al jugador comparando su rendimiento reciente contra
+ *   <li>{@link #RENDIMIENTO_TEMPORADA}: valúa al jugador comparando su rendimiento reciente contra
  *       su propio histórico temporal (normalización min-max de métricas a lo largo de las semanas).
  *       Mide consistencia y evolución respecto a sí mismo.
  *   <li>{@link #RENDIMIENTO_ACTUAL}: valúa al jugador en base a su rendimiento absoluto en la
@@ -13,6 +13,6 @@ package com.tdetroy.valuacion.model;
  * </ul>
  */
 public enum EstrategiaCotizacion {
-    RENDIMIENTO_HISTORICO,
+    RENDIMIENTO_TEMPORADA,
     RENDIMIENTO_ACTUAL
 }

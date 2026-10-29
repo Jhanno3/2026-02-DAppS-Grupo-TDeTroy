@@ -11,6 +11,7 @@ import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.services.CotizacionService;
 import com.tdetroy.valuacion.services.JugadorService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -89,6 +90,20 @@ public class JugadorController {
                         ? cotizacionService.obtenerHistorial(id, estrategia)
                         : cotizacionService.obtenerHistorial(id);
         return historial.stream().map(CotizacionResponse::desde).toList();
+    }
+
+    /**
+     * Cotización de un jugador en una semana ISO puntual ({@code yyyy-Www}, ej. {@code 2026-W44}):
+     * la que resultó del rendimiento de esa semana. Si se calculó más de una vez en esa semana,
+     * devuelve la última. {@code ?estrategia=} opcional. 400 si la semana no tiene ese formato, 404
+     * si el jugador no existe o no tiene cotización en esa semana.
+     */
+    @GetMapping("/{id}/cotizaciones/{semana}")
+    public CotizacionResponse obtenerCotizacionDeSemana(
+            @PathVariable UUID id,
+            @PathVariable @Pattern(regexp = "^\\d{4}-W\\d{2}$") String semana,
+            @RequestParam(required = false) EstrategiaCotizacion estrategia) {
+        return CotizacionResponse.desde(cotizacionService.obtenerDeSemana(id, semana, estrategia));
     }
 
     /** UC-03. {@code actorId} sale del JWT ya validado, nunca del body de la request. */

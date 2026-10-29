@@ -74,4 +74,52 @@ class CotizacionControllerIT {
                 .assertThat()
                 .hasStatus(202);
     }
+
+    // ---- PUT /cotizaciones/estrategia (ADMIN) ----
+
+    @Test
+    void cambiarEstrategia_sinToken_responde401() {
+        mvc.put()
+                .uri("/api/v1/cotizaciones/estrategia?estrategia=RENDIMIENTO_TEMPORADA")
+                .assertThat()
+                .hasStatus(401);
+    }
+
+    @Test
+    void cambiarEstrategia_conTokenUser_responde403() {
+        mvc.put()
+                .uri("/api/v1/cotizaciones/estrategia?estrategia=RENDIMIENTO_TEMPORADA")
+                .header("Authorization", "Bearer " + tokenUser())
+                .assertThat()
+                .hasStatus(403);
+    }
+
+    @Test
+    void cambiarEstrategia_conTokenAdmin_responde200ConLaEstrategiaQueQuedoVigente() {
+        mvc.put()
+                .uri("/api/v1/cotizaciones/estrategia?estrategia=RENDIMIENTO_TEMPORADA")
+                .header("Authorization", "Bearer " + tokenAdmin())
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .isEqualTo("{\"estrategia\":\"RENDIMIENTO_TEMPORADA\"}");
+    }
+
+    @Test
+    void cambiarEstrategia_conValorInexistente_responde400() {
+        mvc.put()
+                .uri("/api/v1/cotizaciones/estrategia?estrategia=NO_EXISTE")
+                .header("Authorization", "Bearer " + tokenAdmin())
+                .assertThat()
+                .hasStatus(400);
+    }
+
+    @Test
+    void cambiarEstrategia_sinEstrategia_responde400() {
+        mvc.put()
+                .uri("/api/v1/cotizaciones/estrategia")
+                .header("Authorization", "Bearer " + tokenAdmin())
+                .assertThat()
+                .hasStatus(400);
+    }
 }

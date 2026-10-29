@@ -4,25 +4,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tdetroy.valuacion.entity.PesoMetricaEntity;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;
+import com.tdetroy.valuacion.model.SentidoMetrica;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class RendimientoHistoricoCalculatorTest {
+class RendimientoTemporadaCalculatorTest {
 
-    private RendimientoHistoricoCalculator calculator;
+    private RendimientoTemporadaCalculator calculator;
 
     @BeforeEach
     void setUp() {
-        calculator = new RendimientoHistoricoCalculator();
+        calculator = new RendimientoTemporadaCalculator();
     }
 
     @Test
-    void getEstrategia_retornaRendimientoHistorico() {
+    void getEstrategia_retornaRendimientoTemporada() {
         assertThat(calculator.getEstrategia())
-                .isEqualTo(EstrategiaCotizacion.RENDIMIENTO_HISTORICO);
+                .isEqualTo(EstrategiaCotizacion.RENDIMIENTO_TEMPORADA);
     }
 
     @Test
@@ -87,6 +88,26 @@ class RendimientoHistoricoCalculatorTest {
                 calculator.calcularPuntaje(historico, semanaActual, List.of(pesoGoles));
 
         // En minimo: normalizado a -1
+        assertThat(puntaje).isEqualByComparingTo(BigDecimal.ONE.negate());
+    }
+
+    @Test
+    void conMetricaDeSentidoNegativo_invierteElSigno() {
+        Map<String, Map<String, BigDecimal>> historico =
+                Map.of(
+                        "2026-W01", Map.of("redCard", new BigDecimal("0")),
+                        "2026-W02", Map.of("redCard", new BigDecimal("2")));
+        Map<String, BigDecimal> semanaActual = Map.of("redCard", new BigDecimal("2"));
+        PesoMetricaEntity pesoRedCard = new PesoMetricaEntity();
+        pesoRedCard.setClave("redCard");
+        pesoRedCard.setPeso(new BigDecimal("1.0"));
+        pesoRedCard.setActivo(true);
+        pesoRedCard.setSentido(SentidoMetrica.NEGATIVO);
+
+        BigDecimal puntaje =
+                calculator.calcularPuntaje(historico, semanaActual, List.of(pesoRedCard));
+
+        // En maximo historico de tarjetas, sin sentido normalizaria a +1; con NEGATIVO, debe ser -1
         assertThat(puntaje).isEqualByComparingTo(BigDecimal.ONE.negate());
     }
 }

@@ -1,23 +1,26 @@
 package com.tdetroy.valuacion.services;
 
 import com.tdetroy.valuacion.common.Monetario;
+import com.tdetroy.valuacion.common.SemanaIso;
 import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
+import com.tdetroy.valuacion.entity.ConfiguracionCotizacionEntity;
 import com.tdetroy.valuacion.entity.CotizacionHistoricaEntity;
 import com.tdetroy.valuacion.entity.JugadorEntity;
 import com.tdetroy.valuacion.entity.PesoMetricaEntity;
 import com.tdetroy.valuacion.entity.RendimientoPartidoEntity;
+import com.tdetroy.valuacion.model.ConfiguracionCotizacion;
 import com.tdetroy.valuacion.model.CotizacionHistorica;
 import com.tdetroy.valuacion.model.EstadoJugador;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
+import com.tdetroy.valuacion.repositories.ConfiguracionCotizacionRepository;
 import com.tdetroy.valuacion.repositories.CotizacionHistoricaRepository;
 import com.tdetroy.valuacion.repositories.JugadorRepository;
 import com.tdetroy.valuacion.repositories.PesoMetricaRepository;
 import com.tdetroy.valuacion.repositories.RendimientoPartidoRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.temporal.IsoFields;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -43,7 +46,7 @@ import tools.jackson.databind.ObjectMapper;
  * EstrategiaCotizacionCalculator}:
  *
  * <ul>
- *   <li>{@link EstrategiaCotizacion#RENDIMIENTO_HISTORICO}: min-max relativo al histórico del
+ *   <li>{@link EstrategiaCotizacion#RENDIMIENTO_TEMPORADA}: min-max relativo al histórico del
  *       jugador.
  *   <li>{@link EstrategiaCotizacion#RENDIMIENTO_ACTUAL}: valuación absoluta del rendimiento
  *       reciente.
@@ -55,7 +58,9 @@ public class CotizacionServiceImpl implements CotizacionService {
     private static final Logger log = LoggerFactory.getLogger(CotizacionServiceImpl.class);
 
     private static final String ENTIDAD_JUGADOR = "Jugador";
+    private static final String ENTIDAD_CONFIGURACION = "ConfiguracionCotizacion";
     private static final String ACCION_RECALCULO = "RECALCULO_COTIZACION";
+    private static final String ACCION_CAMBIO_ESTRATEGIA = "CAMBIO_ESTRATEGIA_COTIZACION";
     private static final BigDecimal CLAMP_MAXIMO = new BigDecimal("0.20");
     private static final BigDecimal CLAMP_MINIMO = CLAMP_MAXIMO.negate();
 
@@ -64,6 +69,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     private final PesoMetricaRepository pesoMetricaRepository;
     private final JugadorRepository jugadorRepository;
     private final AuditoriaService auditoriaService;
+    private final ConfiguracionCotizacionRepository configuracionCotizacionRepository;
     private final ObjectMapper objectMapper;
     private final Map<EstrategiaCotizacion, EstrategiaCotizacionCalculator> calculadores;
     private final CotizacionService self;
@@ -71,7 +77,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     private final BigDecimal sensibilidad;
     private final BigDecimal decayInactividad;
     private final long ventanaHistoricoSemanas;
-    private final EstrategiaCotizacion estrategiaDefault;
+    private final EstrategiaCotizacion estrategiaDefaultDeConfiguracion;
 
     @Autowired
     public CotizacionServiceImpl(
@@ -80,6 +86,7 @@ public class CotizacionServiceImpl implements CotizacionService {
             PesoMetricaRepository pesoMetricaRepository,
             JugadorRepository jugadorRepository,
             AuditoriaService auditoriaService,
+            ConfiguracionCotizacionRepository configuracionCotizacionRepository,
             ObjectMapper objectMapper,
             List<EstrategiaCotizacionCalculator> calculadoresList,
             @Lazy CotizacionService self,
@@ -87,13 +94,14 @@ public class CotizacionServiceImpl implements CotizacionService {
             @Value("${app.cotizacion.sensibilidad}") BigDecimal sensibilidad,
             @Value("${app.cotizacion.decay-inactividad}") BigDecimal decayInactividad,
             @Value("${app.cotizacion.ventana-historico-semanas}") long ventanaHistoricoSemanas,
-            @Value("${app.cotizacion.estrategia-default:RENDIMIENTO_HISTORICO}")
+            @Value("${app.cotizacion.estrategia-default:RENDIMIENTO_ACTUAL}")
                     String estrategiaDefaultStr) {
         this.rendimientoPartidoRepository = rendimientoPartidoRepository;
         this.cotizacionHistoricaRepository = cotizacionHistoricaRepository;
         this.pesoMetricaRepository = pesoMetricaRepository;
         this.jugadorRepository = jugadorRepository;
         this.auditoriaService = auditoriaService;
+        this.configuracionCotizacionRepository = configuracionCotizacionRepository;
         this.objectMapper = objectMapper;
         this.self = self;
         this.valorInicial = valorInicial;
@@ -101,7 +109,7 @@ public class CotizacionServiceImpl implements CotizacionService {
         this.decayInactividad = decayInactividad;
         this.ventanaHistoricoSemanas = ventanaHistoricoSemanas;
 
-        EstrategiaCotizacion parsedDefault = EstrategiaCotizacion.RENDIMIENTO_HISTORICO;
+        EstrategiaCotizacion parsedDefault = EstrategiaCotizacion.RENDIMIENTO_ACTUAL;
         if (estrategiaDefaultStr != null && !estrategiaDefaultStr.isBlank()) {
             try {
                 parsedDefault = EstrategiaCotizacion.valueOf(estrategiaDefaultStr.trim());
@@ -112,7 +120,7 @@ public class CotizacionServiceImpl implements CotizacionService {
                         parsedDefault);
             }
         }
-        this.estrategiaDefault = parsedDefault;
+        this.estrategiaDefaultDeConfiguracion = parsedDefault;
 
         this.calculadores = new EnumMap<>(EstrategiaCotizacion.class);
         if (calculadoresList != null) {
@@ -126,7 +134,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CotizacionHistorica calcularCotizacion(
             UUID jugadorId, OrigenCotizacion origen, UUID actorId) {
-        return calcularCotizacion(jugadorId, origen, estrategiaDefault, actorId);
+        return calcularCotizacion(jugadorId, origen, obtenerEstrategiaPorDefecto(), actorId);
     }
 
     @Override
@@ -138,8 +146,9 @@ public class CotizacionServiceImpl implements CotizacionService {
             UUID actorId) {
         Objects.requireNonNull(jugadorId, "jugadorId no puede ser null");
         Objects.requireNonNull(origen, "origen no puede ser null");
+        EstrategiaCotizacion estrategiaPorDefecto = obtenerEstrategiaPorDefecto();
         EstrategiaCotizacion estrategiaEfectiva =
-                estrategia != null ? estrategia : estrategiaDefault;
+                estrategia != null ? estrategia : estrategiaPorDefecto;
 
         JugadorEntity jugadorEntity =
                 jugadorRepository
@@ -147,9 +156,9 @@ public class CotizacionServiceImpl implements CotizacionService {
                         .orElseThrow(
                                 () -> new RecursoNoEncontradoException(ENTIDAD_JUGADOR, jugadorId));
 
-        LocalDate hoy = LocalDate.now();
-        String semanaActual = semanaIsoDe(hoy);
-        String semanaDesde = semanaIsoDe(hoy.minusWeeks(ventanaHistoricoSemanas));
+        LocalDate referencia = SemanaIso.fechaDeReferencia(LocalDate.now());
+        String semanaActual = SemanaIso.de(referencia);
+        String semanaDesde = SemanaIso.de(referencia.minusWeeks(ventanaHistoricoSemanas));
 
         List<RendimientoPartidoEntity> historico =
                 rendimientoPartidoRepository.findByJugadorIdAndSemanaCalculoGreaterThanEqual(
@@ -164,10 +173,9 @@ public class CotizacionServiceImpl implements CotizacionService {
         } else {
             EstrategiaCotizacionCalculator calculator =
                     calculadores.getOrDefault(
-                            estrategiaEfectiva,
-                            calculadores.get(EstrategiaCotizacion.RENDIMIENTO_HISTORICO));
+                            estrategiaEfectiva, calculadores.get(estrategiaPorDefecto));
             if (calculator == null) {
-                calculator = new RendimientoHistoricoCalculator();
+                calculator = new RendimientoActualCalculator();
             }
             List<PesoMetricaEntity> pesosActivos = pesoMetricaRepository.findByActivoTrue();
             BigDecimal puntaje =
@@ -195,7 +203,7 @@ public class CotizacionServiceImpl implements CotizacionService {
                         jugadorId, semanaActual, cotizacionNueva, origen, estrategiaEfectiva);
         cotizacionHistoricaRepository.save(CotizacionHistoricaEntity.desde(cotizacion));
 
-        if (estrategiaEfectiva == estrategiaDefault
+        if (estrategiaEfectiva == estrategiaPorDefecto
                 || jugadorEntity.getCotizacionVigenteId() == null) {
             Jugador jugador = jugadorEntity.aModelo();
             jugador.actualizarCotizacionVigente(cotizacion.getId());
@@ -215,14 +223,14 @@ public class CotizacionServiceImpl implements CotizacionService {
 
     @Override
     public void recalcular(OrigenCotizacion origen, UUID actorId) {
-        recalcular(origen, estrategiaDefault, actorId);
+        recalcular(origen, null, actorId);
     }
 
     @Override
     public void recalcular(OrigenCotizacion origen, EstrategiaCotizacion estrategia, UUID actorId) {
         Objects.requireNonNull(origen, "origen no puede ser null");
         EstrategiaCotizacion estrategiaEfectiva =
-                estrategia != null ? estrategia : estrategiaDefault;
+                estrategia != null ? estrategia : obtenerEstrategiaPorDefecto();
 
         for (JugadorEntity jugadorEntity : jugadorRepository.findByEstado(EstadoJugador.ACTIVO)) {
             UUID jugadorId = jugadorEntity.getId();
@@ -274,11 +282,72 @@ public class CotizacionServiceImpl implements CotizacionService {
             UUID jugadorId, EstrategiaCotizacion estrategia) {
         Objects.requireNonNull(jugadorId, "jugadorId no puede ser null");
         EstrategiaCotizacion estrategiaEfectiva =
-                estrategia != null ? estrategia : estrategiaDefault;
+                estrategia != null ? estrategia : obtenerEstrategiaPorDefecto();
         return cotizacionHistoricaRepository
                 .findTopByJugadorIdAndEstrategiaOrderByFechaCalculoDesc(
                         jugadorId, estrategiaEfectiva)
                 .map(CotizacionHistoricaEntity::aModelo);
+    }
+
+    @Override
+    public CotizacionHistorica obtenerDeSemana(
+            UUID jugadorId, String semana, EstrategiaCotizacion estrategia) {
+        Objects.requireNonNull(jugadorId, "jugadorId no puede ser null");
+        Objects.requireNonNull(semana, "semana no puede ser null");
+        if (!jugadorRepository.existsById(jugadorId)) {
+            throw new RecursoNoEncontradoException(ENTIDAD_JUGADOR, jugadorId);
+        }
+        Optional<CotizacionHistoricaEntity> cotizacion =
+                estrategia == null
+                        ? cotizacionHistoricaRepository
+                                .findTopByJugadorIdAndSemanaOrderByFechaCalculoDesc(
+                                        jugadorId, semana)
+                        : cotizacionHistoricaRepository
+                                .findTopByJugadorIdAndSemanaAndEstrategiaOrderByFechaCalculoDesc(
+                                        jugadorId, semana, estrategia);
+        return cotizacion
+                .map(CotizacionHistoricaEntity::aModelo)
+                .orElseThrow(
+                        () ->
+                                new RecursoNoEncontradoException(
+                                        "El jugador %s no tiene cotización en la semana %s%s"
+                                                .formatted(
+                                                        jugadorId,
+                                                        semana,
+                                                        estrategia == null
+                                                                ? ""
+                                                                : " con estrategia "
+                                                                        + estrategia)));
+    }
+
+    @Override
+    public EstrategiaCotizacion obtenerEstrategiaPorDefecto() {
+        return configuracionCotizacionRepository
+                .findById(ConfiguracionCotizacion.ID)
+                .map(ConfiguracionCotizacionEntity::getEstrategiaDefault)
+                .orElse(estrategiaDefaultDeConfiguracion);
+    }
+
+    @Override
+    @Transactional
+    public void cambiarEstrategiaPorDefecto(EstrategiaCotizacion estrategia, UUID actorId) {
+        Objects.requireNonNull(estrategia, "estrategia no puede ser null");
+        EstrategiaCotizacion anterior = obtenerEstrategiaPorDefecto();
+        ConfiguracionCotizacion configuracion =
+                configuracionCotizacionRepository
+                        .findById(ConfiguracionCotizacion.ID)
+                        .map(ConfiguracionCotizacionEntity::aModelo)
+                        .orElseGet(() -> ConfiguracionCotizacion.configurar(estrategia));
+        configuracion.cambiarEstrategiaDefault(estrategia);
+        configuracionCotizacionRepository.save(ConfiguracionCotizacionEntity.desde(configuracion));
+
+        auditoriaService.registrar(
+                actorId,
+                ACCION_CAMBIO_ESTRATEGIA,
+                ENTIDAD_CONFIGURACION,
+                ConfiguracionCotizacion.ID,
+                Map.of("estrategiaDefault", anterior),
+                Map.of("estrategiaDefault", estrategia));
     }
 
     private static BigDecimal clamp(BigDecimal factorAjuste) {
@@ -322,11 +391,5 @@ public class CotizacionServiceImpl implements CotizacionService {
             log.warn("No se pudieron parsear las métricas JSON: {}", metricasJson, ex);
             return Map.of();
         }
-    }
-
-    private static String semanaIsoDe(LocalDate fecha) {
-        int anio = fecha.get(IsoFields.WEEK_BASED_YEAR);
-        int semana = fecha.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
-        return "%04d-W%02d".formatted(anio, semana);
     }
 }

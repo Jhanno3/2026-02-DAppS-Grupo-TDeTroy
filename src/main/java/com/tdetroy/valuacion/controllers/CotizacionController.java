@@ -1,6 +1,7 @@
 package com.tdetroy.valuacion.controllers;
 
 import com.tdetroy.valuacion.config.UsuarioPrincipal;
+import com.tdetroy.valuacion.dto.response.EstrategiaCotizacionResponse;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
 import com.tdetroy.valuacion.services.CotizacionService;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,5 +45,20 @@ public class CotizacionController {
             @AuthenticationPrincipal UsuarioPrincipal principal) {
         cotizacionService.recalcular(OrigenCotizacion.MANUAL, estrategia, principal.getUsuarioId());
         return ResponseEntity.accepted().build();
+    }
+
+    /**
+     * Cambia la estrategia con la que calculan el job semanal y el recálculo manual sin {@code
+     * ?estrategia=}. Va como query param (no en el body) para que Swagger UI la muestre como
+     * desplegable con los valores de {@link EstrategiaCotizacion}. No recalcula: aplica desde el
+     * próximo cálculo.
+     */
+    @PutMapping("/estrategia")
+    @PreAuthorize("hasRole('ADMIN')")
+    public EstrategiaCotizacionResponse cambiarEstrategia(
+            @RequestParam EstrategiaCotizacion estrategia,
+            @AuthenticationPrincipal UsuarioPrincipal principal) {
+        cotizacionService.cambiarEstrategiaPorDefecto(estrategia, principal.getUsuarioId());
+        return new EstrategiaCotizacionResponse(cotizacionService.obtenerEstrategiaPorDefecto());
     }
 }

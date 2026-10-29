@@ -5,6 +5,7 @@ import com.tdetroy.valuacion.entity.PesoMetricaEntity;
 import com.tdetroy.valuacion.entity.UsuarioEntity;
 import com.tdetroy.valuacion.model.PesoMetrica;
 import com.tdetroy.valuacion.model.RolUsuario;
+import com.tdetroy.valuacion.model.SentidoMetrica;
 import com.tdetroy.valuacion.model.Usuario;
 import com.tdetroy.valuacion.repositories.JugadorRepository;
 import com.tdetroy.valuacion.repositories.PesoMetricaRepository;
@@ -97,29 +98,39 @@ public class DevDataSeeder implements CommandLineRunner {
      * pesos son configuración del motor de cotización, no datos de prueba descartables, así que se
      * completan aunque el catálogo ya tenga jugadores de una carga previa.
      *
-     * <p>{@code yellowCard-}/{@code redCard}: la normalización min-max de {@code
-     * CotizacionServiceImpl} asume "valor alto = mejor"; con peso positivo, más tarjetas en una
-     * semana puntúa hacia arriba, no hacia abajo -- limitación conocida y heredada del motor de
-     * cotización (no introducida por esta tarea), documentada también en plan.md §8.1. Corregirla
-     * requeriría un atributo de "sentido" en {@code PesoMetrica}, fuera de alcance acá.
+     * <p>{@code yellowCard}/{@code redCard} llevan {@link SentidoMetrica#NEGATIVO}: son un castigo,
+     * así que más tarjetas puntúa hacia abajo, nunca hacia arriba (plan.md §8.1) -- a diferencia
+     * del resto de las métricas, que son {@link SentidoMetrica#POSITIVO}.
      */
     private void seedPesosMetricaWhoScoredLiga() {
-        Map<String, BigDecimal> pesosPorDefecto = new LinkedHashMap<>();
-        pesosPorDefecto.put("apps", new BigDecimal("0.5000"));
-        pesosPorDefecto.put("goals", new BigDecimal("3.0000"));
-        pesosPorDefecto.put("assists", new BigDecimal("2.0000"));
-        pesosPorDefecto.put("manOfTheMatch", new BigDecimal("2.5000"));
-        pesosPorDefecto.put("yellowCard", new BigDecimal("0.5000"));
-        pesosPorDefecto.put("redCard", new BigDecimal("1.0000"));
-        pesosPorDefecto.put("minsPlayed", new BigDecimal("0.3000"));
+        record PesoDefecto(BigDecimal peso, SentidoMetrica sentido) {}
 
-        for (Map.Entry<String, BigDecimal> entry : pesosPorDefecto.entrySet()) {
+        Map<String, PesoDefecto> pesosPorDefecto = new LinkedHashMap<>();
+        pesosPorDefecto.put(
+                "apps", new PesoDefecto(new BigDecimal("0.5000"), SentidoMetrica.POSITIVO));
+        pesosPorDefecto.put(
+                "goals", new PesoDefecto(new BigDecimal("3.0000"), SentidoMetrica.POSITIVO));
+        pesosPorDefecto.put(
+                "assists", new PesoDefecto(new BigDecimal("2.0000"), SentidoMetrica.POSITIVO));
+        pesosPorDefecto.put(
+                "manOfTheMatch",
+                new PesoDefecto(new BigDecimal("2.5000"), SentidoMetrica.POSITIVO));
+        pesosPorDefecto.put(
+                "yellowCard", new PesoDefecto(new BigDecimal("1.0000"), SentidoMetrica.NEGATIVO));
+        pesosPorDefecto.put(
+                "redCard", new PesoDefecto(new BigDecimal("3.0000"), SentidoMetrica.NEGATIVO));
+        pesosPorDefecto.put(
+                "minsPlayed", new PesoDefecto(new BigDecimal("0.3000"), SentidoMetrica.POSITIVO));
+
+        for (Map.Entry<String, PesoDefecto> entry : pesosPorDefecto.entrySet()) {
             if (pesoMetricaRepository.existsById(entry.getKey())) {
                 continue;
             }
+            PesoDefecto defecto = entry.getValue();
             pesoMetricaRepository.save(
                     PesoMetricaEntity.desde(
-                            PesoMetrica.configurar(entry.getKey(), entry.getValue(), true)));
+                            PesoMetrica.configurar(
+                                    entry.getKey(), defecto.peso(), true, defecto.sentido())));
         }
     }
 
