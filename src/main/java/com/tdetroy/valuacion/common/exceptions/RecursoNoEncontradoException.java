@@ -17,4 +17,8 @@ public final class RecursoNoEncontradoException extends RuntimeException {
     public RecursoNoEncontradoException(String tipoEntidad, UUID id) {
         super(tipoEntidad + " no encontrado: " + id);
     }
+
+    public RecursoNoEncontradoException(String mensaje) {
+        super(mensaje);
+    }
 }

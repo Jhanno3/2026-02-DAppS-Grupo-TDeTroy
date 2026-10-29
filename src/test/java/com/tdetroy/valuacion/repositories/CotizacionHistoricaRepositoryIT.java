@@ -97,7 +97,7 @@ class CotizacionHistoricaRepositoryIT extends PostgresIntegrationTest {
                         "2026-W06",
                         new BigDecimal("100.00"),
                         OrigenCotizacion.AUTOMATICO,
-                        EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                        EstrategiaCotizacion.RENDIMIENTO_TEMPORADA,
                         Instant.parse("2026-02-09T03:00:00Z"));
         CotizacionHistorica actual =
                 CotizacionHistorica.calcular(
@@ -121,7 +121,7 @@ class CotizacionHistoricaRepositoryIT extends PostgresIntegrationTest {
 
         var listaHistorica =
                 cotizacionHistoricaRepository.findByJugadorIdAndEstrategiaOrderByFechaCalculoAsc(
-                        jugadorId, EstrategiaCotizacion.RENDIMIENTO_HISTORICO);
+                        jugadorId, EstrategiaCotizacion.RENDIMIENTO_TEMPORADA);
         assertThat(listaHistorica).hasSize(1);
         assertThat(listaHistorica.get(0).getValor()).isEqualByComparingTo(new BigDecimal("100.00"));
     }

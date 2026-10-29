@@ -1,5 +1,6 @@
 package com.tdetroy.valuacion.services;
 
+import com.tdetroy.valuacion.common.SemanaIso;
 import com.tdetroy.valuacion.entity.JugadorEntity;
 import com.tdetroy.valuacion.entity.RendimientoAcumuladoWhoScoredEntity;
 import com.tdetroy.valuacion.entity.RendimientoPartidoEntity;
@@ -13,18 +14,17 @@ import com.tdetroy.valuacion.repositories.JugadorRendimientoLigaCrudo;
 import com.tdetroy.valuacion.repositories.JugadorRepository;
 import com.tdetroy.valuacion.repositories.PartidoCrudo;
 import com.tdetroy.valuacion.repositories.RendimientoAcumuladoWhoScoredRepository;
-import com.tdetroy.valuacion.repositories.RendimientoExternoRepository;
 import com.tdetroy.valuacion.repositories.RendimientoLigaExternoRepository;
 import com.tdetroy.valuacion.repositories.RendimientoPartidoRepository;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.temporal.IsoFields;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -39,10 +39,10 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * {@inheritDoc}
  *
- * <p>La ventana de ingesta de {@code ingestarFixtures} es siempre "de este lunes a hoy" (semana ISO
- * en curso, la misma que calculará {@code CotizacionServiceImpl} el lunes siguiente): corre el
- * domingo previo al cierre de esa semana, igual que {@code ingestarRendimiento} (tasks.md T3.6,
- * plan.md §8.2).
+ * <p>Ambas ingestas corren el lunes de madrugada (plan.md §8.2) y procesan la semana de referencia
+ * de {@link SemanaIso} -- la que acaba de terminar, la misma que calcula {@code
+ * CotizacionServiceImpl} horas después --: {@code ingestarFixtures} cubre de su lunes a su domingo,
+ * e {@code ingestarRendimiento} registra el delta con fecha en ese domingo.
  *
  * <p><b>Ingesta de rendimiento por liga (plan.md §8.1):</b> {@code ingestarRendimiento} agrupa a
  * los jugadores {@code ACTIVO} por {@code liga}, pide a {@link RendimientoLigaExternoRepository} el
@@ -58,18 +58,20 @@ import tools.jackson.databind.ObjectMapper;
  *   <li>Si ya existe, se calcula el delta por métrica (actual - anterior, nunca negativo — un
  *       contador que bajó respecto del snapshot anterior aporta 0, nunca resta) contra ese
  *       snapshot, se reemplaza el snapshot por el nuevo acumulado, y — sólo si al menos una métrica
- *       tuvo delta positivo — se persiste ese delta como el {@code RendimientoPartido} de la semana
- *       en curso ({@code fuenteResultado = WHOSCORED_LIGA}, {@code partidoExternoId} sintético
- *       {@code "WHOSCORED-LIGA-{semana}"}, deduplicando frente a una reingesta del mismo ciclo
- *       igual que el resto de las fuentes). Un delta íntegramente en cero (sin partidos nuevos esa
- *       semana) deliberadamente no persiste fila: así el jugador cae en el mismo camino de "sin
- *       rendimiento esta semana" (decaimiento leve, plan.md §6.3) que ya maneja {@code
- *       CotizacionServiceImpl}, en vez de aportar un puntaje neutro distinto.
+ *       tuvo delta positivo — se persiste ese delta como un {@code RendimientoPartido} de la semana
+ *       de referencia ({@code fuenteResultado = WHOSCORED_LIGA}, {@code partidoExternoId} sintético
+ *       {@code "WHOSCORED-LIGA-{semana}-{corrida}"}). El id es por corrida y no por semana: una
+ *       reingesta no duplica datos porque el snapshot ya se actualizó (su delta da cero), y una
+ *       segunda corrida con partidos nuevos en la misma semana suma su propio delta en vez de
+ *       descartarse. Un delta íntegramente en cero (sin partidos nuevos esa semana) deliberadamente
+ *       no persiste fila: así el jugador cae en el mismo camino de "sin rendimiento esta semana"
+ *       (decaimiento leve, plan.md §6.3) que ya maneja {@code CotizacionServiceImpl}, en vez de
+ *       aportar un puntaje neutro distinto.
  * </ul>
  *
- * <p>También aprovecha el mismo ciclo semanal para refrescar la foto de perfil de cada jugador vía
- * {@code RendimientoExternoRepository#obtenerFotoUrl} (plan.md §8.1) — no es rendimiento deportivo,
- * pero sale de la misma fuente y comparte la misma cadencia, así que no justifica un job propio.
+ * <p>La misma fila de liga trae la foto de perfil del jugador ({@link
+ * JugadorRendimientoLigaCrudo#fotoUrl()}), que se aplica al jugador resuelto si cambió — sin
+ * ninguna request extra por jugador.
  *
  * <p>Cada jugador/liga se procesa de forma aislada (constitution.md §1 "manejo explícito de
  * fallos/indisponibilidad"): una excepción al traducir/persistir el rendimiento de un jugador o
@@ -82,6 +84,8 @@ public class RendimientoServiceImpl implements RendimientoService {
 
     private static final String METRICAS_SIN_DATOS = "{}";
     private static final String PREFIJO_PARTIDO_EXTERNO_LIGA = "WHOSCORED-LIGA-";
+    private static final DateTimeFormatter FORMATO_CORRIDA =
+            DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
 
     /**
      * Único conjunto de métricas que la página de liga de WhoScored provee como acumulado real de
@@ -99,7 +103,6 @@ public class RendimientoServiceImpl implements RendimientoService {
                     "minsPlayed");
 
     private final FixtureRepository fixtureRepository;
-    private final RendimientoExternoRepository rendimientoExternoRepository;
     private final RendimientoLigaExternoRepository rendimientoLigaExternoRepository;
     private final RendimientoPartidoRepository rendimientoPartidoRepository;
     private final RendimientoAcumuladoWhoScoredRepository rendimientoAcumuladoWhoScoredRepository;
@@ -108,14 +111,12 @@ public class RendimientoServiceImpl implements RendimientoService {
 
     public RendimientoServiceImpl(
             FixtureRepository fixtureRepository,
-            RendimientoExternoRepository rendimientoExternoRepository,
             RendimientoLigaExternoRepository rendimientoLigaExternoRepository,
             RendimientoPartidoRepository rendimientoPartidoRepository,
             RendimientoAcumuladoWhoScoredRepository rendimientoAcumuladoWhoScoredRepository,
             JugadorRepository jugadorRepository,
             ObjectMapper objectMapper) {
         this.fixtureRepository = fixtureRepository;
-        this.rendimientoExternoRepository = rendimientoExternoRepository;
         this.rendimientoLigaExternoRepository = rendimientoLigaExternoRepository;
         this.rendimientoPartidoRepository = rendimientoPartidoRepository;
         this.rendimientoAcumuladoWhoScoredRepository = rendimientoAcumuladoWhoScoredRepository;
@@ -126,7 +127,7 @@ public class RendimientoServiceImpl implements RendimientoService {
     @Override
     @Transactional
     public void ingestarFixtures() {
-        LocalDate hasta = LocalDate.now();
+        LocalDate hasta = SemanaIso.fechaDeReferencia(LocalDate.now());
         LocalDate desde = hasta.with(DayOfWeek.MONDAY);
 
         List<PartidoCrudo> partidos = fixtureRepository.obtenerPartidosDisputados(desde, hasta);
@@ -152,15 +153,20 @@ public class RendimientoServiceImpl implements RendimientoService {
             return;
         }
 
-        for (Jugador jugador : jugadoresActivos) {
-            actualizarFotoYPersistirSiCorresponde(jugador);
-        }
-
-        String semanaActual = semanaIsoDe(LocalDate.now());
+        LocalDate fechaReferencia = SemanaIso.fechaDeReferencia(LocalDate.now());
+        // Un id por corrida, no por semana: dos ingestas en la misma semana aportan cada una su
+        // propio delta (la cotización suma las filas de la semana), en vez de descartar la segunda
+        // después de haber pisado el snapshot.
+        String partidoExternoId =
+                PREFIJO_PARTIDO_EXTERNO_LIGA
+                        + SemanaIso.de(fechaReferencia)
+                        + "-"
+                        + LocalDateTime.now().format(FORMATO_CORRIDA);
         Map<String, List<Jugador>> jugadoresPorLiga =
                 jugadoresActivos.stream().collect(Collectors.groupingBy(Jugador::getLiga));
         for (Map.Entry<String, List<Jugador>> entry : jugadoresPorLiga.entrySet()) {
-            ingestarRendimientoDeLiga(entry.getKey(), entry.getValue(), semanaActual);
+            ingestarRendimientoDeLiga(
+                    entry.getKey(), entry.getValue(), fechaReferencia, partidoExternoId);
         }
     }
 
@@ -182,14 +188,11 @@ public class RendimientoServiceImpl implements RendimientoService {
         }
     }
 
-    private void actualizarFotoYPersistirSiCorresponde(Jugador jugador) {
-        if (actualizarFotoSiCorresponde(jugador)) {
-            jugadorRepository.save(JugadorEntity.desde(jugador));
-        }
-    }
-
     private void ingestarRendimientoDeLiga(
-            String liga, List<Jugador> jugadoresDeLaLiga, String semanaActual) {
+            String liga,
+            List<Jugador> jugadoresDeLaLiga,
+            LocalDate fechaReferencia,
+            String partidoExternoId) {
         List<JugadorRendimientoLigaCrudo> crudos;
         try {
             crudos = rendimientoLigaExternoRepository.obtenerAcumuladoLiga(liga);
@@ -204,7 +207,7 @@ public class RendimientoServiceImpl implements RendimientoService {
 
         for (JugadorRendimientoLigaCrudo crudo : crudos) {
             try {
-                procesarCrudoDeJugador(crudo, jugadoresDeLaLiga, semanaActual);
+                procesarCrudoDeJugador(crudo, jugadoresDeLaLiga, fechaReferencia, partidoExternoId);
             } catch (RuntimeException ex) {
                 log.error(
                         "Fallo al procesar el rendimiento de liga de '{}' ({}): {}",
@@ -217,7 +220,10 @@ public class RendimientoServiceImpl implements RendimientoService {
     }
 
     private void procesarCrudoDeJugador(
-            JugadorRendimientoLigaCrudo crudo, List<Jugador> candidatos, String semanaActual) {
+            JugadorRendimientoLigaCrudo crudo,
+            List<Jugador> candidatos,
+            LocalDate fechaReferencia,
+            String partidoExternoId) {
         Optional<Jugador> jugadorResuelto = resolverJugador(crudo, candidatos);
         if (jugadorResuelto.isEmpty()) {
             log.warn(
@@ -229,9 +235,33 @@ public class RendimientoServiceImpl implements RendimientoService {
         }
         Jugador jugador = jugadorResuelto.get();
 
+        boolean fotoNueva = aplicarFotoSiCambio(jugador, crudo.fotoUrl());
+        boolean rendimientoNuevo =
+                registrarRendimiento(jugador, crudo, fechaReferencia, partidoExternoId);
+        if (fotoNueva || rendimientoNuevo) {
+            jugadorRepository.save(JugadorEntity.desde(jugador));
+        }
+    }
+
+    private static boolean aplicarFotoSiCambio(Jugador jugador, String fotoUrl) {
+        if (fotoUrl == null || fotoUrl.equals(jugador.getFotoUrl())) {
+            return false;
+        }
+        jugador.actualizarFoto(fotoUrl);
+        return true;
+    }
+
+    /**
+     * @return {@code true} si persistió un {@code RendimientoPartido} nuevo para {@code jugador}
+     */
+    private boolean registrarRendimiento(
+            Jugador jugador,
+            JugadorRendimientoLigaCrudo crudo,
+            LocalDate fechaReferencia,
+            String partidoExternoId) {
         Map<String, BigDecimal> actual = filtrarYConvertir(crudo.metricas());
         if (actual.isEmpty()) {
-            return;
+            return false;
         }
         String actualJson = serializar(actual);
 
@@ -241,7 +271,7 @@ public class RendimientoServiceImpl implements RendimientoService {
             rendimientoAcumuladoWhoScoredRepository.save(
                     RendimientoAcumuladoWhoScoredEntity.desde(
                             RendimientoAcumuladoWhoScored.primeraVez(jugador.getId(), actualJson)));
-            return;
+            return false;
         }
 
         RendimientoAcumuladoWhoScored snapshot = snapshotExistente.get().aModelo();
@@ -253,23 +283,19 @@ public class RendimientoServiceImpl implements RendimientoService {
                 RendimientoAcumuladoWhoScoredEntity.desde(snapshot));
 
         if (delta.values().stream().allMatch(valor -> valor.signum() == 0)) {
-            return;
+            return false;
         }
 
-        String partidoExternoId = PREFIJO_PARTIDO_EXTERNO_LIGA + semanaActual;
-        if (rendimientoPartidoRepository.existsByJugadorIdAndPartidoExternoId(
-                jugador.getId(), partidoExternoId)) {
-            return;
-        }
-
-        ingestarSiNoExiste(
+        if (!ingestarSiNoExiste(
                 jugador.getId(),
                 partidoExternoId,
-                LocalDate.now(),
+                fechaReferencia,
                 serializar(delta),
-                FuenteResultado.WHOSCORED_LIGA);
+                FuenteResultado.WHOSCORED_LIGA)) {
+            return false;
+        }
         jugador.registrarActualizacionRendimiento(Instant.now());
-        jugadorRepository.save(JugadorEntity.desde(jugador));
+        return true;
     }
 
     private Optional<Jugador> resolverJugador(
@@ -330,32 +356,6 @@ public class RendimientoServiceImpl implements RendimientoService {
         return objectMapper.writeValueAsString(metricas);
     }
 
-    /**
-     * Pide a WhoScored la foto de perfil del jugador y la aplica si trajo una URL nueva o distinta
-     * a la ya persistida. Aísla sus propios errores igual que el resto de la ingesta (constitution
-     * §1): una falla acá nunca interrumpe la ingesta del resto del catálogo.
-     *
-     * @return {@code true} si {@code jugador} quedó con una foto nueva pendiente de persistir
-     */
-    private boolean actualizarFotoSiCorresponde(Jugador jugador) {
-        Optional<String> fotoUrl;
-        try {
-            fotoUrl = rendimientoExternoRepository.obtenerFotoUrl(jugador.getId());
-        } catch (RuntimeException ex) {
-            log.error(
-                    "Fallo al obtener la foto de WhoScored para el jugador {}: {}",
-                    jugador.getId(),
-                    ex.getMessage(),
-                    ex);
-            return false;
-        }
-        if (fotoUrl.isEmpty() || Objects.equals(fotoUrl.get(), jugador.getFotoUrl())) {
-            return false;
-        }
-        jugador.actualizarFoto(fotoUrl.get());
-        return true;
-    }
-
     private boolean ingestarSiNoExiste(
             UUID jugadorId,
             String partidoExternoId,
@@ -366,7 +366,7 @@ public class RendimientoServiceImpl implements RendimientoService {
                 jugadorId, partidoExternoId)) {
             return false;
         }
-        String semanaCalculo = semanaIsoDe(fechaPartido);
+        String semanaCalculo = SemanaIso.de(fechaPartido);
         rendimientoPartidoRepository.save(
                 RendimientoPartidoEntity.desde(
                         RendimientoPartido.ingestar(
@@ -388,11 +388,5 @@ public class RendimientoServiceImpl implements RendimientoService {
     private static boolean clubDisputoElPartido(Jugador jugador, PartidoCrudo partido) {
         return jugador.getClub().equalsIgnoreCase(partido.equipoLocal())
                 || jugador.getClub().equalsIgnoreCase(partido.equipoVisitante());
-    }
-
-    private static String semanaIsoDe(LocalDate fecha) {
-        int semana = fecha.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
-        int anio = fecha.get(IsoFields.WEEK_BASED_YEAR);
-        return "%04d-W%02d".formatted(anio, semana);
     }
 }

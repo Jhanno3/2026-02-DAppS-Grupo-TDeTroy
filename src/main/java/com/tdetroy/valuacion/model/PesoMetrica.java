@@ -24,19 +24,23 @@ public class PesoMetrica {
     private final String clave;
     private BigDecimal peso;
     private boolean activo;
+    private final SentidoMetrica sentido;
 
-    private PesoMetrica(String clave, BigDecimal peso, boolean activo) {
+    private PesoMetrica(String clave, BigDecimal peso, boolean activo, SentidoMetrica sentido) {
         validarClave(clave);
         validarPeso(peso);
+        Objects.requireNonNull(sentido, "sentido no puede ser null");
 
         this.clave = clave;
         this.peso = peso;
         this.activo = activo;
+        this.sentido = sentido;
     }
 
     /** Configura el peso de una métrica. Único punto de creación de {@code PesoMetrica}. */
-    public static PesoMetrica configurar(String clave, BigDecimal peso, boolean activo) {
-        return new PesoMetrica(clave, peso, activo);
+    public static PesoMetrica configurar(
+            String clave, BigDecimal peso, boolean activo, SentidoMetrica sentido) {
+        return new PesoMetrica(clave, peso, activo, sentido);
     }
 
     /**
@@ -46,8 +50,9 @@ public class PesoMetrica {
      * autogenerado que distinga este camino del de {@link #configurar} — la validación de {@code
      * clave}/{@code peso} es la misma en ambos casos, así que delega directamente.
      */
-    public static PesoMetrica reconstruir(String clave, BigDecimal peso, boolean activo) {
-        return configurar(clave, peso, activo);
+    public static PesoMetrica reconstruir(
+            String clave, BigDecimal peso, boolean activo, SentidoMetrica sentido) {
+        return configurar(clave, peso, activo, sentido);
     }
 
     /**

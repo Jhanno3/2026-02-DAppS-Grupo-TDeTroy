@@ -39,6 +39,13 @@ public interface CotizacionHistoricaRepository
     Optional<CotizacionHistoricaEntity> findTopByJugadorIdAndEstrategiaOrderByFechaCalculoDesc(
             UUID jugadorId, EstrategiaCotizacion estrategia);
 
+    Optional<CotizacionHistoricaEntity> findTopByJugadorIdAndSemanaOrderByFechaCalculoDesc(
+            UUID jugadorId, String semana);
+
+    Optional<CotizacionHistoricaEntity>
+            findTopByJugadorIdAndSemanaAndEstrategiaOrderByFechaCalculoDesc(
+                    UUID jugadorId, String semana, EstrategiaCotizacion estrategia);
+
     List<CotizacionHistoricaEntity> findByJugadorIdOrderByFechaCalculoAsc(UUID jugadorId);
 
     List<CotizacionHistoricaEntity> findByJugadorIdAndEstrategiaOrderByFechaCalculoAsc(

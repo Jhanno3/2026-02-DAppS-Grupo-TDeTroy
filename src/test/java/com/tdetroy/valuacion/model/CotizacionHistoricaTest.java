@@ -51,7 +51,7 @@ class CotizacionHistoricaTest {
                         JUGADOR_ID, SEMANA, VALOR, OrigenCotizacion.AUTOMATICO, FECHA_CALCULO_FIJA);
 
         assertThat(cotizacion.getEstrategia())
-                .isEqualTo(EstrategiaCotizacion.RENDIMIENTO_HISTORICO);
+                .isEqualTo(EstrategiaCotizacion.RENDIMIENTO_TEMPORADA);
     }
 
     @Test
