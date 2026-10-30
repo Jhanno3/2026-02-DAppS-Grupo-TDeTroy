@@ -13,6 +13,7 @@ import com.tdetroy.valuacion.services.CotizacionService;
 import com.tdetroy.valuacion.services.JugadorService;
 import com.tdetroy.valuacion.services.RendimientoService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -99,18 +100,17 @@ public class JugadorController {
     }
 
     /**
-     * UC-07: acumulado de temporada del jugador (último snapshot de WhoScored). {@code 204} si
-     * todavía no hay datos de rendimiento; 404 vía {@code RecursoNoEncontradoException} si el
-     * jugador no existe.
+     * Cotización de un jugador en una semana ISO puntual ({@code yyyy-Www}, ej. {@code 2026-W44}):
+     * la que resultó del rendimiento de esa semana. Si se calculó más de una vez en esa semana,
+     * devuelve la última. {@code ?estrategia=} opcional. 400 si la semana no tiene ese formato, 404
+     * si el jugador no existe o no tiene cotización en esa semana.
      */
-    @GetMapping("/{id}/estadisticas")
-    public ResponseEntity<EstadisticasTemporadaResponse> obtenerEstadisticas(
-            @PathVariable UUID id) {
-        return rendimientoService
-                .obtenerEstadisticasTemporada(id)
-                .map(EstadisticasTemporadaResponse::desde)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.noContent().build());
+    @GetMapping("/{id}/cotizaciones/{semana}")
+    public CotizacionResponse obtenerCotizacionDeSemana(
+            @PathVariable UUID id,
+            @PathVariable @Pattern(regexp = "^\\d{4}-W\\d{2}$") String semana,
+            @RequestParam(required = false) EstrategiaCotizacion estrategia) {
+        return CotizacionResponse.desde(cotizacionService.obtenerDeSemana(id, semana, estrategia));
     }
 
     /** UC-03. {@code actorId} sale del JWT ya validado, nunca del body de la request. */

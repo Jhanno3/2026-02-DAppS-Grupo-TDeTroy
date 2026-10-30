@@ -1,8 +1,11 @@
 package com.tdetroy.valuacion.entity;
 
 import com.tdetroy.valuacion.model.PesoMetrica;
+import com.tdetroy.valuacion.model.SentidoMetrica;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
@@ -31,17 +34,22 @@ public class PesoMetricaEntity {
     @Column(nullable = false)
     private boolean activo;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private SentidoMetrica sentido;
+
     /** Traduce {@code pesoMetrica} a la fila que persiste {@code repositories/}. */
     public static PesoMetricaEntity desde(PesoMetrica pesoMetrica) {
         PesoMetricaEntity entity = new PesoMetricaEntity();
         entity.clave = pesoMetrica.getClave();
         entity.peso = pesoMetrica.getPeso();
         entity.activo = pesoMetrica.isActivo();
+        entity.sentido = pesoMetrica.getSentido();
         return entity;
     }
 
     /** Reconstruye el objeto de dominio a partir de esta fila ya persistida. */
     public PesoMetrica aModelo() {
-        return PesoMetrica.reconstruir(clave, peso, activo);
+        return PesoMetrica.reconstruir(clave, peso, activo, sentido);
     }
 }

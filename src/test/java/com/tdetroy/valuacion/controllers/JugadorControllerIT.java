@@ -3,13 +3,16 @@ package com.tdetroy.valuacion.controllers;
 import static org.springframework.test.web.servlet.assertj.MockMvcTester.create;
 
 import com.tdetroy.valuacion.config.JwtService;
-import com.tdetroy.valuacion.entity.RendimientoAcumuladoWhoScoredEntity;
-import com.tdetroy.valuacion.model.RendimientoAcumuladoWhoScored;
+import com.tdetroy.valuacion.entity.CotizacionHistoricaEntity;
+import com.tdetroy.valuacion.model.CotizacionHistorica;
+import com.tdetroy.valuacion.model.EstrategiaCotizacion;
+import com.tdetroy.valuacion.model.OrigenCotizacion;
 import com.tdetroy.valuacion.model.RolUsuario;
 import com.tdetroy.valuacion.model.Usuario;
-import com.tdetroy.valuacion.repositories.RendimientoAcumuladoWhoScoredRepository;
+import com.tdetroy.valuacion.repositories.CotizacionHistoricaRepository;
 import com.tdetroy.valuacion.services.UsuarioService;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +45,7 @@ class JugadorControllerIT {
 
     @Autowired private JwtService jwtService;
     @Autowired private UsuarioService usuarioService;
+    @Autowired private CotizacionHistoricaRepository cotizacionHistoricaRepository;
 
     @Autowired
     private RendimientoAcumuladoWhoScoredRepository rendimientoAcumuladoWhoScoredRepository;
@@ -222,6 +226,105 @@ class JugadorControllerIT {
                 .uri("/api/v1/jugadores/{id}/cotizaciones?estrategia=RENDIMIENTO_ACTUAL", id)
                 .assertThat()
                 .hasStatus(200);
+    }
+
+    // ---- GET /jugadores/{id}/cotizaciones/{semana} (público) ----
+
+    private void guardarCotizacion(
+            String jugadorId,
+            String semana,
+            String valor,
+            EstrategiaCotizacion estrategia,
+            Instant fechaCalculo) {
+        cotizacionHistoricaRepository.save(
+                CotizacionHistoricaEntity.desde(
+                        CotizacionHistorica.calcular(
+                                UUID.fromString(jugadorId),
+                                semana,
+                                new BigDecimal(valor),
+                                OrigenCotizacion.MANUAL,
+                                estrategia,
+                                fechaCalculo)));
+    }
+
+    @Test
+    void obtenerCotizacionDeSemana_conVariasEnLaSemana_devuelveLaUltima() {
+        String id = crearYObtenerId("Jugador Semana " + UUID.randomUUID());
+        Instant base = Instant.parse("2026-10-05T03:00:00Z");
+        guardarCotizacion(id, "2026-W40", "101.00", EstrategiaCotizacion.RENDIMIENTO_ACTUAL, base);
+        guardarCotizacion(
+                id,
+                "2026-W40",
+                "103.50",
+                EstrategiaCotizacion.RENDIMIENTO_ACTUAL,
+                base.plusSeconds(3600));
+        guardarCotizacion(
+                id,
+                "2026-W41",
+                "99.00",
+                EstrategiaCotizacion.RENDIMIENTO_ACTUAL,
+                base.plusSeconds(7 * 86400));
+
+        mvc.get()
+                .uri("/api/v1/jugadores/{id}/cotizaciones/2026-W40", id)
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .contains("\"semana\":\"2026-W40\"")
+                .contains("\"valor\":103.50");
+    }
+
+    @Test
+    void obtenerCotizacionDeSemana_conEstrategia_filtraPorEsaEstrategia() {
+        String id = crearYObtenerId("Jugador Semana Estrategia " + UUID.randomUUID());
+        Instant base = Instant.parse("2026-10-05T03:00:00Z");
+        guardarCotizacion(
+                id, "2026-W40", "95.00", EstrategiaCotizacion.RENDIMIENTO_TEMPORADA, base);
+        guardarCotizacion(
+                id,
+                "2026-W40",
+                "110.00",
+                EstrategiaCotizacion.RENDIMIENTO_ACTUAL,
+                base.plusSeconds(3600));
+
+        mvc.get()
+                .uri(
+                        "/api/v1/jugadores/{id}/cotizaciones/2026-W40?estrategia=RENDIMIENTO_TEMPORADA",
+                        id)
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .contains("\"valor\":95.00")
+                .contains("\"estrategia\":\"RENDIMIENTO_TEMPORADA\"");
+    }
+
+    @Test
+    void obtenerCotizacionDeSemana_sinCotizacionEnEsaSemana_responde404() {
+        String id = crearYObtenerId("Jugador Semana Vacia " + UUID.randomUUID());
+
+        mvc.get()
+                .uri("/api/v1/jugadores/{id}/cotizaciones/2026-W40", id)
+                .assertThat()
+                .hasStatus(404)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+    }
+
+    @Test
+    void obtenerCotizacionDeSemana_conJugadorInexistente_responde404() {
+        mvc.get()
+                .uri("/api/v1/jugadores/{id}/cotizaciones/2026-W40", UUID.randomUUID())
+                .assertThat()
+                .hasStatus(404);
+    }
+
+    @Test
+    void obtenerCotizacionDeSemana_conSemanaMalFormada_responde400() {
+        String id = crearYObtenerId("Jugador Semana Formato " + UUID.randomUUID());
+
+        mvc.get()
+                .uri("/api/v1/jugadores/{id}/cotizaciones/2026-44", id)
+                .assertThat()
+                .hasStatus(400);
     }
 
     // ---- POST /jugadores (UC-03, ADMIN) ----

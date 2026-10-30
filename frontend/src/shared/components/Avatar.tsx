@@ -16,8 +16,8 @@ function iniciales(nombre: string): string {
 }
 
 /**
- * Foto de perfil de un jugador (scrapeada de WhoScored, ver backend
- * `RendimientoExternoRepository#obtenerFotoUrl`), con fallback a iniciales cuando `src` es nulo o
+ * Foto de perfil de un jugador (CDN de imágenes de WhoScored, la arma el backend en
+ * `WhoScoredLigaRepositoryImpl` durante la ingesta), con fallback a iniciales cuando `src` es nulo o
  * la imagen falla al cargar (dominio externo, puede caerse o cambiar de URL sin aviso).
  */
 export function Avatar({ src, nombre, size = 'small' }: AvatarProps) {

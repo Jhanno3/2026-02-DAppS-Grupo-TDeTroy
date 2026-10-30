@@ -10,12 +10,12 @@ import org.springframework.stereotype.Component;
  * disparadores es una request HTTP (constitution.md §1: "el scraping de WhoScored no se ejecuta en
  * el flujo síncrono de un request de usuario").
  *
- * <p>Domingo 01:00 fixtures, domingo 02:00 rendimiento (plan.md §8.2): el margen de una hora deja
- * que Football-Data.org confirme qué partidos ya se disputaron antes de que WhoScored (T3.3)
- * scrapee su detalle, y ambos terminan con margen antes del job de recotización del lunes 03:00
- * (T4.5). Los cron quedan externalizados con el valor del plan como default — la cadencia semanal
- * en sí no es ajustable sin reabrir la constitución (plan.md §8.2), pero el minuto exacto dentro de
- * esa ventana sí puede correrse por operación sin tocar código.
+ * <p>Lunes 00:00 fixtures, lunes 01:00 rendimiento (plan.md §8.2): corren después de los partidos
+ * del domingo, procesan la semana que acaba de terminar (ver {@code common.SemanaIso}) y terminan
+ * antes del job de recotización del lunes 03:00 (T4.5), que lee esa misma semana. Los cron quedan
+ * externalizados con el valor del plan como default — la cadencia semanal en sí no es ajustable sin
+ * reabrir la constitución (plan.md §8.2), pero el minuto exacto dentro de esa ventana sí puede
+ * correrse por operación sin tocar código.
  */
 @Component
 public class RendimientoIngestaScheduler {
@@ -26,12 +26,12 @@ public class RendimientoIngestaScheduler {
         this.rendimientoService = rendimientoService;
     }
 
-    @Scheduled(cron = "${app.rendimiento.ingesta.fixtures-cron:0 0 1 * * SUN}")
+    @Scheduled(cron = "${app.rendimiento.ingesta.fixtures-cron:0 0 0 * * MON}")
     public void ingestarFixtures() {
         rendimientoService.ingestarFixtures();
     }
 
-    @Scheduled(cron = "${app.rendimiento.ingesta.rendimiento-cron:0 0 2 * * SUN}")
+    @Scheduled(cron = "${app.rendimiento.ingesta.rendimiento-cron:0 0 1 * * MON}")
     public void ingestarRendimiento() {
         rendimientoService.ingestarRendimiento();
     }

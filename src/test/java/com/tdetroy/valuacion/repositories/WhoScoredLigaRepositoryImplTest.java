@@ -23,11 +23,12 @@ class WhoScoredLigaRepositoryImplTest {
     private static final String LIGA = "La Liga";
     private static final String CLAVE_LIGA = "la-liga";
     private static final String URL_LIGA = "https://whoscored.test/estadisticas/la-liga";
+    private static final String IMAGENES_URL = "https://imagenes.whoscored.test/img";
 
     @Test
     void obtenerAcumuladoLiga_recorreTodasLasPaginasYTraduceCadaFila() {
         WhoScoredLigaRepositoryImpl repository =
-                new WhoScoredLigaRepositoryImpl(
+                repositorio(
                         Map.of(CLAVE_LIGA, URL_LIGA),
                         url -> {
                             assertThat(url).isEqualTo(URL_LIGA);
@@ -52,6 +53,8 @@ class WhoScoredLigaRepositoryImplTest {
                         entry("yellowCard", 1),
                         entry("redCard", 0),
                         entry("minsPlayed", 880));
+        // El id de WhoScored sale del link "/players/1/show/..." de la misma fila.
+        assertThat(primero.fotoUrl()).isEqualTo(IMAGENES_URL + "/players/1.jpg");
 
         // "8(1)" (titular + suplente) en la celda de apariciones -> suma 9.
         JugadorRendimientoLigaCrudo segundo = resultado.get(1);
@@ -72,7 +75,7 @@ class WhoScoredLigaRepositoryImplTest {
     @Test
     void obtenerAcumuladoLiga_normalizaElNombreDeLigaParaBuscarLaUrl() {
         WhoScoredLigaRepositoryImpl repository =
-                new WhoScoredLigaRepositoryImpl(
+                repositorio(
                         Map.of(CLAVE_LIGA, URL_LIGA),
                         url -> {
                             assertThat(url).isEqualTo(URL_LIGA);
@@ -86,7 +89,7 @@ class WhoScoredLigaRepositoryImplTest {
     @Test
     void obtenerAcumuladoLiga_sinUrlConfigurada_devuelveListaVacia() {
         WhoScoredLigaRepositoryImpl repository =
-                new WhoScoredLigaRepositoryImpl(
+                repositorio(
                         Map.of(),
                         url ->
                                 List.of(
@@ -102,7 +105,7 @@ class WhoScoredLigaRepositoryImplTest {
     @Test
     void obtenerAcumuladoLiga_fallaDeRedAlPaginar_seAislaYDevuelveListaVacia() {
         WhoScoredLigaRepositoryImpl repository =
-                new WhoScoredLigaRepositoryImpl(
+                repositorio(
                         Map.of(CLAVE_LIGA, URL_LIGA),
                         url -> {
                             throw new IOException("sidecar no disponible");
@@ -114,7 +117,7 @@ class WhoScoredLigaRepositoryImplTest {
     @Test
     void obtenerAcumuladoLiga_cambioDeEstructuraDelSitio_seAislaYDevuelveListaVacia() {
         WhoScoredLigaRepositoryImpl repository =
-                new WhoScoredLigaRepositoryImpl(
+                repositorio(
                         Map.of(CLAVE_LIGA, URL_LIGA),
                         url ->
                                 List.of(
@@ -122,6 +125,26 @@ class WhoScoredLigaRepositoryImplTest {
                                                 "<table><tr class=\"otra-cosa\"></tr></table>")));
 
         assertThat(repository.obtenerAcumuladoLiga(LIGA)).isEmpty();
+    }
+
+    @Test
+    void obtenerAcumuladoLiga_filaSinIdDeWhoScoredEnElLink_quedaSinFoto() {
+        String fila =
+                "<table><tbody id=\"player-table-statistics-body\"><tr><td></td>"
+                        + "<td class=\"grid-ghost-cell\"><a class=\"player-link\" href=\"/otra-cosa\">"
+                        + "Jugador Sin Id</a><a class=\"player-meta-data\"><span class=\"team-name\">"
+                        + "Club, </span></a></td><td>3</td></tr></tbody></table>";
+        WhoScoredLigaRepositoryImpl repository =
+                repositorio(Map.of(CLAVE_LIGA, URL_LIGA), url -> List.of(Jsoup.parse(fila)));
+
+        List<JugadorRendimientoLigaCrudo> resultado = repository.obtenerAcumuladoLiga(LIGA);
+
+        assertThat(resultado).singleElement().satisfies(c -> assertThat(c.fotoUrl()).isNull());
+    }
+
+    private static WhoScoredLigaRepositoryImpl repositorio(
+            Map<String, String> urlsPorLiga, WhoScoredLigaRepositoryImpl.PaginasFetcher fetcher) {
+        return new WhoScoredLigaRepositoryImpl(urlsPorLiga, fetcher, IMAGENES_URL);
     }
 
     private static Document documentoDesdeFixture(String ruta) {

@@ -2,6 +2,7 @@ package com.tdetroy.valuacion.services;
 
 import com.tdetroy.valuacion.entity.PesoMetricaEntity;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;
+import com.tdetroy.valuacion.model.SentidoMetrica;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.Comparator;
@@ -11,23 +12,24 @@ import java.util.Objects;
 import org.springframework.stereotype.Component;
 
 /**
- * Estrategia {@link EstrategiaCotizacion#RENDIMIENTO_HISTORICO}: calcula el puntaje de rendimiento
+ * Estrategia {@link EstrategiaCotizacion#RENDIMIENTO_TEMPORADA}: calcula el puntaje de rendimiento
  * en base a la consistencia y evolución temporal del propio jugador (plan.md §6.2).
  *
  * <p>Por cada {@code PesoMetrica} activo presente en la semana en curso, el valor se normaliza
  * min-max sobre su propio histórico reciente a un rango centrado en 0, {@code [-1, 1]} (mínimo
  * histórico → -1, máximo histórico → +1). Si la métrica no tiene al menos dos semanas de histórico
- * o el rango es cero, aporta 0 (neutro). El puntaje final es el promedio ponderado de esas
- * normalizaciones.
+ * o el rango es cero, aporta 0 (neutro). Si {@link PesoMetricaEntity#getSentido()} es {@link
+ * SentidoMetrica#NEGATIVO} (tarjetas: más nunca debería mejorar la cotización), ese normalizado se
+ * invierte antes de ponderar. El puntaje final es el promedio ponderado de esas normalizaciones.
  */
 @Component
-public class RendimientoHistoricoCalculator implements EstrategiaCotizacionCalculator {
+public class RendimientoTemporadaCalculator implements EstrategiaCotizacionCalculator {
 
     private static final BigDecimal DOS = BigDecimal.valueOf(2);
 
     @Override
     public EstrategiaCotizacion getEstrategia() {
-        return EstrategiaCotizacion.RENDIMIENTO_HISTORICO;
+        return EstrategiaCotizacion.RENDIMIENTO_TEMPORADA;
     }
 
     @Override
@@ -51,7 +53,12 @@ public class RendimientoHistoricoCalculator implements EstrategiaCotizacionCalcu
                             .filter(Objects::nonNull)
                             .toList();
             BigDecimal normalizado = normalizarMinMax(valorActual, historicoDeLaClave);
-            sumaPonderada = sumaPonderada.add(pesoMetrica.getPeso().multiply(normalizado));
+            BigDecimal normalizadoConSentido =
+                    pesoMetrica.getSentido() == SentidoMetrica.NEGATIVO
+                            ? normalizado.negate()
+                            : normalizado;
+            sumaPonderada =
+                    sumaPonderada.add(pesoMetrica.getPeso().multiply(normalizadoConSentido));
             sumaPesos = sumaPesos.add(pesoMetrica.getPeso());
         }
 

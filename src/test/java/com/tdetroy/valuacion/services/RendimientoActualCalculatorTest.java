@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tdetroy.valuacion.entity.PesoMetricaEntity;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;
+import com.tdetroy.valuacion.model.SentidoMetrica;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -97,5 +98,21 @@ class RendimientoActualCalculatorTest {
         // asistencias = 1 * 0.4 = 0.4 (peso 1) -> 0.4
         // total = 2.4 / 3 = 0.8
         assertThat(puntaje).isEqualByComparingTo(new BigDecimal("0.8"));
+    }
+
+    @Test
+    void conMetricaDeSentidoNegativo_invierteElSigno() {
+        Map<String, BigDecimal> semanaActual = Map.of("redCard", new BigDecimal("1"));
+        PesoMetricaEntity pesoRedCard = new PesoMetricaEntity();
+        pesoRedCard.setClave("redCard");
+        pesoRedCard.setPeso(new BigDecimal("1.0"));
+        pesoRedCard.setActivo(true);
+        pesoRedCard.setSentido(SentidoMetrica.NEGATIVO);
+
+        BigDecimal puntaje =
+                calculator.calcularPuntaje(Map.of(), semanaActual, List.of(pesoRedCard));
+
+        // sin sentido, 1 tarjeta roja puntuaria +0.2 (1/5); con NEGATIVO, debe puntuar -0.2
+        assertThat(puntaje).isEqualByComparingTo(new BigDecimal("-0.2"));
     }
 }

@@ -21,29 +21,37 @@ class PesoMetricaTest {
 
     @Test
     void pesoMetricaValida_construyeCorrectamenteYGettersDevuelvenLoEsperado() {
-        PesoMetrica pesoMetrica = PesoMetrica.configurar(CLAVE, PESO, true);
+        PesoMetrica pesoMetrica =
+                PesoMetrica.configurar(CLAVE, PESO, true, SentidoMetrica.POSITIVO);
 
         assertThat(pesoMetrica.getClave()).isEqualTo(CLAVE);
         assertThat(pesoMetrica.getPeso()).isEqualByComparingTo(PESO);
         assertThat(pesoMetrica.isActivo()).isTrue();
+        assertThat(pesoMetrica.getSentido()).isEqualTo(SentidoMetrica.POSITIVO);
     }
 
     @Test
     void claveNula_lanzaExcepcion() {
-        assertThatNullPointerException().isThrownBy(() -> PesoMetrica.configurar(null, PESO, true));
+        assertThatNullPointerException()
+                .isThrownBy(
+                        () -> PesoMetrica.configurar(null, PESO, true, SentidoMetrica.POSITIVO));
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", " ", "   "})
     void claveVaciaOBlanca_lanzaExcepcion(String claveInvalida) {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> PesoMetrica.configurar(claveInvalida, PESO, true));
+                .isThrownBy(
+                        () ->
+                                PesoMetrica.configurar(
+                                        claveInvalida, PESO, true, SentidoMetrica.POSITIVO));
     }
 
     @Test
     void pesoNulo_lanzaExcepcion() {
         assertThatNullPointerException()
-                .isThrownBy(() -> PesoMetrica.configurar(CLAVE, null, true));
+                .isThrownBy(
+                        () -> PesoMetrica.configurar(CLAVE, null, true, SentidoMetrica.POSITIVO));
     }
 
     @ParameterizedTest
@@ -51,12 +59,24 @@ class PesoMetricaTest {
     void pesoCeroONegativo_lanzaExcepcion(String pesoInvalido) {
         assertThatIllegalArgumentException()
                 .isThrownBy(
-                        () -> PesoMetrica.configurar(CLAVE, new BigDecimal(pesoInvalido), true));
+                        () ->
+                                PesoMetrica.configurar(
+                                        CLAVE,
+                                        new BigDecimal(pesoInvalido),
+                                        true,
+                                        SentidoMetrica.POSITIVO));
+    }
+
+    @Test
+    void sentidoNulo_lanzaExcepcion() {
+        assertThatNullPointerException()
+                .isThrownBy(() -> PesoMetrica.configurar(CLAVE, PESO, true, null));
     }
 
     @Test
     void actualizarPesoConValorValido_actualizaElPeso() {
-        PesoMetrica pesoMetrica = PesoMetrica.configurar(CLAVE, PESO, true);
+        PesoMetrica pesoMetrica =
+                PesoMetrica.configurar(CLAVE, PESO, true, SentidoMetrica.POSITIVO);
 
         pesoMetrica.actualizarPeso(new BigDecimal("2.0000"));
 
@@ -65,7 +85,8 @@ class PesoMetricaTest {
 
     @Test
     void actualizarPesoConValorCeroONegativo_lanzaExcepcionYNoModificaElPesoActual() {
-        PesoMetrica pesoMetrica = PesoMetrica.configurar(CLAVE, PESO, true);
+        PesoMetrica pesoMetrica =
+                PesoMetrica.configurar(CLAVE, PESO, true, SentidoMetrica.POSITIVO);
 
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> pesoMetrica.actualizarPeso(BigDecimal.ZERO));
@@ -75,7 +96,8 @@ class PesoMetricaTest {
 
     @Test
     void desactivarYActivar_cambianActivoSinTocarElPeso() {
-        PesoMetrica pesoMetrica = PesoMetrica.configurar(CLAVE, PESO, true);
+        PesoMetrica pesoMetrica =
+                PesoMetrica.configurar(CLAVE, PESO, true, SentidoMetrica.POSITIVO);
 
         pesoMetrica.desactivar();
         assertThat(pesoMetrica.isActivo()).isFalse();
@@ -88,10 +110,12 @@ class PesoMetricaTest {
 
     @Test
     void reconstruir_devuelveUnaInstanciaConLosMismosDatos() {
-        PesoMetrica reconstruido = PesoMetrica.reconstruir(CLAVE, PESO, false);
+        PesoMetrica reconstruido =
+                PesoMetrica.reconstruir(CLAVE, PESO, false, SentidoMetrica.NEGATIVO);
 
         assertThat(reconstruido.getClave()).isEqualTo(CLAVE);
         assertThat(reconstruido.getPeso()).isEqualByComparingTo(PESO);
         assertThat(reconstruido.isActivo()).isFalse();
+        assertThat(reconstruido.getSentido()).isEqualTo(SentidoMetrica.NEGATIVO);
     }
 }

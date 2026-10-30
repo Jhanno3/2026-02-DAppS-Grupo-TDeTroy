@@ -15,7 +15,7 @@ import java.util.UUID;
  * CotizacionHistoricaRepository}/este Service.
  *
  * <p>Soporta múltiples estrategias de valuación vía patrón Strategy ({@link EstrategiaCotizacion}):
- * {@link EstrategiaCotizacion#RENDIMIENTO_HISTORICO} y {@link
+ * {@link EstrategiaCotizacion#RENDIMIENTO_TEMPORADA} y {@link
  * EstrategiaCotizacion#RENDIMIENTO_ACTUAL}.
  */
 public interface CotizacionService {
@@ -61,4 +61,28 @@ public interface CotizacionService {
 
     /** Obtiene la cotización vigente de un jugador para una estrategia determinada. */
     Optional<CotizacionHistorica> obtenerVigente(UUID jugadorId, EstrategiaCotizacion estrategia);
+
+    /**
+     * Cotización de {@code jugadorId} para la semana ISO {@code semana} ({@code yyyy-Www}): si en
+     * esa semana se calculó más de una vez (ej. recálculos manuales), la última. {@code estrategia}
+     * opcional: {@code null} considera cualquier estrategia.
+     *
+     * @throws com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException si {@code
+     *     jugadorId} no existe o no tiene cotización en esa semana
+     */
+    CotizacionHistorica obtenerDeSemana(
+            UUID jugadorId, String semana, EstrategiaCotizacion estrategia);
+
+    /**
+     * Estrategia con la que calculan el job semanal y el recálculo manual cuando no se indica una:
+     * la última elegida vía {@link #cambiarEstrategiaPorDefecto}, o {@code
+     * app.cotizacion.estrategia-default} si nunca se eligió ninguna.
+     */
+    EstrategiaCotizacion obtenerEstrategiaPorDefecto();
+
+    /**
+     * Cambia la estrategia por defecto (sólo {@code ADMIN}) y lo registra en la auditoría. No
+     * recalcula nada: aplica desde el próximo cálculo.
+     */
+    void cambiarEstrategiaPorDefecto(EstrategiaCotizacion estrategia, UUID actorId);
 }

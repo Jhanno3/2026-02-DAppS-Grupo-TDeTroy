@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 /**
  * Mapea liga → URL de la página pública de estadísticas de liga de WhoScored (plan.md §8.1), config
  * aparte de la lógica de scraping — agregar una liga nueva es sólo una entrada más de
- * configuración, sin tocar código (mismo criterio que {@code app.whoscored.fetcher-url}).
+ * configuración, sin tocar código.
  *
  * <p>Clave esperada en {@code application.properties} (prefijo {@code app.whoscored.liga-urls}): el
  * nombre de la liga normalizado (sin acentos, minúsculas, espacios por guiones — ver {@code

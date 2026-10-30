@@ -9,17 +9,21 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.tdetroy.valuacion.common.SemanaIso;
 import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
+import com.tdetroy.valuacion.entity.ConfiguracionCotizacionEntity;
 import com.tdetroy.valuacion.entity.CotizacionHistoricaEntity;
 import com.tdetroy.valuacion.entity.JugadorEntity;
 import com.tdetroy.valuacion.entity.PesoMetricaEntity;
 import com.tdetroy.valuacion.entity.RendimientoPartidoEntity;
+import com.tdetroy.valuacion.model.ConfiguracionCotizacion;
 import com.tdetroy.valuacion.model.CotizacionHistorica;
 import com.tdetroy.valuacion.model.EstadoJugador;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.FuenteResultado;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
+import com.tdetroy.valuacion.repositories.ConfiguracionCotizacionRepository;
 import com.tdetroy.valuacion.repositories.CotizacionHistoricaRepository;
 import com.tdetroy.valuacion.repositories.JugadorRepository;
 import com.tdetroy.valuacion.repositories.PesoMetricaRepository;
@@ -27,8 +31,8 @@ import com.tdetroy.valuacion.repositories.RendimientoPartidoRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.temporal.IsoFields;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,10 +51,10 @@ import tools.jackson.databind.ObjectMapper;
  * 3) en ambas direcciones, la auditoría de cada recálculo, y la orquestación de {@code recalcular}
  * sobre todos los jugadores {@code ACTIVO} (§6.4) aislando la falla de uno puntual.
  *
- * <p>{@code semanaActualEsperada()} replica {@code CotizacionServiceImpl#semanaIsoDe} para no
- * hardcodear la semana ISO en curso — a diferencia de {@code RendimientoPartido.semanaCalculo} (que
- * sale de la fecha del partido, un dato fijo del test), acá la semana depende de {@code
- * LocalDate.now()} en el momento en que corre el test.
+ * <p>{@code semanaActualEsperada()} usa la misma semana de referencia que el Service ({@code
+ * SemanaIso}) para no hardcodear la semana ISO — a diferencia de {@code
+ * RendimientoPartido.semanaCalculo} (que sale de la fecha del partido, un dato fijo del test), acá
+ * la semana depende de {@code LocalDate.now()} en el momento en que corre el test.
  */
 @ExtendWith(MockitoExtension.class)
 class CotizacionServiceImplTest {
@@ -65,6 +69,7 @@ class CotizacionServiceImplTest {
     @Mock private PesoMetricaRepository pesoMetricaRepository;
     @Mock private JugadorRepository jugadorRepository;
     @Mock private AuditoriaService auditoriaService;
+    @Mock private ConfiguracionCotizacionRepository configuracionCotizacionRepository;
     @Mock private CotizacionService self;
 
     private UUID jugadorId;
@@ -91,14 +96,15 @@ class CotizacionServiceImplTest {
                 pesoMetricaRepository,
                 jugadorRepository,
                 auditoriaService,
+                configuracionCotizacionRepository,
                 new ObjectMapper(),
-                List.of(new RendimientoHistoricoCalculator(), new RendimientoActualCalculator()),
+                List.of(new RendimientoTemporadaCalculator(), new RendimientoActualCalculator()),
                 self,
                 VALOR_INICIAL,
                 sensibilidad,
                 DECAY_INACTIVIDAD,
                 VENTANA_HISTORICO_SEMANAS,
-                "RENDIMIENTO_HISTORICO");
+                "RENDIMIENTO_TEMPORADA");
     }
 
     private static Jugador jugadorActivoCon(UUID id) {
@@ -313,13 +319,13 @@ class CotizacionServiceImplTest {
                 .calcularCotizacion(
                         uno.getId(),
                         OrigenCotizacion.AUTOMATICO,
-                        EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                        EstrategiaCotizacion.RENDIMIENTO_TEMPORADA,
                         actorId);
         verify(self)
                 .calcularCotizacion(
                         otro.getId(),
                         OrigenCotizacion.AUTOMATICO,
-                        EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                        EstrategiaCotizacion.RENDIMIENTO_TEMPORADA,
                         actorId);
     }
 
@@ -332,7 +338,7 @@ class CotizacionServiceImplTest {
         when(self.calcularCotizacion(
                         eq(fallido.getId()),
                         eq(OrigenCotizacion.AUTOMATICO),
-                        eq(EstrategiaCotizacion.RENDIMIENTO_HISTORICO),
+                        eq(EstrategiaCotizacion.RENDIMIENTO_TEMPORADA),
                         any()))
                 .thenThrow(new RuntimeException("fallo inesperado"));
 
@@ -342,7 +348,7 @@ class CotizacionServiceImplTest {
                 .calcularCotizacion(
                         exitoso.getId(),
                         OrigenCotizacion.AUTOMATICO,
-                        EstrategiaCotizacion.RENDIMIENTO_HISTORICO,
+                        EstrategiaCotizacion.RENDIMIENTO_TEMPORADA,
                         null);
     }
 
@@ -431,6 +437,117 @@ class CotizacionServiceImplTest {
         assertThat(vigente.get().getValor()).isEqualByComparingTo(new BigDecimal("120.00"));
     }
 
+    // ---- obtenerDeSemana ----
+
+    @Test
+    void obtenerDeSemana_conCotizacionEnEsaSemana_laDevuelve() {
+        when(jugadorRepository.existsById(jugadorId)).thenReturn(true);
+        when(cotizacionHistoricaRepository.findTopByJugadorIdAndSemanaOrderByFechaCalculoDesc(
+                        jugadorId, "2026-W01"))
+                .thenReturn(Optional.of(cotizacionAnteriorDe(new BigDecimal("104.00"))));
+
+        CotizacionHistorica cotizacion = service.obtenerDeSemana(jugadorId, "2026-W01", null);
+
+        assertThat(cotizacion.getSemana()).isEqualTo("2026-W01");
+        assertThat(cotizacion.getValor()).isEqualByComparingTo(new BigDecimal("104.00"));
+    }
+
+    @Test
+    void obtenerDeSemana_conEstrategia_filtraPorEsaEstrategia() {
+        when(jugadorRepository.existsById(jugadorId)).thenReturn(true);
+        when(cotizacionHistoricaRepository
+                        .findTopByJugadorIdAndSemanaAndEstrategiaOrderByFechaCalculoDesc(
+                                jugadorId, "2026-W01", EstrategiaCotizacion.RENDIMIENTO_TEMPORADA))
+                .thenReturn(Optional.of(cotizacionAnteriorDe(new BigDecimal("98.00"))));
+
+        CotizacionHistorica cotizacion =
+                service.obtenerDeSemana(
+                        jugadorId, "2026-W01", EstrategiaCotizacion.RENDIMIENTO_TEMPORADA);
+
+        assertThat(cotizacion.getValor()).isEqualByComparingTo(new BigDecimal("98.00"));
+    }
+
+    @Test
+    void obtenerDeSemana_jugadorInexistente_lanzaRecursoNoEncontrado() {
+        when(jugadorRepository.existsById(jugadorId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.obtenerDeSemana(jugadorId, "2026-W01", null))
+                .isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    @Test
+    void obtenerDeSemana_sinCotizacionEnEsaSemana_lanzaRecursoNoEncontrado() {
+        when(jugadorRepository.existsById(jugadorId)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.obtenerDeSemana(jugadorId, "2026-W30", null))
+                .isInstanceOf(RecursoNoEncontradoException.class)
+                .hasMessageContaining("2026-W30");
+    }
+
+    // ---- estrategia por defecto configurable en runtime ----
+
+    @Test
+    void obtenerEstrategiaPorDefecto_sinConfiguracionGuardada_usaLaDeProperties() {
+        assertThat(service.obtenerEstrategiaPorDefecto())
+                .isEqualTo(EstrategiaCotizacion.RENDIMIENTO_TEMPORADA);
+    }
+
+    @Test
+    void obtenerEstrategiaPorDefecto_conConfiguracionGuardada_usaLaGuardada() {
+        stubEstrategiaGuardada(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
+
+        assertThat(service.obtenerEstrategiaPorDefecto())
+                .isEqualTo(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
+    }
+
+    @Test
+    void cambiarEstrategiaPorDefecto_guardaLaNuevaYAuditaElCambio() {
+        service.cambiarEstrategiaPorDefecto(EstrategiaCotizacion.RENDIMIENTO_ACTUAL, actorId);
+
+        ArgumentCaptor<ConfiguracionCotizacionEntity> captor =
+                ArgumentCaptor.forClass(ConfiguracionCotizacionEntity.class);
+        verify(configuracionCotizacionRepository).save(captor.capture());
+        assertThat(captor.getValue().getId()).isEqualTo(ConfiguracionCotizacion.ID);
+        assertThat(captor.getValue().getEstrategiaDefault())
+                .isEqualTo(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
+        verify(auditoriaService)
+                .registrar(
+                        actorId,
+                        "CAMBIO_ESTRATEGIA_COTIZACION",
+                        "ConfiguracionCotizacion",
+                        ConfiguracionCotizacion.ID,
+                        Map.of("estrategiaDefault", EstrategiaCotizacion.RENDIMIENTO_TEMPORADA),
+                        Map.of("estrategiaDefault", EstrategiaCotizacion.RENDIMIENTO_ACTUAL));
+    }
+
+    @Test
+    void cambiarEstrategiaPorDefecto_conNull_lanzaExcepcionYNoGuardaNiAudita() {
+        assertThatThrownBy(() -> service.cambiarEstrategiaPorDefecto(null, actorId))
+                .isInstanceOf(NullPointerException.class);
+
+        verify(configuracionCotizacionRepository, never()).save(any());
+        verify(auditoriaService, never()).registrar(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void calcularCotizacion_sinEstrategia_usaLaElegidaEnRuntimeYNoLaDeProperties() {
+        stubJugadorExistente();
+        stubEstrategiaGuardada(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
+
+        CotizacionHistorica cotizacion =
+                service.calcularCotizacion(jugadorId, OrigenCotizacion.AUTOMATICO, actorId);
+
+        assertThat(cotizacion.getEstrategia()).isEqualTo(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
+    }
+
+    private void stubEstrategiaGuardada(EstrategiaCotizacion estrategia) {
+        when(configuracionCotizacionRepository.findById(ConfiguracionCotizacion.ID))
+                .thenReturn(
+                        Optional.of(
+                                ConfiguracionCotizacionEntity.desde(
+                                        ConfiguracionCotizacion.configurar(estrategia))));
+    }
+
     private void verificarPersistenciaYPunteroDelJugador(CotizacionHistorica cotizacionEsperada) {
         ArgumentCaptor<CotizacionHistoricaEntity> cotizacionCaptor =
                 ArgumentCaptor.forClass(CotizacionHistoricaEntity.class);
@@ -486,22 +603,16 @@ class CotizacionServiceImplTest {
         entity.setSemana("2026-W01");
         entity.setValor(valor);
         entity.setOrigen(OrigenCotizacion.AUTOMATICO);
-        entity.setEstrategia(EstrategiaCotizacion.RENDIMIENTO_HISTORICO);
+        entity.setEstrategia(EstrategiaCotizacion.RENDIMIENTO_TEMPORADA);
         entity.setFechaCalculo(Instant.now());
         return entity;
     }
 
     private static String semanaActualEsperada() {
-        return semanaIsoDe(LocalDate.now());
+        return semanaHace(0);
     }
 
     private static String semanaHace(int semanas) {
-        return semanaIsoDe(LocalDate.now().minusWeeks(semanas));
-    }
-
-    private static String semanaIsoDe(LocalDate fecha) {
-        int semana = fecha.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
-        int anio = fecha.get(IsoFields.WEEK_BASED_YEAR);
-        return "%04d-W%02d".formatted(anio, semana);
+        return SemanaIso.de(SemanaIso.fechaDeReferencia(LocalDate.now()).minusWeeks(semanas));
     }
 }

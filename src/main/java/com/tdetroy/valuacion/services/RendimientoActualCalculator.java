@@ -2,6 +2,7 @@ package com.tdetroy.valuacion.services;
 
 import com.tdetroy.valuacion.entity.PesoMetricaEntity;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;
+import com.tdetroy.valuacion.model.SentidoMetrica;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.List;
@@ -14,8 +15,10 @@ import org.springframework.stereotype.Component;
  * jugadores del momento"), sin normalizar contra su histórico temporal.
  *
  * <p>Evalúa las métricas registradas en la semana actual frente a referencias estándar absolutas de
- * rendimiento (ej. rating WhoScored centrado en 6.0, goles, asistencias y acciones positivas). El
- * puntaje final es el promedio ponderado de esas valuaciones absolutas en el rango {@code [-1, 1]}.
+ * rendimiento (ej. rating WhoScored centrado en 6.0, goles, asistencias y acciones positivas). Si
+ * {@link PesoMetricaEntity#getSentido()} es {@link SentidoMetrica#NEGATIVO} (tarjetas: más nunca
+ * debería mejorar la cotización), esa evaluación se invierte antes de ponderar. El puntaje final es
+ * el promedio ponderado de esas valuaciones absolutas en el rango {@code [-1, 1]}.
  */
 @Component
 public class RendimientoActualCalculator implements EstrategiaCotizacionCalculator {
@@ -47,7 +50,11 @@ public class RendimientoActualCalculator implements EstrategiaCotizacionCalculat
             }
 
             BigDecimal puntajeMetrica = evaluarMetricaAbsoluta(pesoMetrica.getClave(), valorActual);
-            sumaPonderada = sumaPonderada.add(pesoMetrica.getPeso().multiply(puntajeMetrica));
+            BigDecimal puntajeConSentido =
+                    pesoMetrica.getSentido() == SentidoMetrica.NEGATIVO
+                            ? puntajeMetrica.negate()
+                            : puntajeMetrica;
+            sumaPonderada = sumaPonderada.add(pesoMetrica.getPeso().multiply(puntajeConSentido));
             sumaPesos = sumaPesos.add(pesoMetrica.getPeso());
         }
 
