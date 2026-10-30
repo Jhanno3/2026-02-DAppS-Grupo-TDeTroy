@@ -1,6 +1,7 @@
 package com.tdetroy.valuacion.services;
 
 import com.tdetroy.valuacion.common.SemanaIso;
+import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
 import com.tdetroy.valuacion.entity.JugadorEntity;
 import com.tdetroy.valuacion.entity.RendimientoAcumuladoWhoScoredEntity;
 import com.tdetroy.valuacion.entity.RendimientoPartidoEntity;

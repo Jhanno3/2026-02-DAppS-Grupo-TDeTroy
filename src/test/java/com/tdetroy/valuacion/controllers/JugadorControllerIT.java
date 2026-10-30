@@ -4,12 +4,15 @@ import static org.springframework.test.web.servlet.assertj.MockMvcTester.create;
 
 import com.tdetroy.valuacion.config.JwtService;
 import com.tdetroy.valuacion.entity.CotizacionHistoricaEntity;
+import com.tdetroy.valuacion.entity.RendimientoAcumuladoWhoScoredEntity;
 import com.tdetroy.valuacion.model.CotizacionHistorica;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
+import com.tdetroy.valuacion.model.RendimientoAcumuladoWhoScored;
 import com.tdetroy.valuacion.model.RolUsuario;
 import com.tdetroy.valuacion.model.Usuario;
 import com.tdetroy.valuacion.repositories.CotizacionHistoricaRepository;
+import com.tdetroy.valuacion.repositories.RendimientoAcumuladoWhoScoredRepository;
 import com.tdetroy.valuacion.services.UsuarioService;
 import java.math.BigDecimal;
 import java.time.Instant;

@@ -113,6 +113,21 @@ public class JugadorController {
         return CotizacionResponse.desde(cotizacionService.obtenerDeSemana(id, semana, estrategia));
     }
 
+    /**
+     * UC-07: acumulado de temporada del jugador (último snapshot de WhoScored). {@code 204} si
+     * todavía no hay datos de rendimiento; 404 vía {@code RecursoNoEncontradoException} si el
+     * jugador no existe.
+     */
+    @GetMapping("/{id}/estadisticas")
+    public ResponseEntity<EstadisticasTemporadaResponse> obtenerEstadisticas(
+            @PathVariable UUID id) {
+        return rendimientoService
+                .obtenerEstadisticasTemporada(id)
+                .map(EstadisticasTemporadaResponse::desde)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
     /** UC-03. {@code actorId} sale del JWT ya validado, nunca del body de la request. */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
