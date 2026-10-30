@@ -26,8 +26,9 @@ import lombok.Getter;
  *   <li>Cualquier otro tipo: {@code jugadorId}, {@code cantidad} (&gt;0) y {@code precioUnitario}
  *       (&gt;0) son obligatorios.
  *   <li>{@code contraparteUsuarioId} es obligatorio únicamente para {@link
- *       TipoMovimiento#COMPRA_P2P}/{@link TipoMovimiento#VENTA_P2P}, y debe ser {@code null} para
- *       el resto.
+ *       TipoMovimiento#COMPRA_P2P}/{@link TipoMovimiento#VENTA_P2P} y {@link
+ *       TipoMovimiento#COMPRA_SUBASTA}/{@link TipoMovimiento#VENTA_SUBASTA}, y debe ser {@code
+ *       null} para el resto.
  *   <li>{@code montoTotal} siempre es obligatorio y mayor a cero.
  * </ul>
  */
@@ -186,7 +187,10 @@ public class Movimiento {
     }
 
     private static void validarContraparte(TipoMovimiento tipo, UUID contraparteUsuarioId) {
-        if (tipo == TipoMovimiento.COMPRA_P2P || tipo == TipoMovimiento.VENTA_P2P) {
+        if (tipo == TipoMovimiento.COMPRA_P2P
+                || tipo == TipoMovimiento.VENTA_P2P
+                || tipo == TipoMovimiento.COMPRA_SUBASTA
+                || tipo == TipoMovimiento.VENTA_SUBASTA) {
             Objects.requireNonNull(
                     contraparteUsuarioId, "contraparteUsuarioId es obligatorio para tipo " + tipo);
         } else {

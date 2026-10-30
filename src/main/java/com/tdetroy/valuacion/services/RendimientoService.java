@@ -1,5 +1,9 @@
 package com.tdetroy.valuacion.services;
 
+import com.tdetroy.valuacion.model.EstadisticasTemporada;
+import java.util.Optional;
+import java.util.UUID;
+
 /**
  * Ingesta semanal de rendimiento (UC-05, plan.md §1/§8). Orquesta las fuentes externas aisladas
  * detrás de {@code repositories/} ({@code FixtureRepository}, {@code
@@ -8,7 +12,8 @@ package com.tdetroy.valuacion.services;
  * ni de WhoScored (constitution.md §1/§2).
  *
  * <p>Pensada para ser invocada directamente desde un componente de scheduling en {@code config/}
- * (tasks.md T3.6), nunca desde un Controller: ninguno de los dos métodos es un disparador HTTP.
+ * (tasks.md T3.6), nunca desde un Controller: ninguno de los dos métodos de ingesta es un
+ * disparador HTTP. {@link #obtenerEstadisticasTemporada(UUID)} es la única consulta de lectura.
  */
 public interface RendimientoService {
 
@@ -33,4 +38,11 @@ public interface RendimientoService {
      * comparte la misma cadencia.
      */
     void ingestarRendimiento();
+
+    /**
+     * UC-07: último acumulado de temporada conocido de {@code jugadorId} (snapshot de WhoScored).
+     * Vacío si el jugador todavía no tiene ningún snapshot — no es un error. 404 vía {@code
+     * RecursoNoEncontradoException} si el jugador no existe.
+     */
+    Optional<EstadisticasTemporada> obtenerEstadisticasTemporada(UUID jugadorId);
 }

@@ -177,26 +177,51 @@ export function TradePanel({
               +
             </button>
           </div>
+          <div className={styles.rapidos}>
+            {[1, 5, 10].map((rapida) => (
+              <button
+                key={rapida}
+                type="button"
+                onClick={() => setCantidad(Math.min(max, rapida))}
+                disabled={rapida > max}
+              >
+                {rapida}
+              </button>
+            ))}
+            <button type="button" onClick={() => setCantidad(max)}>
+              Máx
+            </button>
+          </div>
           <p className={styles.hint}>
             {modo === 'comprar'
-              ? `Máximo ${max} disponibles para comprar`
+              ? `Hasta ${max} disponibles`
               : `Tenés ${max} token(s) disponibles para vender`}
           </p>
 
-          <div className={styles.kv}>
-            <span>Precio por token</span>
-            <span>{formatMoney(precioUnitario)}</span>
-          </div>
-          <div className={styles.total}>
-            <span>Total</span>
-            <strong>{formatMoney(total)}</strong>
+          <div className={styles.resumen}>
+            <div className={styles.kv}>
+              <span>Precio por token</span>
+              <span className={styles.mono}>{formatMoney(precioUnitario)}</span>
+            </div>
+            <div className={styles.kv}>
+              <span>Comisión</span>
+              <span className={styles.mono}>
+                {modo === 'comprar'
+                  ? 'Sin comisión'
+                  : `−${DESCUENTO_VENTA_SISTEMA * 100}% venta al sistema`}
+              </span>
+            </div>
+            <div className={styles.total}>
+              <span>Total</span>
+              <strong>{formatMoney(total)}</strong>
+            </div>
           </div>
 
           {modo === 'vender' && (
             <p className={styles.hint}>
               El sistema paga un {DESCUENTO_VENTA_SISTEMA * 100}% menos que la
               cotización vigente ({formatMoney(cotizacionBase)}). Para elegir tu
-              propio precio, publicá una oferta P2P con el botón de arriba.
+              propio precio, publicá una oferta en el Mercado P2P.
             </p>
           )}
 
@@ -216,9 +241,9 @@ export function TradePanel({
           >
             {mutation.isPending
               ? 'Procesando…'
-              : modo === 'comprar'
-                ? 'Confirmar compra'
-                : 'Confirmar venta'}
+              : `${modo === 'comprar' ? 'Comprar' : 'Vender'} ${cantidad} ${
+                  cantidad === 1 ? 'token' : 'tokens'
+                }`}
           </button>
         </form>
       )}

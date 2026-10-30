@@ -11,6 +11,8 @@ const ETIQUETAS_TIPO: Record<string, string> = {
   VENTA_SISTEMA: 'Venta',
   COMPRA_P2P: 'Compra P2P',
   VENTA_P2P: 'Venta P2P',
+  COMPRA_SUBASTA: 'Compra en subasta',
+  VENTA_SUBASTA: 'Venta en subasta',
   RECARGA_SALDO: 'Recarga de saldo',
   COMPENSACION_BAJA: 'Compensación por baja',
 }

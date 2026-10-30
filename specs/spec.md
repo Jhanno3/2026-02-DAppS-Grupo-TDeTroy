@@ -362,6 +362,28 @@ Cada caso de uso incluye actor, descripción, precondiciones, flujo principal, f
   - Dado que el jugador de una oferta abierta es dado de baja, la oferta queda cancelada, la cantidad reservada se reintegra primero a la tenencia del vendedor, y luego ese vendedor recibe la compensación de UC-15 (sobre la totalidad de su tenencia de ese jugador, incluida la reintegrada) a la cotización del día anterior a la baja.
   - La vía P2P convive con la compra/venta contra el sistema (UC-09/UC-10) sin reemplazarla ni limitarla: un usuario puede seguir comprando tokens nuevos al sistema y vendiéndoselos de vuelta, además de usar esta vía de oferta abierta entre usuarios.
 
+### UC-18 — Subasta de tokens entre usuarios
+
+- **Actor:** Usuario (vendedor) — crea la subasta de una cantidad de tokens que posee de un jugador. Usuario (postor) — cualquier otro usuario autenticado con saldo suficiente.
+- **Descripción:** El vendedor subasta una cantidad de sus tokens de un jugador fijando, al crearla, la **cantidad**, el **precio inicial por token** (la cotización vigente del jugador se le muestra sólo como referencia) y la **duración**. Mientras está activa, cualquier otro usuario puede verla y pujar. Cada puja fija un nuevo precio por token, siempre hacia arriba en un incremento fijo de **5%, 10% o 20%** sobre el precio vigente; la primera puja puede además igualar el precio inicial. Gana un **único postor**, que se lleva la totalidad de la cantidad subastada al precio de su puja. **Regla de cierre:** la duración es el plazo para que llegue la primera puja; desde la primera puja, la subasta se adjudica cuando pasan **2 minutos sin pujas nuevas** (cada puja reinicia ese plazo), aunque todavía quede duración — y aunque la duración ya haya vencido.
+- **Precondiciones:** El vendedor está autenticado, el jugador está activo y el vendedor posee la cantidad a subastar como tenencia no reservada; cantidad, precio inicial y duración son mayores a cero. Un postor está autenticado, no es el vendedor, no es ya el mejor postor de esa subasta, y tiene saldo virtual suficiente para pagar la cantidad total al precio de su puja.
+- **Flujo principal:**
+  1. El vendedor crea la subasta. La cantidad subastada queda **reservada** (mismo mecanismo que UC-17): no puede venderla al sistema ni publicarla en otra oferta o subasta.
+  2. Un postor elige un incremento (5/10/20%, o igualar el precio inicial si no hubo pujas). El sistema calcula el nuevo precio por token y le **reserva el saldo** del monto total (precio × cantidad).
+  3. Si había un mejor postor anterior, su saldo reservado se le devuelve completo en la misma operación.
+  4. Si pasan 2 minutos desde la última puja sin una nueva, el sistema adjudica en una única operación atómica: los tokens reservados del vendedor pasan al ganador y el saldo reservado del ganador se acredita al vendedor. Ambos usuarios ven el movimiento en su historial (UC-12), identificado como operación de subasta.
+- **Flujos alternativos:**
+  - Vence la duración sin ninguna puja: la subasta queda **desierta** y la cantidad reservada vuelve a la tenencia ordinaria del vendedor, sin venta.
+  - El vendedor **cancela** la subasta (en cualquier momento mientras está activa): la cantidad reservada vuelve a su tenencia y, si había un mejor postor, se le devuelve su saldo reservado.
+  - El postor no tiene saldo suficiente, es el vendedor, ya es el mejor postor, o la subasta ya no está activa: la puja se rechaza sin afectar la subasta ni el saldo de nadie.
+  - Dos postores pujan a la vez: el sistema procesa las pujas de a una; la segunda se calcula sobre el precio ya actualizado por la primera.
+  - El jugador es dado de baja (UC-15): la subasta se cancela (como una cancelación del vendedor) antes de aplicar la compensación de la baja.
+- **Criterios de aceptación:**
+  - Una puja nunca baja el precio ni fija un monto libre: sólo +5/10/20% sobre el precio vigente, o el precio inicial como primera puja.
+  - En todo momento sólo el mejor postor tiene saldo reservado en una subasta; los superados recuperan su saldo completo.
+  - La adjudicación mueve tokens y saldo en una única operación atómica, y nunca más tokens que los subastados.
+  - Los tokens reservados en una subasta y el saldo reservado en una puja vigente siguen contando en el valor total del portfolio del usuario (UC-11), aunque no estén disponibles para operar.
+
 ---
 
 ## 5. Reglas de negocio heredadas de la constitución (no renegociables en esta spec)

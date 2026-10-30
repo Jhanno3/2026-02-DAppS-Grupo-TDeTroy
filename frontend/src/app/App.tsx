@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { AuthProvider } from '../features/auth/AuthContext'
 import { router } from './router'
+import { TemaProvider } from './TemaProvider'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,9 +27,11 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
+      <TemaProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </TemaProvider>
     </QueryClientProvider>
   )
 }

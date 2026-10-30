@@ -92,6 +92,14 @@ public class SecurityConfig {
      */
     private static final String[] RUTAS_PUBLICAS_OFERTAS_GET = {"/api/v1/ofertas"};
 
+    /**
+     * {@code SubastaController} (UC-18): listado y detalle de subastas son públicos, mismo criterio
+     * que las ofertas P2P. Crear, pujar y cancelar requieren autenticación.
+     */
+    private static final String[] RUTAS_PUBLICAS_SUBASTAS_GET = {
+        "/api/v1/subastas", "/api/v1/subastas/*"
+    };
+
     private final ProblemDetailResponseWriter problemDetailResponseWriter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
@@ -158,6 +166,9 @@ public class SecurityConfig {
                                                 HttpMethod.GET, RUTAS_PUBLICAS_JUGADORES_GET)
                                         .permitAll()
                                         .requestMatchers(HttpMethod.GET, RUTAS_PUBLICAS_OFERTAS_GET)
+                                        .permitAll()
+                                        .requestMatchers(
+                                                HttpMethod.GET, RUTAS_PUBLICAS_SUBASTAS_GET)
                                         .permitAll()
                                         .anyRequest()
                                         .authenticated())

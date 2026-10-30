@@ -1,0 +1,475 @@
+.scope {
+  --bg: #0b0f0d;
+  --surface: #151b18;
+  --surface-2: #1a221e;
+  --chip: #1c2420;
+  --line: #26302b;
+  --line-strong: #3a4640;
+  --text: #eef2ee;
+  --text-2: #b4beb8;
+  --muted: #9aa59f;
+  --accent: #c8f25a;
+  --down: #ff9a6b;
+
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100%;
+}
+
+.container {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.containerAngosto {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.back {
+  display: inline-flex;
+  margin-bottom: 1.5rem;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.back:hover {
+  color: var(--accent);
+}
+
+.titulo {
+  margin: 0 0 0.375rem;
+  font-size: 2rem;
+}
+
+.bajada {
+  margin: 0 0 1.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  max-width: 48rem;
+}
+
+.bajada a,
+.hint a {
+  color: var(--accent);
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.error {
+  margin: 0 0 0.75rem;
+  padding: 0.625rem;
+  border-radius: 0.5rem;
+  background: var(--chip);
+  color: var(--down);
+  font-size: 0.9rem;
+}
+
+/* ---------- Listado ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 1.25rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.125rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.card:hover {
+  border-color: var(--line-strong);
+}
+
+.cardJugador {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cardNombre {
+  display: block;
+  font-weight: 600;
+}
+
+.cardClub {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.cardPrecio small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.cardPrecio strong {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardPie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-2);
+  font-size: 0.85rem;
+}
+
+.reloj {
+  padding: 0.1875rem 0.625rem;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.relojUrgente {
+  color: var(--down);
+}
+
+/* ---------- Detalle ---------- */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.headerJugador {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.headerJugador h1 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.headerJugador p {
+  margin: 0.125rem 0 0;
+  color: var(--text-2);
+}
+
+.badge {
+  padding: 0.1875rem 0.625rem;
+  border-radius: 999px;
+  background: var(--chip);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.badgeActiva {
+  color: var(--accent);
+}
+
+.badgeCerrada {
+  color: var(--text-2);
+}
+
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.layout > * {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+
+.panel {
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.precioVigente small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.precioVigente strong {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 2.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.precioVigente span {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.cierre {
+  margin: 1rem 0;
+  padding: 0.75rem 0.875rem;
+  border-radius: 0.75rem;
+  background: var(--surface-2);
+}
+
+.cierre strong {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cierre p {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.datos {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.375rem 1rem;
+  font-size: 0.9rem;
+}
+
+.datos dt {
+  color: var(--muted);
+}
+
+.datos dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.opciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.opcion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+  padding: 0.875rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.75rem;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.opcion:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.opcion:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.opcionIncremento {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.opcionPrecio {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.opcionTotal {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.btnCancelar {
+  height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--down);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnCancelar:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.resultado {
+  margin: 0 0 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--chip);
+  font-weight: 600;
+}
+
+.historial {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.historial li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+.historial li:last-child {
+  border-bottom: none;
+}
+
+.historialPostor {
+  color: var(--text-2);
+}
+
+.historialPostorVos {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.historialPrecio {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.historialFecha {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* ---------- Formulario de creación ---------- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.formGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.label input,
+.label select {
+  width: 11rem;
+  height: 2.75rem;
+  padding: 0 0.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.label select option {
+  background: var(--surface);
+}
+
+.referencia {
+  color: var(--text-2);
+  font-size: 0.75rem;
+}
+
+.reglas {
+  margin: 0;
+  padding-left: 1.125rem;
+  color: var(--text-2);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.btnPrimario {
+  align-self: flex-start;
+  height: 2.75rem;
+  padding: 0 1.25rem;
+  border: none;
+  border-radius: 0.625rem;
+  background: var(--accent);
+  color: #0b0f0d;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btnPrimario:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.separado {
+  margin-top: 1.5rem;
+}
+
+.hintConMargen {
+  margin-bottom: 1rem;
+}
+
+.precioVigente {
+  margin-bottom: 1rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.toolbar .bajada {
+  margin-bottom: 0;
+}

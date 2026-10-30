@@ -6,16 +6,23 @@ import static org.mockito.Mockito.when;
 
 import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
 import com.tdetroy.valuacion.entity.CotizacionHistoricaEntity;
+import com.tdetroy.valuacion.entity.SubastaEntity;
 import com.tdetroy.valuacion.entity.TenenciaTokenEntity;
 import com.tdetroy.valuacion.entity.UsuarioEntity;
 import com.tdetroy.valuacion.model.CotizacionHistorica;
+import com.tdetroy.valuacion.model.EstadoSubasta;
+import com.tdetroy.valuacion.model.IncrementoPuja;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
+import com.tdetroy.valuacion.model.Subasta;
 import com.tdetroy.valuacion.model.TenenciaToken;
 import com.tdetroy.valuacion.model.Usuario;
 import com.tdetroy.valuacion.repositories.CotizacionHistoricaRepository;
+import com.tdetroy.valuacion.repositories.SubastaRepository;
 import com.tdetroy.valuacion.repositories.TenenciaTokenRepository;
 import com.tdetroy.valuacion.repositories.UsuarioRepository;
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,6 +47,7 @@ class PortfolioServiceImplTest {
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private TenenciaTokenRepository tenenciaTokenRepository;
     @Mock private CotizacionHistoricaRepository cotizacionHistoricaRepository;
+    @Mock private SubastaRepository subastaRepository;
 
     private UUID usuarioId;
     private PortfolioServiceImpl service;
@@ -52,6 +60,7 @@ class PortfolioServiceImplTest {
                         usuarioRepository,
                         tenenciaTokenRepository,
                         cotizacionHistoricaRepository,
+                        subastaRepository,
                         VALOR_INICIAL);
     }
 
@@ -150,6 +159,65 @@ class PortfolioServiceImplTest {
         assertThat(portfolio.tenencias()).isEmpty();
         assertThat(portfolio.saldoVirtual()).isEqualByComparingTo("30.00");
         assertThat(portfolio.valorTotal()).isEqualByComparingTo("30.00");
+    }
+
+    @Test
+    void obtenerDe_conTokensReservadosEnOfertaP2P_losSacaDeTenenciasPeroLosSumaAlValorTotal() {
+        stubUsuarioConSaldo(BigDecimal.ZERO);
+        UUID jugadorParcial = UUID.randomUUID();
+        TenenciaToken parcial = TenenciaToken.abrir(usuarioId, jugadorParcial);
+        parcial.acreditar(5);
+        parcial.reservar(2);
+        TenenciaToken todaEnVenta = TenenciaToken.abrir(usuarioId, UUID.randomUUID());
+        todaEnVenta.acreditar(1);
+        todaEnVenta.reservar(1);
+        when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
+                .thenReturn(
+                        List.of(
+                                TenenciaTokenEntity.desde(parcial),
+                                TenenciaTokenEntity.desde(todaEnVenta)));
+        when(cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(
+                        jugadorParcial))
+                .thenReturn(Optional.empty());
+
+        PortfolioService.Portfolio portfolio = service.obtenerDe(usuarioId);
+
+        // la tenencia con todo reservado no aparece; la parcial muestra sólo 3 disponibles
+        assertThat(portfolio.tenencias()).hasSize(1);
+        PortfolioService.TenenciaPortfolio tenenciaPortfolio = portfolio.tenencias().get(0);
+        assertThat(tenenciaPortfolio.jugadorId()).isEqualTo(jugadorParcial);
+        assertThat(tenenciaPortfolio.cantidad()).isEqualTo(3);
+        // 3 × 100.00 (valor inicial)
+        assertThat(tenenciaPortfolio.valor()).isEqualByComparingTo("300.00");
+        // en venta: (2 + 1) × 100.00 — siguen siendo patrimonio mientras la oferta está abierta
+        assertThat(portfolio.valorEnVenta()).isEqualByComparingTo("300.00");
+        // total = 300.00 (disponible) + 300.00 (en venta) + 0 (saldo)
+        assertThat(portfolio.valorTotal()).isEqualByComparingTo("600.00");
+    }
+
+    @Test
+    void obtenerDe_comoMejorPostorDeUnaSubasta_sumaElSaldoReservadoAlValorTotal() {
+        stubUsuarioConSaldo(new BigDecimal("40.00"));
+        when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
+                .thenReturn(List.of());
+        Subasta subasta =
+                Subasta.crear(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        3,
+                        new BigDecimal("20.00"),
+                        Duration.ofMinutes(30),
+                        Instant.now());
+        subasta.pujar(usuarioId, IncrementoPuja.PRECIO_INICIAL, Instant.now());
+        when(subastaRepository.findByMejorPostorIdAndEstado(usuarioId, EstadoSubasta.ACTIVA))
+                .thenReturn(List.of(SubastaEntity.desde(subasta)));
+
+        PortfolioService.Portfolio portfolio = service.obtenerDe(usuarioId);
+
+        // 3 × 20.00 reservados en la puja, fuera del saldo disponible
+        assertThat(portfolio.saldoEnPujas()).isEqualByComparingTo("60.00");
+        assertThat(portfolio.saldoVirtual()).isEqualByComparingTo("40.00");
+        assertThat(portfolio.valorTotal()).isEqualByComparingTo("100.00");
     }
 
     @Test

@@ -59,10 +59,13 @@ describe('OfertaP2PJugadorPage', () => {
       logout: vi.fn(),
     })
     vi.mocked(jugadoresApi.obtenerJugador).mockResolvedValue(JUGADOR)
+    vi.mocked(jugadoresApi.listarCotizaciones).mockResolvedValue([])
     vi.mocked(ofertasApi.listarOfertas).mockResolvedValue([])
     vi.mocked(portfolioApi.obtenerPortfolio).mockResolvedValue({
       saldoVirtual: '1000.00',
       tenencias: [],
+      valorEnVenta: '0.00',
+      saldoEnPujas: '0.00',
       valorTotal: '1000.00',
     })
   })
@@ -120,6 +123,8 @@ describe('OfertaP2PJugadorPage', () => {
           valor: '0.00',
         },
       ],
+      valorEnVenta: '0.00',
+      saldoEnPujas: '0.00',
       valorTotal: '1000.00',
     })
     vi.mocked(ofertasApi.publicarOferta).mockResolvedValue({
@@ -145,6 +150,63 @@ describe('OfertaP2PJugadorPage', () => {
       1,
       24,
       'fake-token',
+    )
+  })
+
+  it('precarga el precio con la cotización vigente y avisa "Oferta creada exitosamente" al publicar', async () => {
+    vi.mocked(jugadoresApi.listarCotizaciones).mockResolvedValue([
+      {
+        id: 'c1',
+        semana: '2026-W44',
+        valor: '104.39',
+        origen: 'AUTOMATICO',
+        fechaCalculo: '2026-10-29T00:00:00Z',
+      },
+    ])
+    vi.mocked(portfolioApi.obtenerPortfolio).mockResolvedValue({
+      saldoVirtual: '1000.00',
+      tenencias: [
+        {
+          jugadorId: JUGADOR_ID,
+          cantidad: 10,
+          cotizacionVigente: '104.39',
+          valor: '1043.90',
+        },
+      ],
+      valorEnVenta: '0.00',
+      saldoEnPujas: '0.00',
+      valorTotal: '2043.90',
+    })
+    vi.mocked(ofertasApi.publicarOferta).mockResolvedValue({
+      id: 'o1',
+      vendedorId: 'u1',
+      jugadorId: JUGADOR_ID,
+      cantidadPublicada: 1,
+      cantidadDisponible: 1,
+      precioUnitario: '104.39',
+      estado: 'ABIERTA',
+      fechaCreacion: '2026-10-29T00:00:00Z',
+      fechaVencimiento: '2026-10-30T00:00:00Z',
+    })
+    const user = userEvent.setup()
+    renderPagina()
+
+    expect(
+      await screen.findByText('Cotización actual: $ 104,39'),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText(/Precio por token/)).toHaveValue(104.39)
+
+    await user.click(screen.getByRole('button', { name: 'Publicar oferta' }))
+
+    expect(ofertasApi.publicarOferta).toHaveBeenCalledWith(
+      JUGADOR_ID,
+      1,
+      104.39,
+      24,
+      'fake-token',
+    )
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Oferta creada exitosamente',
     )
   })
 
@@ -242,6 +304,8 @@ describe('OfertaP2PJugadorPage', () => {
           valor: '0.00',
         },
       ],
+      valorEnVenta: '0.00',
+      saldoEnPujas: '0.00',
       valorTotal: '1000.00',
     })
     vi.mocked(ofertasApi.publicarOferta).mockRejectedValue(

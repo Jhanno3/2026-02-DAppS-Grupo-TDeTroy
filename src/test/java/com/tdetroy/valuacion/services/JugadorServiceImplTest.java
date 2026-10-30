@@ -74,6 +74,7 @@ class JugadorServiceImplTest {
     @Mock private CotizacionHistoricaRepository cotizacionHistoricaRepository;
     @Mock private MovimientoRepository movimientoRepository;
     @Mock private AuditoriaService auditoriaService;
+    @Mock private SubastaService subastaService;
 
     private JugadorServiceImpl service;
 
@@ -88,6 +89,7 @@ class JugadorServiceImplTest {
                         cotizacionHistoricaRepository,
                         movimientoRepository,
                         auditoriaService,
+                        subastaService,
                         VALOR_INICIAL);
     }
 

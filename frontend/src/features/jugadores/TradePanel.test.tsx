@@ -51,6 +51,8 @@ describe('TradePanel', () => {
     vi.mocked(portfolioApi.obtenerPortfolio).mockResolvedValue({
       saldoVirtual: '1000.00',
       tenencias: [],
+      valorEnVenta: '0.00',
+      saldoEnPujas: '0.00',
       valorTotal: '0.00',
     })
   })
@@ -163,7 +165,7 @@ describe('TradePanel', () => {
     const user = userEvent.setup()
     renderTradePanel({ cotizacionVigente: 91.36 })
 
-    await user.click(screen.getByRole('button', { name: 'Confirmar compra' }))
+    await user.click(screen.getByRole('button', { name: 'Comprar 1 token' }))
 
     await waitFor(() =>
       expect(tokensApi.comprarTokens).toHaveBeenCalledWith(
@@ -188,6 +190,8 @@ describe('TradePanel', () => {
           valor: '274.08',
         },
       ],
+      valorEnVenta: '0.00',
+      saldoEnPujas: '0.00',
       valorTotal: '274.08',
     })
     vi.mocked(tokensApi.venderTokens).mockResolvedValue({
@@ -205,7 +209,7 @@ describe('TradePanel', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Vender' }))
     await screen.findByText('Tenés 3 token(s) disponibles para vender')
-    await user.click(screen.getByRole('button', { name: 'Confirmar venta' }))
+    await user.click(screen.getByRole('button', { name: 'Vender 1 token' }))
 
     await waitFor(() =>
       expect(tokensApi.venderTokens).toHaveBeenCalledWith(
@@ -227,6 +231,8 @@ describe('TradePanel', () => {
           valor: '300.00',
         },
       ],
+      valorEnVenta: '0.00',
+      saldoEnPujas: '0.00',
       valorTotal: '300.00',
     })
     const user = userEvent.setup()
@@ -246,7 +252,7 @@ describe('TradePanel', () => {
     const user = userEvent.setup()
     renderTradePanel()
 
-    await user.click(screen.getByRole('button', { name: 'Confirmar compra' }))
+    await user.click(screen.getByRole('button', { name: 'Comprar 1 token' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Saldo insuficiente',

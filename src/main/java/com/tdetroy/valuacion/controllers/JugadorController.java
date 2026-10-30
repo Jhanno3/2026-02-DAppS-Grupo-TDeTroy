@@ -4,12 +4,14 @@ import com.tdetroy.valuacion.config.UsuarioPrincipal;
 import com.tdetroy.valuacion.dto.request.CrearJugadorRequest;
 import com.tdetroy.valuacion.dto.request.EditarJugadorRequest;
 import com.tdetroy.valuacion.dto.response.CotizacionResponse;
+import com.tdetroy.valuacion.dto.response.EstadisticasTemporadaResponse;
 import com.tdetroy.valuacion.dto.response.JugadorResponse;
 import com.tdetroy.valuacion.dto.response.PaginaMercadoResponse;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.services.CotizacionService;
 import com.tdetroy.valuacion.services.JugadorService;
+import com.tdetroy.valuacion.services.RendimientoService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -37,10 +39,15 @@ public class JugadorController {
 
     private final JugadorService jugadorService;
     private final CotizacionService cotizacionService;
+    private final RendimientoService rendimientoService;
 
-    public JugadorController(JugadorService jugadorService, CotizacionService cotizacionService) {
+    public JugadorController(
+            JugadorService jugadorService,
+            CotizacionService cotizacionService,
+            RendimientoService rendimientoService) {
         this.jugadorService = jugadorService;
         this.cotizacionService = cotizacionService;
+        this.rendimientoService = rendimientoService;
     }
 
     /** UC-07: catálogo completo, incluidos los jugadores dados de baja (spec.md UC-07). */
@@ -89,6 +96,21 @@ public class JugadorController {
                         ? cotizacionService.obtenerHistorial(id, estrategia)
                         : cotizacionService.obtenerHistorial(id);
         return historial.stream().map(CotizacionResponse::desde).toList();
+    }
+
+    /**
+     * UC-07: acumulado de temporada del jugador (último snapshot de WhoScored). {@code 204} si
+     * todavía no hay datos de rendimiento; 404 vía {@code RecursoNoEncontradoException} si el
+     * jugador no existe.
+     */
+    @GetMapping("/{id}/estadisticas")
+    public ResponseEntity<EstadisticasTemporadaResponse> obtenerEstadisticas(
+            @PathVariable UUID id) {
+        return rendimientoService
+                .obtenerEstadisticasTemporada(id)
+                .map(EstadisticasTemporadaResponse::desde)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     /** UC-03. {@code actorId} sale del JWT ya validado, nunca del body de la request. */

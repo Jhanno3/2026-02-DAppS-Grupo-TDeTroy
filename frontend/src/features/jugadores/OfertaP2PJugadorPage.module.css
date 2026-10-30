@@ -235,3 +235,8 @@
   opacity: 0.6;
   cursor: default;
 }
+
+.referencia {
+  color: var(--text-2);
+  font-size: 0.75rem;
+}
