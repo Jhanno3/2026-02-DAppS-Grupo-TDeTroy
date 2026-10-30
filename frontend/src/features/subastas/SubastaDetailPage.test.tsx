@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SubastaDetailPage } from './SubastaDetailPage'
+import { ApiError } from '../../api/client'
 import * as jugadoresApi from '../../api/jugadores'
 import * as subastasApi from '../../api/subastas'
 import type { SubastaResponse } from '../../api/subastas'
@@ -176,5 +177,107 @@ describe('SubastaDetailPage', () => {
         '¡Ganaste la subasta! Recibiste 2 token(s) por $ 240,00.',
       ),
     ).toBeInTheDocument()
+  })
+  it('el vendedor cancela tras confirmar y ve el aviso', async () => {
+    comoUsuario('vendedor')
+    vi.mocked(subastasApi.obtenerSubasta).mockResolvedValue(subasta())
+    vi.mocked(subastasApi.cancelarSubasta).mockResolvedValue(undefined)
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const user = userEvent.setup()
+    renderPagina()
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Cancelar subasta' }),
+    )
+
+    expect(subastasApi.cancelarSubasta).toHaveBeenCalledWith('s1', 'fake-token')
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Subasta cancelada',
+    )
+  })
+
+  it('si el vendedor no confirma, no se cancela nada', async () => {
+    comoUsuario('vendedor')
+    vi.mocked(subastasApi.obtenerSubasta).mockResolvedValue(subasta())
+    vi.mocked(subastasApi.cancelarSubasta).mockClear()
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const user = userEvent.setup()
+    renderPagina()
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Cancelar subasta' }),
+    )
+
+    expect(subastasApi.cancelarSubasta).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [
+      'vendedor',
+      {
+        estado: 'ADJUDICADA' as const,
+        precioActual: '110.00',
+        mejorPostorId: 'postor',
+      },
+      'Vendiste 2 token(s) por $ 220,00.',
+    ],
+    [
+      'tercero',
+      {
+        estado: 'ADJUDICADA' as const,
+        precioActual: '110.00',
+        mejorPostorId: 'postor',
+      },
+      'Adjudicada a $ 110,00 por token.',
+    ],
+    [
+      'tercero',
+      { estado: 'DESIERTA' as const },
+      'Venció sin pujas: los tokens volvieron al vendedor.',
+    ],
+    [
+      'tercero',
+      { estado: 'CANCELADA' as const },
+      'El vendedor canceló la subasta.',
+    ],
+  ])(
+    'cerrada, %s ve el resultado que le corresponde',
+    async (usuario, cambios, mensaje) => {
+      comoUsuario(usuario)
+      vi.mocked(subastasApi.obtenerSubasta).mockResolvedValue(
+        subasta({ ...cambios, opcionesPuja: [] }),
+      )
+      renderPagina()
+
+      expect(await screen.findByText(mensaje)).toBeInTheDocument()
+    },
+  )
+
+  it('si la subasta no existe, lo dice', async () => {
+    comoUsuario(null)
+    vi.mocked(subastasApi.obtenerSubasta).mockRejectedValue(
+      new ApiError(404, 'No existe', 'Not Found'),
+    )
+    renderPagina()
+
+    expect(
+      await screen.findByText('No existe esa subasta.'),
+    ).toBeInTheDocument()
+  })
+
+  it('si la puja falla, muestra el mensaje del backend', async () => {
+    comoUsuario('postor')
+    vi.mocked(subastasApi.obtenerSubasta).mockResolvedValue(subasta())
+    vi.mocked(subastasApi.pujar).mockRejectedValue(
+      new ApiError(409, 'Saldo insuficiente', 'Conflict'),
+    )
+    const user = userEvent.setup()
+    renderPagina()
+
+    await user.click(await screen.findByRole('button', { name: /\+5%/ }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Saldo insuficiente',
+    )
   })
 })

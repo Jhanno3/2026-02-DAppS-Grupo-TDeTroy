@@ -255,6 +255,27 @@ export function CarteraPage() {
   )
 }
 
+/** Foto, nombre y club del jugador de una fila de la cartera, enlazando a `to`. */
+function JugadorEnFila({
+  to,
+  jugador,
+}: {
+  to: string
+  jugador: JugadorResponse | undefined
+}) {
+  return (
+    <Link to={to} className={styles.ofertaJugador}>
+      <Avatar src={jugador?.fotoUrl ?? null} nombre={jugador?.nombre ?? '?'} />
+      <span>
+        <span className={styles.ofertaNombre}>
+          {jugador?.nombre ?? 'Jugador no disponible'}
+        </span>
+        <span className={styles.ofertaClub}>{jugador?.club}</span>
+      </span>
+    </Link>
+  )
+}
+
 function FilaSubasta({
   subasta,
   jugador,
@@ -267,21 +288,7 @@ function FilaSubasta({
   const precio = subasta.precioActual ?? subasta.precioInicial
   return (
     <li className={styles.oferta}>
-      <Link
-        to={`/jugadores/${subasta.jugadorId}`}
-        className={styles.ofertaJugador}
-      >
-        <Avatar
-          src={jugador?.fotoUrl ?? null}
-          nombre={jugador?.nombre ?? '?'}
-        />
-        <span>
-          <span className={styles.ofertaNombre}>
-            {jugador?.nombre ?? 'Jugador no disponible'}
-          </span>
-          <span className={styles.ofertaClub}>{jugador?.club}</span>
-        </span>
-      </Link>
+      <JugadorEnFila to={`/jugadores/${subasta.jugadorId}`} jugador={jugador} />
       <span className={styles.ofertaDato}>
         {esVendedor ? 'Vendés' : 'Vas ganando'} ·{' '}
         <strong>{subasta.cantidad}</strong> token(s)
@@ -310,21 +317,10 @@ function FilaOfertaPropia({
 }) {
   return (
     <li className={styles.oferta}>
-      <Link
+      <JugadorEnFila
         to={`/jugadores/${oferta.jugadorId}/p2p`}
-        className={styles.ofertaJugador}
-      >
-        <Avatar
-          src={jugador?.fotoUrl ?? null}
-          nombre={jugador?.nombre ?? '?'}
-        />
-        <span>
-          <span className={styles.ofertaNombre}>
-            {jugador?.nombre ?? 'Jugador no disponible'}
-          </span>
-          <span className={styles.ofertaClub}>{jugador?.club}</span>
-        </span>
-      </Link>
+        jugador={jugador}
+      />
       <span className={styles.ofertaDato}>
         <strong>{oferta.cantidadDisponible}</strong> /{' '}
         {oferta.cantidadPublicada} token(s)

@@ -29,7 +29,7 @@ export function RootLayout() {
 
   function handleLogout() {
     logout()
-    navigate('/login')
+    void navigate('/login')
   }
 
   return (

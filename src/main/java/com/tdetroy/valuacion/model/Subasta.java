@@ -7,6 +7,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
@@ -23,6 +25,8 @@ import lombok.Getter;
  * (mismo reparto que {@link OfertaP2P}).
  */
 @Getter
+// Constructor con todos los campos en orden de declaración, sólo para crear() y reconstruir().
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Subasta {
 
     /** Plazo sin pujas nuevas, desde la última puja, tras el cual la subasta se adjudica. */
@@ -42,33 +46,6 @@ public class Subasta {
     private final Instant fechaCreacion;
     private final Instant fechaVencimiento;
     private Instant fechaCierre;
-
-    private Subasta(
-            UUID id,
-            UUID vendedorId,
-            UUID jugadorId,
-            int cantidad,
-            BigDecimal precioInicial,
-            BigDecimal precioActual,
-            UUID mejorPostorId,
-            int cantidadPujas,
-            EstadoSubasta estado,
-            Instant fechaCreacion,
-            Instant fechaVencimiento,
-            Instant fechaCierre) {
-        this.id = id;
-        this.vendedorId = vendedorId;
-        this.jugadorId = jugadorId;
-        this.cantidad = cantidad;
-        this.precioInicial = precioInicial;
-        this.precioActual = precioActual;
-        this.mejorPostorId = mejorPostorId;
-        this.cantidadPujas = cantidadPujas;
-        this.estado = estado;
-        this.fechaCreacion = fechaCreacion;
-        this.fechaVencimiento = fechaVencimiento;
-        this.fechaCierre = fechaCierre;
-    }
 
     /**
      * Crea una subasta {@link EstadoSubasta#ACTIVA} sin pujas, con {@code fechaVencimiento =

@@ -1,15 +1,18 @@
 package com.tdetroy.valuacion.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
 import com.tdetroy.valuacion.entity.JugadorEntity;
 import com.tdetroy.valuacion.entity.RendimientoAcumuladoWhoScoredEntity;
 import com.tdetroy.valuacion.entity.RendimientoPartidoEntity;
+import com.tdetroy.valuacion.model.EstadisticasTemporada;
 import com.tdetroy.valuacion.model.EstadoJugador;
 import com.tdetroy.valuacion.model.FuenteResultado;
 import com.tdetroy.valuacion.model.Jugador;
@@ -23,10 +26,12 @@ import com.tdetroy.valuacion.repositories.RendimientoAcumuladoWhoScoredRepositor
 import com.tdetroy.valuacion.repositories.RendimientoExternoRepository;
 import com.tdetroy.valuacion.repositories.RendimientoLigaExternoRepository;
 import com.tdetroy.valuacion.repositories.RendimientoPartidoRepository;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -462,6 +467,50 @@ class RendimientoServiceImplTest {
                 ArgumentCaptor.forClass(RendimientoPartidoEntity.class);
         verify(rendimientoPartidoRepository).save(captor.capture());
         return captor.getValue().aModelo();
+    }
+
+    // ---- obtenerEstadisticasTemporada (UC-07) ----
+
+    @Test
+    void obtenerEstadisticasTemporada_conJugadorInexistente_lanzaExcepcion() {
+        UUID jugadorId = UUID.randomUUID();
+        when(jugadorRepository.existsById(jugadorId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.obtenerEstadisticasTemporada(jugadorId))
+                .isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    @Test
+    void obtenerEstadisticasTemporada_sinSnapshot_devuelveVacio() {
+        UUID jugadorId = UUID.randomUUID();
+        when(jugadorRepository.existsById(jugadorId)).thenReturn(true);
+        when(rendimientoAcumuladoWhoScoredRepository.findById(jugadorId))
+                .thenReturn(Optional.empty());
+
+        assertThat(service.obtenerEstadisticasTemporada(jugadorId)).isEmpty();
+    }
+
+    @Test
+    void obtenerEstadisticasTemporada_conSnapshot_mapeaLasMetricasYCompletaConCeroLasQueFaltan() {
+        UUID jugadorId = UUID.randomUUID();
+        Instant fecha = Instant.parse("2026-10-29T19:43:00Z");
+        when(jugadorRepository.existsById(jugadorId)).thenReturn(true);
+        // Sin "redCard": una métrica ausente del snapshot se informa como 0.
+        when(rendimientoAcumuladoWhoScoredRepository.findById(jugadorId))
+                .thenReturn(
+                        Optional.of(
+                                RendimientoAcumuladoWhoScoredEntity.desde(
+                                        RendimientoAcumuladoWhoScored.primeraVez(
+                                                jugadorId,
+                                                """
+                                                {"apps":9,"minsPlayed":503,"goals":2,"assists":3,\
+                                                "manOfTheMatch":0,"yellowCard":1}""",
+                                                fecha))));
+
+        EstadisticasTemporada estadisticas =
+                service.obtenerEstadisticasTemporada(jugadorId).orElseThrow();
+
+        assertThat(estadisticas).isEqualTo(new EstadisticasTemporada(9, 503, 2, 3, 0, 1, 0, fecha));
     }
 
     private static Map<String, Object> metricasComoMapa(String json) {

@@ -198,4 +198,61 @@ describe('JugadorDetailPage', () => {
       screen.getByRole('button', { name: 'Cambiar a modo oscuro' }),
     ).toBeInTheDocument()
   })
+  it('con ofertas y subastas en curso, resume la mejor oferta y lista las subastas', async () => {
+    const oferta = {
+      vendedorId: 'v1',
+      jugadorId: 'j1',
+      cantidadPublicada: 2,
+      cantidadDisponible: 2,
+      estado: 'ABIERTA' as const,
+      fechaCreacion: '2026-10-29T00:00:00Z',
+      fechaVencimiento: '2026-10-30T00:00:00Z',
+    }
+    vi.mocked(ofertasApi.listarOfertas).mockResolvedValue([
+      { ...oferta, id: 'o1', precioUnitario: '120.00' },
+      { ...oferta, id: 'o2', precioUnitario: '99.50' },
+    ])
+    vi.mocked(subastasApi.listarSubastas).mockResolvedValue([
+      {
+        id: 's1',
+        vendedorId: 'v1',
+        jugadorId: 'j1',
+        cantidad: 3,
+        precioInicial: '100.00',
+        precioActual: '115.00',
+        mejorPostorId: 'p1',
+        cantidadPujas: 2,
+        estado: 'ACTIVA',
+        fechaCreacion: '2026-10-29T00:00:00Z',
+        fechaVencimiento: '2026-10-29T01:00:00Z',
+        cierraEn: '2026-10-29T00:10:00Z',
+        opcionesPuja: [],
+        pujas: null,
+      },
+    ])
+    renderFicha()
+
+    expect(
+      await screen.findByText('2 ofertas abiertas · desde $ 99,50 por token.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Ver ofertas →' }),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole('link', { name: /3 token\(s\) · 2 pujas/ }),
+    ).toHaveAttribute('href', '/subastas/s1')
+  })
+
+  it('un jugador dado de baja no ofrece publicar ni subastar', async () => {
+    vi.mocked(jugadoresApi.obtenerJugador).mockResolvedValue({
+      ...JUGADOR,
+      estado: 'INACTIVO',
+    })
+    renderFicha()
+
+    expect(await screen.findByText('● INACTIVO')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'Subastar →' }),
+    ).not.toBeInTheDocument()
+  })
 })

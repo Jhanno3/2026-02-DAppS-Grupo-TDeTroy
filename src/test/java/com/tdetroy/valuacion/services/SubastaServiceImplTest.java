@@ -5,12 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.tdetroy.valuacion.common.exceptions.OperacionSubastaInvalidaException;
+import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
 import com.tdetroy.valuacion.common.exceptions.SaldoInsuficienteException;
 import com.tdetroy.valuacion.common.exceptions.TenenciaInsuficienteException;
 import com.tdetroy.valuacion.entity.JugadorEntity;
@@ -334,6 +336,54 @@ class SubastaServiceImplTest {
         assertThat(subastas.get(subastaId).getEstado()).isEqualTo(EstadoSubasta.CANCELADA);
         assertThat(tenencia(vendedorId).disponible()).isEqualTo(3);
         assertThat(saldo(postorA)).isEqualByComparingTo("1000.00");
+    }
+
+    @Test
+    void crear_deUnJugadorInexistente_lanzaExcepcion() {
+        UUID inexistente = UUID.randomUUID();
+        when(jugadorRepository.findById(inexistente)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                        () ->
+                                service.crear(
+                                        vendedorId, inexistente, 1, new BigDecimal("10.00"), 30))
+                .isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    @Test
+    void listarActivas_devuelveLasActivasDelRepositorio() {
+        UUID subastaId = crearSubasta();
+        when(subastaRepository.findByEstadoOrderByFechaCreacionDesc(EstadoSubasta.ACTIVA))
+                .thenReturn(List.of(subastas.get(subastaId)));
+
+        assertThat(service.listarActivas()).extracting(Subasta::getId).containsExactly(subastaId);
+    }
+
+    @Test
+    void cerrarVencidas_soloCierraLasQueCorresponden_yUnaFallaNoFrenaALasDemas() {
+        darTokens(vendedorId, 6);
+        UUID enCurso = crearSubasta();
+        UUID paraAdjudicar = crearSubasta();
+        UUID queFalla = crearSubasta();
+        service.pujar(postorA, enCurso, 5);
+        service.pujar(postorA, paraAdjudicar, 5);
+        service.pujar(postorB, queFalla, 5);
+        retrocederCierre(paraAdjudicar);
+        retrocederCierre(queFalla);
+        when(subastaRepository.findByEstadoOrderByFechaCreacionDesc(EstadoSubasta.ACTIVA))
+                .thenReturn(
+                        List.of(
+                                subastas.get(queFalla),
+                                subastas.get(enCurso),
+                                subastas.get(paraAdjudicar)));
+        doThrow(new IllegalStateException("falla puntual")).when(self).cerrarUna(queFalla);
+
+        service.cerrarVencidas();
+
+        // La que falla se intenta igual, la que sigue en plazo ni se toca, y la vencida se cierra.
+        verify(self).cerrarUna(queFalla);
+        verify(self, never()).cerrarUna(enCurso);
+        verify(self).cerrarUna(paraAdjudicar);
     }
 
     private UUID crearSubasta() {

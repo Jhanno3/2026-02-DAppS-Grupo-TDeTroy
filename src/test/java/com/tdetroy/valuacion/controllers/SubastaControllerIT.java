@@ -181,6 +181,14 @@ class SubastaControllerIT {
                 .contains("\"id\":\"" + subastaId + "\"")
                 .contains("\"estado\":\"ACTIVA\"");
 
+        // Listado global, sin filtrar por jugador.
+        mvc.get()
+                .uri("/api/v1/subastas")
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .contains("\"id\":\"" + subastaId + "\"");
+
         mvc.get()
                 .uri("/api/v1/subastas/{id}", subastaId)
                 .assertThat()

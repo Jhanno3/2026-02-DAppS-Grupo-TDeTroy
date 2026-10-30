@@ -3,8 +3,11 @@ package com.tdetroy.valuacion.controllers;
 import static org.springframework.test.web.servlet.assertj.MockMvcTester.create;
 
 import com.tdetroy.valuacion.config.JwtService;
+import com.tdetroy.valuacion.entity.RendimientoAcumuladoWhoScoredEntity;
+import com.tdetroy.valuacion.model.RendimientoAcumuladoWhoScored;
 import com.tdetroy.valuacion.model.RolUsuario;
 import com.tdetroy.valuacion.model.Usuario;
+import com.tdetroy.valuacion.repositories.RendimientoAcumuladoWhoScoredRepository;
 import com.tdetroy.valuacion.services.UsuarioService;
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -39,6 +42,9 @@ class JugadorControllerIT {
 
     @Autowired private JwtService jwtService;
     @Autowired private UsuarioService usuarioService;
+
+    @Autowired
+    private RendimientoAcumuladoWhoScoredRepository rendimientoAcumuladoWhoScoredRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private MockMvcTester mvc;
@@ -429,5 +435,45 @@ class JugadorControllerIT {
                 .contains("\"tipo\":\"COMPENSACION_BAJA\"")
                 .contains("\"cantidad\":10");
         mvc.get().uri("/api/v1/ofertas?jugadorId={id}", id).assertThat().bodyText().isEqualTo("[]");
+    }
+
+    // ---- GET /jugadores/{id}/estadisticas (UC-07) ----
+
+    @Test
+    void obtenerEstadisticas_conJugadorInexistente_responde404() {
+        mvc.get()
+                .uri("/api/v1/jugadores/{id}/estadisticas", UUID.randomUUID())
+                .assertThat()
+                .hasStatus(404);
+    }
+
+    @Test
+    void obtenerEstadisticas_sinSnapshotDeRendimiento_responde204() {
+        String id = crearYObtenerId("Sin Estadisticas");
+
+        mvc.get().uri("/api/v1/jugadores/{id}/estadisticas", id).assertThat().hasStatus(204);
+    }
+
+    @Test
+    void obtenerEstadisticas_conSnapshot_esPublicoYDevuelveElAcumuladoDeTemporada() {
+        String id = crearYObtenerId("Con Estadisticas");
+        rendimientoAcumuladoWhoScoredRepository.save(
+                RendimientoAcumuladoWhoScoredEntity.desde(
+                        RendimientoAcumuladoWhoScored.primeraVez(
+                                UUID.fromString(id),
+                                """
+                                {"apps":9,"minsPlayed":503,"goals":2,"assists":3,\
+                                "manOfTheMatch":0,"yellowCard":1,"redCard":0}""")));
+
+        mvc.get()
+                .uri("/api/v1/jugadores/{id}/estadisticas", id)
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .contains("\"partidosJugados\":9")
+                .contains("\"minutosJugados\":503")
+                .contains("\"goles\":2")
+                .contains("\"asistencias\":3")
+                .contains("\"tarjetasAmarillas\":1");
     }
 }

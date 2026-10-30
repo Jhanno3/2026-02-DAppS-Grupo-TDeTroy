@@ -123,4 +123,48 @@ describe('SubastasPage', () => {
 
     expect(await screen.findByText('Formulario de subasta')).toBeInTheDocument()
   })
+  it('lista las subastas activas con su precio, etiqueta propia o "vas ganando"', async () => {
+    const base = {
+      jugadorId: 'jugador-1',
+      cantidad: 2,
+      precioInicial: '100.00',
+      cantidadPujas: 0,
+      estado: 'ACTIVA' as const,
+      fechaCreacion: '2026-10-29T20:00:00Z',
+      fechaVencimiento: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      opcionesPuja: [],
+      pujas: null,
+    }
+    vi.mocked(subastasApi.listarSubastas).mockResolvedValue([
+      {
+        ...base,
+        id: 's1',
+        vendedorId: 'u1',
+        precioActual: null,
+        mejorPostorId: null,
+        cierraEn: base.fechaVencimiento,
+      },
+      {
+        ...base,
+        id: 's2',
+        vendedorId: 'otro',
+        precioActual: '110.00',
+        mejorPostorId: 'u1',
+        cantidadPujas: 1,
+        // Cierra en menos de 2 minutos: el reloj se marca como urgente.
+        cierraEn: new Date(Date.now() + 60 * 1000).toISOString(),
+      },
+    ])
+    renderPagina()
+
+    const tarjetas = await screen.findAllByRole('link', {
+      name: /Matteo Politano/,
+    })
+    expect(tarjetas).toHaveLength(2)
+    expect(tarjetas[0]).toHaveTextContent('Precio inicial')
+    expect(tarjetas[0]).toHaveTextContent('Tu subasta')
+    expect(tarjetas[1]).toHaveTextContent('$ 110,00')
+    expect(tarjetas[1]).toHaveTextContent('1 puja · Vas ganando')
+    expect(tarjetas[1]).toHaveAttribute('href', '/subastas/s2')
+  })
 })

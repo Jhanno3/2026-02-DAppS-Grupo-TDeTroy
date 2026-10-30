@@ -203,6 +203,17 @@ class SubastaTest {
     }
 
     @Test
+    void declararDesierta_antesDeVencerOConPujas_lanzaExcepcion() {
+        assertThatThrownBy(() -> subasta.declararDesierta(INICIO.plusSeconds(10)))
+                .isInstanceOf(IllegalStateException.class);
+
+        subasta.pujar(postorA, IncrementoPuja.CINCO, INICIO.plusSeconds(10));
+        Instant vencida = INICIO.plus(DURACION);
+        assertThatThrownBy(() -> subasta.declararDesierta(vencida))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     void cancelar_soloSiEstaActiva() {
         subasta.pujar(postorA, IncrementoPuja.CINCO, INICIO.plusSeconds(10));
         subasta.cancelar();
