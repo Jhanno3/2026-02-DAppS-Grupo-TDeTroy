@@ -13,6 +13,8 @@ import { ApiError } from '../../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Avatar } from '../../shared/components/Avatar'
 import { Button } from '../../shared/components/Button'
+import { SelectorJugadorPropio } from '../../shared/components/SelectorJugadorPropio'
+import { jugadoresConTokensDe } from '../../shared/jugadoresConTokens'
 import { formatMoney } from '../../shared/format'
 import styles from './P2PPage.module.css'
 
@@ -34,7 +36,6 @@ export function P2PPage() {
   const [cantidades, setCantidades] = useState<Record<string, number>>({})
   const [error, setError] = useState<string | null>(null)
   const [selectorAbierto, setSelectorAbierto] = useState(false)
-  const [busquedaSelector, setBusquedaSelector] = useState('')
 
   const ofertas = useQuery({
     queryKey: ['ofertas'],
@@ -59,30 +60,15 @@ export function P2PPage() {
   }, [jugadores.data])
 
   const jugadoresConTokens = useMemo(
-    () =>
-      (portfolio.data?.tenencias ?? [])
-        .filter((t) => t.cantidad > 0)
-        .map((t) => ({ tenencia: t, jugador: jugadorPorId.get(t.jugadorId) }))
-        .filter((item) => item.jugador != null),
+    () => jugadoresConTokensDe(portfolio.data?.tenencias, jugadorPorId),
     [portfolio.data, jugadorPorId],
   )
-
-  const jugadoresFiltrados = useMemo(() => {
-    const q = busquedaSelector.trim().toLowerCase()
-    if (!q) return jugadoresConTokens
-    return jugadoresConTokens.filter(
-      ({ jugador }) =>
-        jugador!.nombre.toLowerCase().includes(q) ||
-        jugador!.club.toLowerCase().includes(q),
-    )
-  }, [jugadoresConTokens, busquedaSelector])
 
   function handleCrearOferta() {
     if (!isAuthenticated) {
       void navigate('/login')
       return
     }
-    setBusquedaSelector('')
     setSelectorAbierto(true)
   }
 
@@ -204,83 +190,13 @@ export function P2PPage() {
       </main>
 
       {selectorAbierto && (
-        <div
-          className={styles.overlay}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Elegí un jugador para publicar una oferta"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) cerrarSelector()
-          }}
-        >
-          <div className={styles.selector}>
-            <div className={styles.selectorHeader}>
-              <h2>Elegí un jugador</h2>
-              <input
-                type="search"
-                name="buscarJugador"
-                className={styles.selectorBuscador}
-                placeholder="Buscar jugador o club"
-                value={busquedaSelector}
-                onChange={(e) => setBusquedaSelector(e.target.value)}
-                aria-label="Buscar jugador"
-                autoFocus
-              />
-              <button
-                type="button"
-                className={styles.selectorClose}
-                aria-label="Cerrar"
-                onClick={cerrarSelector}
-              >
-                ✕
-              </button>
-            </div>
-
-            {portfolio.isLoading && <p className={styles.hint}>Cargando…</p>}
-
-            {portfolio.data && jugadoresConTokens.length === 0 && (
-              <p className={styles.hint}>
-                No tenés tokens de ningún jugador todavía. Comprá primero en el{' '}
-                <Link to="/mercado" onClick={cerrarSelector}>
-                  Mercado
-                </Link>
-                .
-              </p>
-            )}
-
-            {jugadoresConTokens.length > 0 &&
-              jugadoresFiltrados.length === 0 && (
-                <p className={styles.hint}>
-                  Ningún jugador tuyo coincide con "{busquedaSelector}".
-                </p>
-              )}
-
-            {jugadoresFiltrados.length > 0 && (
-              <ul className={styles.selectorLista}>
-                {jugadoresFiltrados.map(({ tenencia, jugador }) => (
-                  <li key={tenencia.jugadorId}>
-                    <Link
-                      to={`/jugadores/${tenencia.jugadorId}/p2p`}
-                      className={styles.selectorItem}
-                      onClick={cerrarSelector}
-                    >
-                      <Avatar src={jugador!.fotoUrl} nombre={jugador!.nombre} />
-                      <div>
-                        <div className={styles.cardName}>{jugador!.nombre}</div>
-                        <div className={styles.cardClub}>
-                          {jugador!.club} · {jugador!.posicion}
-                        </div>
-                      </div>
-                      <span className={styles.selectorCantidad}>
-                        {tenencia.cantidad} token(s)
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+        <SelectorJugadorPropio
+          jugadores={jugadoresConTokens}
+          cargando={portfolio.isLoading}
+          destinoDe={(jugadorId) => `/jugadores/${jugadorId}/p2p`}
+          ariaLabel="Elegí un jugador para publicar una oferta"
+          onClose={cerrarSelector}
+        />
       )}
     </div>
   )

@@ -1,0 +1,104 @@
+.hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.hint a {
+  color: var(--accent);
+}
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 60%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 10;
+}
+.selector {
+  width: 100%;
+  max-width: 32rem;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1.25rem;
+}
+.selectorHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.selectorHeader h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.selectorBuscador {
+  flex: 1;
+  min-width: 0;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+}
+.selectorBuscador::placeholder {
+  color: var(--muted);
+}
+.selectorClose {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.25rem;
+}
+.selectorClose:hover {
+  color: var(--text);
+}
+.selectorLista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.selectorItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem;
+  border-radius: 0.625rem;
+  background: var(--chip);
+  text-decoration: none;
+  color: var(--text);
+}
+.selectorItem:hover {
+  background: var(--surface-2);
+}
+.selectorCantidad {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.nombre {
+  font-weight: 700;
+}
+
+.club {
+  font-size: 0.8rem;
+  color: var(--text-2);
+}

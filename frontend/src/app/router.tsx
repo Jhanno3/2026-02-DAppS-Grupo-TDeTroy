@@ -9,6 +9,9 @@ import { CarteraPage } from '../features/cartera/CarteraPage'
 import { MovimientosPage } from '../features/cartera/MovimientosPage'
 import { MercadoPage } from '../features/mercado/MercadoPage'
 import { P2PPage } from '../features/p2p/P2PPage'
+import { SubastasPage } from '../features/subastas/SubastasPage'
+import { SubastaDetailPage } from '../features/subastas/SubastaDetailPage'
+import { CrearSubastaPage } from '../features/subastas/CrearSubastaPage'
 import { AdminRoute } from '../features/admin/AdminRoute'
 import { AdminJugadoresPage } from '../features/admin/AdminJugadoresPage'
 import { JugadorFormPage } from '../features/admin/JugadorFormPage'
@@ -26,6 +29,13 @@ export const router = createBrowserRouter([
       { path: 'p2p', element: <P2PPage /> },
       { path: 'jugadores/:id', element: <JugadorDetailPage /> },
       { path: 'jugadores/:id/p2p', element: <OfertaP2PJugadorPage /> },
+      { path: 'subastas', element: <SubastasPage /> },
+      { path: 'subastas/:id', element: <SubastaDetailPage /> },
+      {
+        path: 'jugadores/:id/subasta',
+        element: <RequireAuth />,
+        children: [{ index: true, element: <CrearSubastaPage /> }],
+      },
       {
         path: 'cartera',
         element: <RequireAuth />,

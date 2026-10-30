@@ -7,6 +7,7 @@ import {
   listarCotizaciones,
   listarJugadores,
   listarMercado,
+  obtenerEstadisticas,
   obtenerJugador,
 } from './jugadores'
 
@@ -140,6 +141,33 @@ describe('api/jugadores', () => {
         2,
         '/jugadores/mercado?pagina=0&tamanio=50&orden=precio-desc',
       )
+    })
+  })
+
+  describe('obtenerEstadisticas', () => {
+    it('pide GET /jugadores/{id}/estadisticas y devuelve el acumulado', async () => {
+      const estadisticas = {
+        partidosJugados: 9,
+        minutosJugados: 503,
+        goles: 2,
+        asistencias: 3,
+        figuraDelPartido: 0,
+        tarjetasAmarillas: 1,
+        tarjetasRojas: 0,
+        fechaActualizacion: '2026-10-29T19:43:00Z',
+      }
+      vi.mocked(client.apiFetch).mockResolvedValue(estadisticas)
+
+      expect(await obtenerEstadisticas('jugador-1')).toEqual(estadisticas)
+      expect(client.apiFetch).toHaveBeenCalledWith(
+        '/jugadores/jugador-1/estadisticas',
+      )
+    })
+
+    it('con 204 (todavía sin datos de rendimiento) devuelve null, no undefined', async () => {
+      vi.mocked(client.apiFetch).mockResolvedValue(undefined)
+
+      expect(await obtenerEstadisticas('jugador-1')).toBeNull()
     })
   })
 })

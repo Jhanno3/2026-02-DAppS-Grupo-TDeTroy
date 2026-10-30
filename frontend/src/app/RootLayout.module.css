@@ -1,19 +1,96 @@
+.layout {
+  min-height: 100vh;
+  background: var(--t-bg);
+  color: var(--t-text);
+}
+
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid light-dark(#e2e2e2, #2f2f2f);
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 32px;
+  border-bottom: 1px solid var(--t-line);
+  font-family: var(--t-font);
+}
+
+.izquierda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 28px;
+}
+
+.marca {
+  color: var(--t-text);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
 }
 
 .nav {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 0.9rem;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
-.nav button {
-  font: inherit;
+.link {
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--t-muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.link:hover {
+  color: var(--t-text);
+}
+
+.linkActivo {
+  background: var(--t-chip);
+  color: var(--t-text);
+}
+
+.derecha {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.usuario {
+  color: var(--t-muted);
+  font-size: 13px;
+}
+
+.botonSecundario,
+.botonPrimario {
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  text-decoration: none;
   cursor: pointer;
+}
+
+.botonSecundario {
+  border: 1px solid var(--t-line-strong);
+  background: transparent;
+  color: var(--t-text);
+}
+
+.botonSecundario:hover {
+  border-color: var(--t-muted);
+}
+
+.botonPrimario {
+  border: 1px solid var(--t-accent);
+  background: var(--t-accent);
+  color: var(--t-on-accent);
+  font-weight: 600;
+}
+
+.botonPrimario:hover {
+  background: var(--t-accent-hover);
 }

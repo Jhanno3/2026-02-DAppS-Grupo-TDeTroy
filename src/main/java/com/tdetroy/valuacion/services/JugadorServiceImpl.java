@@ -62,6 +62,7 @@ public class JugadorServiceImpl implements JugadorService {
     private final CotizacionHistoricaRepository cotizacionHistoricaRepository;
     private final MovimientoRepository movimientoRepository;
     private final AuditoriaService auditoriaService;
+    private final SubastaService subastaService;
     private final BigDecimal valorInicial;
 
     public JugadorServiceImpl(
@@ -72,7 +73,9 @@ public class JugadorServiceImpl implements JugadorService {
             CotizacionHistoricaRepository cotizacionHistoricaRepository,
             MovimientoRepository movimientoRepository,
             AuditoriaService auditoriaService,
+            SubastaService subastaService,
             @Value("${app.cotizacion.valor-inicial}") BigDecimal valorInicial) {
+        this.subastaService = subastaService;
         this.jugadorRepository = jugadorRepository;
         this.ofertaP2PRepository = ofertaP2PRepository;
         this.tenenciaTokenRepository = tenenciaTokenRepository;
@@ -320,6 +323,9 @@ public class JugadorServiceImpl implements JugadorService {
                                                 ENTIDAD_AUDITADA, jugadorId));
 
         cancelarOfertasAbiertasDe(jugadorId);
+        // UC-18: igual que las ofertas, las subastas activas se cancelan (tokens al vendedor,
+        // saldo al mejor postor) antes de compensar, para que la tenencia quede completa.
+        subastaService.cancelarActivasDe(jugadorId);
         BigDecimal cotizacionReferencia = cotizacionVigenteDe(jugadorId);
         List<CompensacionBaja> compensaciones =
                 compensarTenenciasDe(jugadorId, cotizacionReferencia);

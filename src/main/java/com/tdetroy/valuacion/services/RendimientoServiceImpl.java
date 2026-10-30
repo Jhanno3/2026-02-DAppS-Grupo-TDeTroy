@@ -1,9 +1,11 @@
 package com.tdetroy.valuacion.services;
 
 import com.tdetroy.valuacion.common.SemanaIso;
+import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
 import com.tdetroy.valuacion.entity.JugadorEntity;
 import com.tdetroy.valuacion.entity.RendimientoAcumuladoWhoScoredEntity;
 import com.tdetroy.valuacion.entity.RendimientoPartidoEntity;
+import com.tdetroy.valuacion.model.EstadisticasTemporada;
 import com.tdetroy.valuacion.model.EstadoJugador;
 import com.tdetroy.valuacion.model.FuenteResultado;
 import com.tdetroy.valuacion.model.Jugador;
@@ -333,6 +335,35 @@ public class RendimientoServiceImpl implements RendimientoService {
             delta.put(entry.getKey(), diferencia.signum() < 0 ? BigDecimal.ZERO : diferencia);
         }
         return delta;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<EstadisticasTemporada> obtenerEstadisticasTemporada(UUID jugadorId) {
+        if (!jugadorRepository.existsById(jugadorId)) {
+            throw new RecursoNoEncontradoException("Jugador", jugadorId);
+        }
+        return rendimientoAcumuladoWhoScoredRepository
+                .findById(jugadorId)
+                .map(RendimientoAcumuladoWhoScoredEntity::aModelo)
+                .map(this::aEstadisticas);
+    }
+
+    private EstadisticasTemporada aEstadisticas(RendimientoAcumuladoWhoScored snapshot) {
+        Map<String, BigDecimal> metricas = parsearComoBigDecimal(snapshot.getMetricas());
+        return new EstadisticasTemporada(
+                entero(metricas, "apps"),
+                entero(metricas, "minsPlayed"),
+                entero(metricas, "goals"),
+                entero(metricas, "assists"),
+                entero(metricas, "manOfTheMatch"),
+                entero(metricas, "yellowCard"),
+                entero(metricas, "redCard"),
+                snapshot.getFechaActualizacion());
+    }
+
+    private static int entero(Map<String, BigDecimal> metricas, String clave) {
+        return metricas.getOrDefault(clave, BigDecimal.ZERO).intValue();
     }
 
     private Map<String, BigDecimal> parsearComoBigDecimal(String json) {

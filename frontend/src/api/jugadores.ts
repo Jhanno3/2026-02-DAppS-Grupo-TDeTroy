@@ -138,3 +138,27 @@ export interface CotizacionResponse {
 export function listarCotizaciones(id: string): Promise<CotizacionResponse[]> {
   return apiFetch<CotizacionResponse[]>(`/jugadores/${id}/cotizaciones`)
 }
+
+export interface EstadisticasTemporadaResponse {
+  partidosJugados: number
+  minutosJugados: number
+  goles: number
+  asistencias: number
+  figuraDelPartido: number
+  tarjetasAmarillas: number
+  tarjetasRojas: number
+  fechaActualizacion: string
+}
+
+/**
+ * UC-07: acumulado de temporada del jugador (último snapshot de WhoScored). `null` si todavía no
+ * hay datos de rendimiento — el backend responde `204` sin cuerpo, no es un error.
+ */
+export async function obtenerEstadisticas(
+  id: string,
+): Promise<EstadisticasTemporadaResponse | null> {
+  const estadisticas = await apiFetch<
+    EstadisticasTemporadaResponse | undefined
+  >(`/jugadores/${id}/estadisticas`)
+  return estadisticas ?? null
+}

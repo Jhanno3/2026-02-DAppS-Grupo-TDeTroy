@@ -1,0 +1,47 @@
+/*
+ * Tokens de color del tema claro/oscuro (modeloHTML/ficha-jugador-*.html). Se activan con
+ * `data-tema` en un contenedor: hoy lo usan el header y la ficha del jugador; el resto de las
+ * pantallas sigue con su propia paleta oscura hasta migrarlas.
+ */
+[data-tema='oscuro'] {
+  color-scheme: dark;
+  --t-bg: #16140f;
+  --t-surface: #1e1b15;
+  --t-inset: #1a1712;
+  --t-line: #2e2a21;
+  --t-line-strong: #3e392d;
+  --t-chip: #26221a;
+  --t-text: #f1ebdd;
+  --t-muted: #ada48f;
+  --t-accent: #9ccb5b;
+  --t-accent-hover: #bde08a;
+  --t-on-accent: #16140f;
+  --t-accent-soft: #232a16;
+  --t-accent-border: #4a5e2a;
+  --t-halo: rgb(156 203 91 / 18%);
+  --t-down: #e8916a;
+}
+
+[data-tema='claro'] {
+  color-scheme: light;
+  --t-bg: #f3eee3;
+  --t-surface: #fbf8f1;
+  --t-inset: #f6f1e6;
+  --t-line: #e3dccb;
+  --t-line-strong: #cfc6b1;
+  --t-chip: #ebe4d4;
+  --t-text: #1c1a14;
+  --t-muted: #625b4c;
+  --t-accent: #3f7d0a;
+  --t-accent-hover: #2c5a05;
+  --t-on-accent: #f3eee3;
+  --t-accent-soft: #eaedd2;
+  --t-accent-border: #bfcb92;
+  --t-halo: rgb(63 125 10 / 15%);
+  --t-down: #b4441f;
+}
+
+:root {
+  --t-font: 'Space Grotesk', system-ui, sans-serif;
+  --t-mono: 'JetBrains Mono', ui-monospace, monospace;
+}

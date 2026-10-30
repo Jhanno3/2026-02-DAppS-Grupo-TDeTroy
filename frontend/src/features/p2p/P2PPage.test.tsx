@@ -75,6 +75,8 @@ describe('P2PPage', () => {
     vi.mocked(portfolioApi.obtenerPortfolio).mockResolvedValue({
       saldoVirtual: '1000.00',
       tenencias: [],
+      valorEnVenta: '0.00',
+      saldoEnPujas: '0.00',
       valorTotal: '1000.00',
     })
   })
@@ -201,6 +203,8 @@ describe('P2PPage', () => {
           valor: '0.00',
         },
       ],
+      valorEnVenta: '0.00',
+      saldoEnPujas: '0.00',
       valorTotal: '1000.00',
     })
     const user = userEvent.setup()
@@ -238,6 +242,8 @@ describe('P2PPage', () => {
           valor: '0.00',
         },
       ],
+      valorEnVenta: '0.00',
+      saldoEnPujas: '0.00',
       valorTotal: '1000.00',
     })
     const user = userEvent.setup()

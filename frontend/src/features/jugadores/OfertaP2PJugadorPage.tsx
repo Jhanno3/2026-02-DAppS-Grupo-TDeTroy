@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
@@ -9,11 +9,12 @@ import {
   publicarOferta,
   type OfertaResponse,
 } from '../../api/ofertas'
-import { obtenerJugador } from '../../api/jugadores'
+import { listarCotizaciones, obtenerJugador } from '../../api/jugadores'
 import { obtenerPortfolio } from '../../api/portfolio'
 import { ApiError } from '../../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Avatar } from '../../shared/components/Avatar'
+import { Toast } from '../../shared/components/Toast'
 import { formatMoney } from '../../shared/format'
 import styles from './OfertaP2PJugadorPage.module.css'
 
@@ -27,14 +28,18 @@ const formatoFechaHora = new Intl.DateTimeFormat('es-AR', {
  * adicional que convive con la compra/venta contra el sistema ({@link TradePanel}) sin
  * reemplazarla. El vendedor fija libremente, al publicar, el precio por token, la cantidad y un
  * tiempo límite en horas (si se cumple sin venderse, el sistema cancela la oferta automáticamente
- * y reintegra los tokens al vendedor) — el precio nunca es la cotización vigente del jugador.
+ * y reintegra los tokens al vendedor). El campo de precio arranca con la cotización vigente sólo
+ * como referencia: el vendedor puede fijar cualquier otro valor.
  */
 export function OfertaP2PJugadorPage() {
   const { id } = useParams<{ id: string }>()
   const { token, user, isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const [cantidadAPublicar, setCantidadAPublicar] = useState(1)
-  const [precioAPublicar, setPrecioAPublicar] = useState(1)
+  // null = el usuario todavía no tocó el campo: se muestra la cotización vigente como punto de
+  // partida (sólo referencia — el precio de la oferta lo fija libremente el vendedor, UC-17).
+  const [precioEditado, setPrecioEditado] = useState<number | null>(null)
+  const [ofertaCreada, setOfertaCreada] = useState(false)
   const [horasAPublicar, setHorasAPublicar] = useState(24)
   const [cantidadesAComprar, setCantidadesAComprar] = useState<
     Record<string, number>
@@ -52,6 +57,17 @@ export function OfertaP2PJugadorPage() {
     queryFn: () => listarOfertas(id),
     enabled: Boolean(id),
   })
+
+  const cotizaciones = useQuery({
+    queryKey: ['cotizaciones', id],
+    queryFn: () => listarCotizaciones(id!),
+    enabled: Boolean(id),
+  })
+
+  const cotizacionVigente = cotizaciones.data?.at(-1)
+    ? Number(cotizaciones.data.at(-1)!.valor)
+    : null
+  const precioAPublicar = precioEditado ?? cotizacionVigente ?? 1
 
   const portfolio = useQuery({
     queryKey: ['portfolio', 'me'],
@@ -81,7 +97,8 @@ export function OfertaP2PJugadorPage() {
     onSuccess: async () => {
       setError(null)
       setCantidadAPublicar(1)
-      setPrecioAPublicar(1)
+      setPrecioEditado(null)
+      setOfertaCreada(true)
       setHorasAPublicar(24)
       await invalidarTodo()
     },
@@ -126,6 +143,8 @@ export function OfertaP2PJugadorPage() {
           : 'No se pudo cancelar la oferta.',
       ),
   })
+
+  const cerrarAvisoOfertaCreada = useCallback(() => setOfertaCreada(false), [])
 
   function handlePublicar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -273,7 +292,7 @@ export function OfertaP2PJugadorPage() {
                       step={0.01}
                       value={precioAPublicar}
                       onChange={(e) =>
-                        setPrecioAPublicar(
+                        setPrecioEditado(
                           Math.max(
                             0.01,
                             Number.parseFloat(e.target.value) || 0.01,
@@ -281,6 +300,11 @@ export function OfertaP2PJugadorPage() {
                         )
                       }
                     />
+                    {cotizacionVigente !== null && (
+                      <span className={styles.referencia}>
+                        Cotización actual: {formatMoney(cotizacionVigente)}
+                      </span>
+                    )}
                   </label>
                   <label className={styles.label}>
                     Tiempo límite (horas)
@@ -310,6 +334,13 @@ export function OfertaP2PJugadorPage() {
             ))}
         </section>
       </main>
+
+      {ofertaCreada && (
+        <Toast
+          mensaje="Oferta creada exitosamente"
+          onClose={cerrarAvisoOfertaCreada}
+        />
+      )}
     </div>
   )
 }

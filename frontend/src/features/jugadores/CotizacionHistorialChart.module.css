@@ -1,0 +1,162 @@
+.sinDatos {
+  margin: 0;
+  color: var(--t-muted);
+  font-size: 14px;
+}
+
+.contenedor {
+  position: relative;
+  border-radius: 10px;
+  background: var(--t-inset);
+}
+
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  touch-action: pan-y;
+}
+
+.chart:focus-visible {
+  outline: 2px solid var(--t-accent);
+  outline-offset: 4px;
+  border-radius: 10px;
+}
+
+.grilla {
+  stroke: var(--t-line);
+  stroke-width: 1;
+}
+
+.grillaMedia {
+  stroke: var(--t-line-strong);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
+}
+
+.guia {
+  stroke: var(--t-line-strong);
+  stroke-width: 1;
+}
+
+.etiquetaEje {
+  fill: var(--t-muted);
+  font-family: var(--t-mono);
+  font-size: 11px;
+}
+
+.linea {
+  fill: none;
+  stroke: var(--t-accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.crosshair {
+  stroke: var(--t-line-strong);
+  stroke-width: 1;
+}
+
+.halo {
+  fill: var(--t-halo);
+}
+
+.marcador,
+.marcadorActivo {
+  fill: var(--t-accent);
+  stroke: var(--t-inset);
+  stroke-width: 2;
+}
+
+.etiquetaUltimo {
+  position: absolute;
+  transform: translate(calc(-100% - 14px), calc(-100% - 6px));
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--t-line);
+  color: var(--t-text);
+  font-family: var(--t-mono);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.unaSemana {
+  position: absolute;
+  top: 50%;
+  left: 24px;
+  max-width: 320px;
+  margin: 0;
+  transform: translateY(-50%);
+  color: var(--t-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+.tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 12px));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--t-line-strong);
+  border-radius: 8px;
+  background: var(--t-surface);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 18%);
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.tooltipSemana,
+.tooltipOrigen {
+  color: var(--t-muted);
+}
+
+.tooltipValor {
+  color: var(--t-text);
+  font-family: var(--t-mono);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.tabla {
+  margin-top: 8px;
+  color: var(--t-muted);
+  font-size: 13px;
+}
+
+.tabla summary {
+  cursor: pointer;
+}
+
+.tabla summary:hover {
+  color: var(--t-text);
+}
+
+.tabla table {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-family: var(--t-mono);
+}
+
+.tabla th,
+.tabla td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--t-line);
+  text-align: left;
+}
+
+.tabla th {
+  font-family: var(--t-font);
+  font-weight: 500;
+}
+
+.tabla td {
+  color: var(--t-text);
+}
