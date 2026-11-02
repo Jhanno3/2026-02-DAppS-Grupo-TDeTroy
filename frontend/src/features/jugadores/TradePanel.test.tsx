@@ -53,6 +53,7 @@ describe('TradePanel', () => {
       tenencias: [],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '0.00',
     })
   })
@@ -188,10 +189,14 @@ describe('TradePanel', () => {
           cantidad: 3,
           cotizacionVigente: '91.36',
           valor: '274.08',
+          precioPromedioCompra: '100.00',
+          gananciaPerdida: '0.00',
+          rentabilidad: '0.00',
         },
       ],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '274.08',
     })
     vi.mocked(tokensApi.venderTokens).mockResolvedValue({
@@ -229,10 +234,14 @@ describe('TradePanel', () => {
           cantidad: 3,
           cotizacionVigente: '100.00',
           valor: '300.00',
+          precioPromedioCompra: '100.00',
+          gananciaPerdida: '0.00',
+          rentabilidad: '0.00',
         },
       ],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '300.00',
     })
     const user = userEvent.setup()

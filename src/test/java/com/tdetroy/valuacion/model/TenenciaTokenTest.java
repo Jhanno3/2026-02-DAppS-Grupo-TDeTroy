@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.tdetroy.valuacion.common.exceptions.TenenciaInsuficienteException;
+import java.math.BigDecimal;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +54,7 @@ class TenenciaTokenTest {
     @Test
     void disponible_esCantidadMenosReservada() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
         tenencia.reservar(4);
 
         assertThat(tenencia.disponible()).isEqualTo(6);
@@ -65,8 +66,8 @@ class TenenciaTokenTest {
     void acreditar_sumaALaCantidad() {
         TenenciaToken tenencia = tenenciaVacia();
 
-        tenencia.acreditar(5);
-        tenencia.acreditar(3);
+        tenencia.acreditar(5, BigDecimal.TEN);
+        tenencia.acreditar(3, BigDecimal.TEN);
 
         assertThat(tenencia.getCantidad()).isEqualTo(8);
     }
@@ -75,14 +76,16 @@ class TenenciaTokenTest {
     void acreditar_cantidadCero_lanzaExcepcion() {
         TenenciaToken tenencia = tenenciaVacia();
 
-        assertThatIllegalArgumentException().isThrownBy(() -> tenencia.acreditar(0));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> tenencia.acreditar(0, BigDecimal.TEN));
     }
 
     @Test
     void acreditar_cantidadNegativa_lanzaExcepcion() {
         TenenciaToken tenencia = tenenciaVacia();
 
-        assertThatIllegalArgumentException().isThrownBy(() -> tenencia.acreditar(-1));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> tenencia.acreditar(-1, BigDecimal.TEN));
     }
 
     // ---- debitar ----
@@ -90,7 +93,7 @@ class TenenciaTokenTest {
     @Test
     void debitar_conDisponibleExacto_dejaCantidadEnCero() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
 
         tenencia.debitar(10);
 
@@ -100,7 +103,7 @@ class TenenciaTokenTest {
     @Test
     void debitar_queSuperaDisponible_lanzaTenenciaInsuficienteExceptionYNoMutaEstado() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
         tenencia.reservar(4);
 
         assertThatThrownBy(() -> tenencia.debitar(7))
@@ -112,7 +115,7 @@ class TenenciaTokenTest {
     @Test
     void debitar_cantidadCero_lanzaExcepcion() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
 
         assertThatIllegalArgumentException().isThrownBy(() -> tenencia.debitar(0));
     }
@@ -122,7 +125,7 @@ class TenenciaTokenTest {
     @Test
     void reservar_sumaACantidadReservada() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
 
         tenencia.reservar(6);
 
@@ -133,7 +136,7 @@ class TenenciaTokenTest {
     @Test
     void reservar_hastaExactamenteLoDisponible_permitido() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
 
         tenencia.reservar(10);
 
@@ -144,7 +147,7 @@ class TenenciaTokenTest {
     @Test
     void reservar_queSuperaDisponible_lanzaTenenciaInsuficienteExceptionYNoMutaEstado() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
 
         assertThatThrownBy(() -> tenencia.reservar(11))
                 .isInstanceOf(TenenciaInsuficienteException.class);
@@ -154,7 +157,7 @@ class TenenciaTokenTest {
     @Test
     void reservar_cantidadCero_lanzaExcepcion() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
 
         assertThatIllegalArgumentException().isThrownBy(() -> tenencia.reservar(0));
     }
@@ -164,7 +167,7 @@ class TenenciaTokenTest {
     @Test
     void liberarReserva_restaDeCantidadReservadaSinTocarCantidad() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
         tenencia.reservar(7);
 
         tenencia.liberarReserva(3);
@@ -176,7 +179,7 @@ class TenenciaTokenTest {
     @Test
     void liberarReserva_queSuperaCantidadReservada_lanzaExcepcion() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
         tenencia.reservar(5);
 
         assertThatIllegalArgumentException().isThrownBy(() -> tenencia.liberarReserva(6));
@@ -186,7 +189,7 @@ class TenenciaTokenTest {
     @Test
     void liberarReserva_cantidadCero_lanzaExcepcion() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
         tenencia.reservar(5);
 
         assertThatIllegalArgumentException().isThrownBy(() -> tenencia.liberarReserva(0));
@@ -197,7 +200,7 @@ class TenenciaTokenTest {
     @Test
     void ejecutarReserva_restaDeCantidadYDeCantidadReservadaALaVez() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
         tenencia.reservar(7);
 
         tenencia.ejecutarReserva(4);
@@ -209,7 +212,7 @@ class TenenciaTokenTest {
     @Test
     void ejecutarReserva_todaLaReserva_dejaAmbosCamposConsistentes() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
         tenencia.reservar(10);
 
         tenencia.ejecutarReserva(10);
@@ -221,7 +224,7 @@ class TenenciaTokenTest {
     @Test
     void ejecutarReserva_queSuperaCantidadReservada_lanzaExcepcion() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
         tenencia.reservar(5);
 
         assertThatIllegalArgumentException().isThrownBy(() -> tenencia.ejecutarReserva(6));
@@ -232,7 +235,7 @@ class TenenciaTokenTest {
     @Test
     void ejecutarReserva_cantidadCero_lanzaExcepcion() {
         TenenciaToken tenencia = tenenciaVacia();
-        tenencia.acreditar(10);
+        tenencia.acreditar(10, BigDecimal.TEN);
         tenencia.reservar(5);
 
         assertThatIllegalArgumentException().isThrownBy(() -> tenencia.ejecutarReserva(0));
@@ -244,12 +247,117 @@ class TenenciaTokenTest {
     void secuenciaDeOperaciones_nuncaDejaCantidadReservadaPorEncimaDeCantidad() {
         TenenciaToken tenencia = tenenciaVacia();
 
-        tenencia.acreditar(20);
+        tenencia.acreditar(20, BigDecimal.TEN);
         tenencia.reservar(15);
         tenencia.ejecutarReserva(5);
         tenencia.liberarReserva(2);
         tenencia.debitar(3);
 
         assertThat(tenencia.getCantidadReservada()).isLessThanOrEqualTo(tenencia.getCantidad());
+    }
+
+    // ---- costo de adquisición: precio promedio y ganancia/pérdida ----
+
+    @Test
+    void acreditar_sumaElCostoDeCompra() {
+        TenenciaToken tenencia = tenenciaVacia();
+
+        tenencia.acreditar(10, new BigDecimal("100"));
+
+        assertThat(tenencia.getCostoTotal()).isEqualByComparingTo("1000.00");
+        assertThat(tenencia.precioPromedioCompra()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    void acreditar_variasCompras_promediaPonderandoPorCantidad() {
+        TenenciaToken tenencia = tenenciaVacia();
+
+        tenencia.acreditar(10, new BigDecimal("100"));
+        tenencia.acreditar(10, new BigDecimal("120"));
+
+        // (1000 + 1200) / 20 = 110
+        assertThat(tenencia.precioPromedioCompra()).isEqualByComparingTo("110.00");
+    }
+
+    @Test
+    void acreditar_conPrecioCeroONegativo_lanzaExcepcion() {
+        TenenciaToken tenencia = tenenciaVacia();
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> tenencia.acreditar(1, BigDecimal.ZERO));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> tenencia.acreditar(1, new BigDecimal("-1")));
+    }
+
+    @Test
+    void gananciaPerdida_ejemploDelEnunciado() {
+        TenenciaToken tenencia = tenenciaVacia();
+        tenencia.acreditar(10, new BigDecimal("100"));
+
+        // Sube a 120: la posición vale 1200, ganancia 200 (+20%).
+        assertThat(tenencia.valorDisponible(new BigDecimal("120"))).isEqualByComparingTo("1200.00");
+        assertThat(tenencia.gananciaPerdida(new BigDecimal("120"))).isEqualByComparingTo("200.00");
+        assertThat(tenencia.rentabilidad(new BigDecimal("120"))).isEqualByComparingTo("20.00");
+        // Baja a 90: la posición vale 900, pérdida 100 (-10%).
+        assertThat(tenencia.gananciaPerdida(new BigDecimal("90"))).isEqualByComparingTo("-100.00");
+        assertThat(tenencia.rentabilidad(new BigDecimal("90"))).isEqualByComparingTo("-10.00");
+    }
+
+    @Test
+    void debitar_noCambiaElPrecioPromedioDeLoQueQueda() {
+        TenenciaToken tenencia = tenenciaVacia();
+        tenencia.acreditar(10, new BigDecimal("100"));
+        tenencia.acreditar(10, new BigDecimal("120"));
+
+        tenencia.debitar(5);
+
+        assertThat(tenencia.getCostoTotal()).isEqualByComparingTo("1650.00");
+        assertThat(tenencia.precioPromedioCompra()).isEqualByComparingTo("110.00");
+    }
+
+    @Test
+    void ejecutarReserva_descuentaElCostoProporcional() {
+        TenenciaToken tenencia = tenenciaVacia();
+        tenencia.acreditar(10, new BigDecimal("100"));
+        tenencia.reservar(4);
+
+        tenencia.ejecutarReserva(4);
+
+        assertThat(tenencia.getCostoTotal()).isEqualByComparingTo("600.00");
+        assertThat(tenencia.precioPromedioCompra()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    void venderTodo_dejaElCostoEnCeroExacto() {
+        TenenciaToken tenencia = tenenciaVacia();
+        tenencia.acreditar(3, new BigDecimal("3.33"));
+        tenencia.acreditar(1, new BigDecimal("0.01"));
+
+        tenencia.debitar(1);
+        tenencia.debitar(3);
+
+        assertThat(tenencia.getCostoTotal()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(tenencia.precioPromedioCompra()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void gananciaPerdida_sinRedondeoDelPromedio() {
+        // 3 tokens por 10.00 en total: el promedio redondeado es 3.33, pero el costo es 10.00.
+        TenenciaToken tenencia = tenenciaVacia();
+        tenencia.acreditar(1, new BigDecimal("3.34"));
+        tenencia.acreditar(2, new BigDecimal("3.33"));
+
+        assertThat(tenencia.gananciaPerdida(new BigDecimal("4"))).isEqualByComparingTo("2.00");
+    }
+
+    @Test
+    void reservar_noCuentaEnLaGananciaDeLoDisponible() {
+        TenenciaToken tenencia = tenenciaVacia();
+        tenencia.acreditar(10, new BigDecimal("100"));
+        tenencia.reservar(4);
+
+        // Disponibles: 6 tokens que costaron 600 y valen 720.
+        assertThat(tenencia.gananciaPerdida(new BigDecimal("120"))).isEqualByComparingTo("120.00");
+        assertThat(tenencia.valorReservado(new BigDecimal("120"))).isEqualByComparingTo("480.00");
     }
 }

@@ -66,6 +66,7 @@ describe('OfertaP2PJugadorPage', () => {
       tenencias: [],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '1000.00',
     })
   })
@@ -121,10 +122,14 @@ describe('OfertaP2PJugadorPage', () => {
           cantidad: 10,
           cotizacionVigente: null,
           valor: '0.00',
+          precioPromedioCompra: '100.00',
+          gananciaPerdida: '0.00',
+          rentabilidad: '0.00',
         },
       ],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '1000.00',
     })
     vi.mocked(ofertasApi.publicarOferta).mockResolvedValue({
@@ -171,10 +176,14 @@ describe('OfertaP2PJugadorPage', () => {
           cantidad: 10,
           cotizacionVigente: '104.39',
           valor: '1043.90',
+          precioPromedioCompra: '100.00',
+          gananciaPerdida: '0.00',
+          rentabilidad: '0.00',
         },
       ],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '2043.90',
     })
     vi.mocked(ofertasApi.publicarOferta).mockResolvedValue({
@@ -302,10 +311,14 @@ describe('OfertaP2PJugadorPage', () => {
           cantidad: 10,
           cotizacionVigente: null,
           valor: '0.00',
+          precioPromedioCompra: '100.00',
+          gananciaPerdida: '0.00',
+          rentabilidad: '0.00',
         },
       ],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '1000.00',
     })
     vi.mocked(ofertasApi.publicarOferta).mockRejectedValue(

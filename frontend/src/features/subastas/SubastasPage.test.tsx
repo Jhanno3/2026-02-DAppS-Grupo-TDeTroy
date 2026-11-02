@@ -70,10 +70,14 @@ describe('SubastasPage', () => {
           cantidad: 3,
           cotizacionVigente: '104.39',
           valor: '313.17',
+          precioPromedioCompra: '100.00',
+          gananciaPerdida: '0.00',
+          rentabilidad: '0.00',
         },
       ],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '1313.17',
     })
   })

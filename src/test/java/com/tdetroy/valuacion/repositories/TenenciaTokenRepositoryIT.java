@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.tdetroy.valuacion.entity.TenenciaTokenEntity;
 import com.tdetroy.valuacion.model.TenenciaToken;
 import com.tdetroy.valuacion.repositories.support.PostgresIntegrationTest;
+import java.math.BigDecimal;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,7 +90,7 @@ class TenenciaTokenRepositoryIT extends PostgresIntegrationTest {
     void findByUsuarioIdAndCantidadGreaterThan_soloTraeLasTenenciasConCantidadPositiva() {
         UUID usuarioId = UUID.randomUUID();
         TenenciaToken conTokens = TenenciaToken.abrir(usuarioId, UUID.randomUUID());
-        conTokens.acreditar(5);
+        conTokens.acreditar(5, BigDecimal.TEN);
         TenenciaToken sinTokens = TenenciaToken.abrir(usuarioId, UUID.randomUUID());
         tenenciaTokenRepository.saveAndFlush(TenenciaTokenEntity.desde(conTokens));
         tenenciaTokenRepository.saveAndFlush(TenenciaTokenEntity.desde(sinTokens));

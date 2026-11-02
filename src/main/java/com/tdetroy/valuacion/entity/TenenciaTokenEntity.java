@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -36,6 +37,9 @@ public class TenenciaTokenEntity {
     @Column(nullable = false)
     private int cantidadReservada;
 
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal costoTotal;
+
     /** Traduce {@code tenencia} a la fila que persiste {@code repositories/}. */
     public static TenenciaTokenEntity desde(TenenciaToken tenencia) {
         TenenciaTokenEntity entity = new TenenciaTokenEntity();
@@ -44,11 +48,13 @@ public class TenenciaTokenEntity {
         entity.jugadorId = tenencia.getJugadorId();
         entity.cantidad = tenencia.getCantidad();
         entity.cantidadReservada = tenencia.getCantidadReservada();
+        entity.costoTotal = tenencia.getCostoTotal();
         return entity;
     }
 
     /** Reconstruye el objeto de dominio a partir de esta fila ya persistida. */
     public TenenciaToken aModelo() {
-        return TenenciaToken.reconstruir(id, usuarioId, jugadorId, cantidad, cantidadReservada);
+        return TenenciaToken.reconstruir(
+                id, usuarioId, jugadorId, cantidad, cantidadReservada, costoTotal);
     }
 }

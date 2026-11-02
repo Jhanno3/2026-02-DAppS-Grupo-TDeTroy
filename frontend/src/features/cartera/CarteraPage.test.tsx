@@ -54,6 +54,7 @@ describe('CarteraPage', () => {
       tenencias: [],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '0.00',
     })
     vi.mocked(jugadoresApi.listarJugadores).mockResolvedValue([])
@@ -77,10 +78,14 @@ describe('CarteraPage', () => {
           cantidad: 1,
           cotizacionVigente: '91.36',
           valor: '91.36',
+          precioPromedioCompra: '100.00',
+          gananciaPerdida: '0.00',
+          rentabilidad: '0.00',
         },
       ],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '5000.00',
     })
     vi.mocked(jugadoresApi.listarJugadores).mockResolvedValue([
@@ -107,110 +112,88 @@ describe('CarteraPage', () => {
     expect(screen.getByText(/Inter Miami CF/)).toBeInTheDocument()
   })
 
-  it('calcula el costo promedio de compra ponderado por cantidad, ignorando ventas/recargas/compensaciones', async () => {
+  it('muestra el precio promedio y la ganancia/pérdida que calcula el backend', async () => {
     vi.mocked(portfolioApi.obtenerPortfolio).mockResolvedValue({
       saldoVirtual: '0.00',
       tenencias: [
         {
           jugadorId: 'j1',
           cantidad: 10,
-          cotizacionVigente: '150.00',
-          valor: '1500.00',
+          cotizacionVigente: '120.00',
+          valor: '1200.00',
+          precioPromedioCompra: '100.00',
+          gananciaPerdida: '200.00',
+          rentabilidad: '20.00',
         },
-      ],
-      valorEnVenta: '0.00',
-      saldoEnPujas: '0.00',
-      valorTotal: '1500.00',
-    })
-    vi.mocked(jugadoresApi.listarJugadores).mockResolvedValue([
-      {
-        id: 'j1',
-        nombre: 'Leonel Messi',
-        club: 'Inter Miami CF',
-        posicion: 'Delantero',
-        fechaNacimiento: '1987-06-24',
-        nacionalidad: 'Argentina',
-        liga: 'Major League Soccer',
-        estado: 'ACTIVO',
-        tokensDisponibles: 57,
-        fechaUltimaActualizacionRendimiento: null,
-        fotoUrl: null,
-      },
-    ])
-    vi.mocked(movimientosApi.listarMisMovimientos).mockResolvedValue([
-      // (5 × 100) + (5 × 120) = 1100 / 10 = costo promedio $110,00 -- la venta, la recarga y
-      // la compensación no cuentan para el promedio de compra.
-      {
-        id: 'm1',
-        jugadorId: 'j1',
-        tipo: 'COMPRA_SISTEMA',
-        cantidad: 5,
-        precioUnitario: '100.00',
-        montoTotal: '500.00',
-        contraparteUsuarioId: null,
-        fecha: '2026-02-01T00:00:00Z',
-      },
-      {
-        id: 'm2',
-        jugadorId: 'j1',
-        tipo: 'COMPRA_P2P',
-        cantidad: 5,
-        precioUnitario: '120.00',
-        montoTotal: '600.00',
-        contraparteUsuarioId: 'u2',
-        fecha: '2026-02-02T00:00:00Z',
-      },
-      {
-        id: 'm3',
-        jugadorId: 'j1',
-        tipo: 'VENTA_SISTEMA',
-        cantidad: 2,
-        precioUnitario: '140.00',
-        montoTotal: '280.00',
-        contraparteUsuarioId: null,
-        fecha: '2026-02-03T00:00:00Z',
-      },
-      {
-        id: 'm4',
-        jugadorId: 'j1',
-        tipo: 'RECARGA_SALDO',
-        cantidad: 0,
-        precioUnitario: '0',
-        montoTotal: '1000.00',
-        contraparteUsuarioId: null,
-        fecha: '2026-02-04T00:00:00Z',
-      },
-    ])
-
-    renderCartera()
-
-    expect(await screen.findByText('$ 110,00')).toBeInTheDocument()
-  })
-
-  it('sin compras registradas para el jugador, muestra "—" en vez de un costo promedio', async () => {
-    vi.mocked(portfolioApi.obtenerPortfolio).mockResolvedValue({
-      saldoVirtual: '0.00',
-      tenencias: [
         {
-          jugadorId: 'j1',
+          jugadorId: 'j2',
           cantidad: 10,
-          cotizacionVigente: '150.00',
-          valor: '1500.00',
+          cotizacionVigente: '90.00',
+          valor: '900.00',
+          precioPromedioCompra: '100.00',
+          gananciaPerdida: '-100.00',
+          rentabilidad: '-10.00',
         },
       ],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
-      valorTotal: '1500.00',
+      gananciaPerdida: '100.00',
+      valorTotal: '2100.00',
     })
     vi.mocked(jugadoresApi.listarJugadores).mockResolvedValue([])
-    vi.mocked(movimientosApi.listarMisMovimientos).mockResolvedValue([])
 
     renderCartera()
 
-    expect(
-      await screen.findByText('Costo promedio de compra'),
-    ).toBeInTheDocument()
-    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(await screen.findByText('+ $ 100,00')).toBeInTheDocument()
+    expect(screen.getAllByText('$ 100,00')).toHaveLength(2)
+    expect(screen.getByText(/\+ \$ 200,00 \(\+20,00 %\)/)).toBeInTheDocument()
+    expect(screen.getByText(/- \$ 100,00 \(-10,00 %\)/)).toBeInTheDocument()
+  })
+
+  it('acepta los montos como números JSON, que es como los serializa el backend', async () => {
+    // Jackson manda BigDecimal como número (`0.00` → 0), no como string.
+    const n = (valor: number) => valor as unknown as string
+    vi.mocked(portfolioApi.obtenerPortfolio).mockResolvedValue({
+      saldoVirtual: n(0),
+      tenencias: [
+        {
+          jugadorId: 'j1',
+          cantidad: 10,
+          cotizacionVigente: n(90),
+          valor: n(900),
+          precioPromedioCompra: n(100),
+          gananciaPerdida: n(-100),
+          rentabilidad: n(-10),
+        },
+      ],
+      valorEnVenta: n(0),
+      saldoEnPujas: n(0),
+      gananciaPerdida: n(-100),
+      valorTotal: n(900),
+    })
+    vi.mocked(jugadoresApi.listarJugadores).mockResolvedValue([])
+
+    renderCartera()
+
+    expect(await screen.findByText('- $ 100,00')).toBeInTheDocument()
+    expect(screen.getByText(/- \$ 100,00 \(-10,00 %\)/)).toBeInTheDocument()
+  })
+
+  it('no pide el historial de movimientos para calcular nada', async () => {
+    vi.mocked(portfolioApi.obtenerPortfolio).mockResolvedValue({
+      saldoVirtual: '0.00',
+      tenencias: [],
+      valorEnVenta: '0.00',
+      saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
+      valorTotal: '0.00',
+    })
+    vi.mocked(jugadoresApi.listarJugadores).mockResolvedValue([])
+
+    renderCartera()
+
+    await screen.findByText(/Todavía no tenés tokens/)
+    expect(movimientosApi.listarMisMovimientos).not.toHaveBeenCalled()
   })
 
   it('una tenencia de un jugador que ya no está en el catálogo, no revienta la página', async () => {
@@ -222,10 +205,14 @@ describe('CarteraPage', () => {
           cantidad: 1,
           cotizacionVigente: '100.00',
           valor: '100.00',
+          precioPromedioCompra: '100.00',
+          gananciaPerdida: '0.00',
+          rentabilidad: '0.00',
         },
       ],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '100.00',
     })
     vi.mocked(jugadoresApi.listarJugadores).mockResolvedValue([])
@@ -264,6 +251,7 @@ describe('CarteraPage — En venta en P2P', () => {
       tenencias: [],
       valorEnVenta: '104.39',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '604.39',
     })
     vi.mocked(jugadoresApi.listarJugadores).mockResolvedValue([
@@ -351,6 +339,7 @@ describe('CarteraPage — Subastas en curso', () => {
       tenencias: [],
       valorEnVenta: '0.00',
       saldoEnPujas: '220.00',
+      gananciaPerdida: '0.00',
       valorTotal: '1000.00',
     })
   })

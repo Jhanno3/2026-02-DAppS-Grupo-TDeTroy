@@ -1,10 +1,7 @@
-package com.tdetroy.valuacion.services;
+package com.tdetroy.valuacion.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.tdetroy.valuacion.entity.PesoMetricaEntity;
-import com.tdetroy.valuacion.model.EstrategiaCotizacion;
-import com.tdetroy.valuacion.model.SentidoMetrica;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -34,10 +31,9 @@ class RendimientoActualCalculatorTest {
     @Test
     void conRatingNeutroDeSeisPuntos_retornaCero() {
         Map<String, BigDecimal> semanaActual = Map.of("rating", new BigDecimal("6.0"));
-        PesoMetricaEntity pesoRating = new PesoMetricaEntity();
-        pesoRating.setClave("rating");
-        pesoRating.setPeso(new BigDecimal("1.0"));
-        pesoRating.setActivo(true);
+        PesoMetrica pesoRating =
+                PesoMetrica.configurar(
+                        "rating", new BigDecimal("1.0"), true, SentidoMetrica.POSITIVO);
 
         BigDecimal puntaje =
                 calculator.calcularPuntaje(Map.of(), semanaActual, List.of(pesoRating));
@@ -49,10 +45,9 @@ class RendimientoActualCalculatorTest {
     @Test
     void conRatingSobresalienteDeDiez_retornaUno() {
         Map<String, BigDecimal> semanaActual = Map.of("rating", new BigDecimal("10.0"));
-        PesoMetricaEntity pesoRating = new PesoMetricaEntity();
-        pesoRating.setClave("rating");
-        pesoRating.setPeso(new BigDecimal("1.0"));
-        pesoRating.setActivo(true);
+        PesoMetrica pesoRating =
+                PesoMetrica.configurar(
+                        "rating", new BigDecimal("1.0"), true, SentidoMetrica.POSITIVO);
 
         BigDecimal puntaje =
                 calculator.calcularPuntaje(Map.of(), semanaActual, List.of(pesoRating));
@@ -64,10 +59,9 @@ class RendimientoActualCalculatorTest {
     @Test
     void conRatingBajoDeDos_retornaMenosUno() {
         Map<String, BigDecimal> semanaActual = Map.of("rating", new BigDecimal("2.0"));
-        PesoMetricaEntity pesoRating = new PesoMetricaEntity();
-        pesoRating.setClave("rating");
-        pesoRating.setPeso(new BigDecimal("1.0"));
-        pesoRating.setActivo(true);
+        PesoMetrica pesoRating =
+                PesoMetrica.configurar(
+                        "rating", new BigDecimal("1.0"), true, SentidoMetrica.POSITIVO);
 
         BigDecimal puntaje =
                 calculator.calcularPuntaje(Map.of(), semanaActual, List.of(pesoRating));
@@ -80,15 +74,13 @@ class RendimientoActualCalculatorTest {
     void conGolesYAsistencias_calculaPromedioPonderadoPositivo() {
         Map<String, BigDecimal> semanaActual =
                 Map.of("goles", new BigDecimal("2"), "asistencias", new BigDecimal("1"));
-        PesoMetricaEntity pesoGoles = new PesoMetricaEntity();
-        pesoGoles.setClave("goles");
-        pesoGoles.setPeso(new BigDecimal("2.0"));
-        pesoGoles.setActivo(true);
+        PesoMetrica pesoGoles =
+                PesoMetrica.configurar(
+                        "goles", new BigDecimal("2.0"), true, SentidoMetrica.POSITIVO);
 
-        PesoMetricaEntity pesoAsistencias = new PesoMetricaEntity();
-        pesoAsistencias.setClave("asistencias");
-        pesoAsistencias.setPeso(new BigDecimal("1.0"));
-        pesoAsistencias.setActivo(true);
+        PesoMetrica pesoAsistencias =
+                PesoMetrica.configurar(
+                        "asistencias", new BigDecimal("1.0"), true, SentidoMetrica.POSITIVO);
 
         BigDecimal puntaje =
                 calculator.calcularPuntaje(
@@ -103,11 +95,9 @@ class RendimientoActualCalculatorTest {
     @Test
     void conMetricaDeSentidoNegativo_invierteElSigno() {
         Map<String, BigDecimal> semanaActual = Map.of("redCard", new BigDecimal("1"));
-        PesoMetricaEntity pesoRedCard = new PesoMetricaEntity();
-        pesoRedCard.setClave("redCard");
-        pesoRedCard.setPeso(new BigDecimal("1.0"));
-        pesoRedCard.setActivo(true);
-        pesoRedCard.setSentido(SentidoMetrica.NEGATIVO);
+        PesoMetrica pesoRedCard =
+                PesoMetrica.configurar(
+                        "redCard", new BigDecimal("1.0"), true, SentidoMetrica.NEGATIVO);
 
         BigDecimal puntaje =
                 calculator.calcularPuntaje(Map.of(), semanaActual, List.of(pesoRedCard));

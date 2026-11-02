@@ -42,6 +42,18 @@ public interface CotizacionHistoricaRepository
     Optional<CotizacionHistoricaEntity> findTopByJugadorIdAndSemanaOrderByFechaCalculoDesc(
             UUID jugadorId, String semana);
 
+    /**
+     * Última cotización de {@code estrategia} de una semana anterior a {@code semana} (formato
+     * {@code yyyy-Www}, que ordena bien como texto): base del recálculo de {@code semana}.
+     */
+    Optional<CotizacionHistoricaEntity>
+            findTopByJugadorIdAndEstrategiaAndSemanaLessThanOrderByFechaCalculoDesc(
+                    UUID jugadorId, EstrategiaCotizacion estrategia, String semana);
+
+    /** Igual que la anterior, de cualquier estrategia. */
+    Optional<CotizacionHistoricaEntity> findTopByJugadorIdAndSemanaLessThanOrderByFechaCalculoDesc(
+            UUID jugadorId, String semana);
+
     Optional<CotizacionHistoricaEntity>
             findTopByJugadorIdAndSemanaAndEstrategiaOrderByFechaCalculoDesc(
                     UUID jugadorId, String semana, EstrategiaCotizacion estrategia);

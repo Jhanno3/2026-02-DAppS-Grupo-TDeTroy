@@ -251,7 +251,7 @@ public class SubastaServiceImpl implements SubastaService {
         TenenciaToken tenenciaVendedor = obtenerOAbrirTenencia(vendedorId, subasta.getJugadorId());
         tenenciaVendedor.ejecutarReserva(cantidad);
         TenenciaToken tenenciaGanador = obtenerOAbrirTenencia(ganadorId, subasta.getJugadorId());
-        tenenciaGanador.acreditar(cantidad);
+        tenenciaGanador.acreditar(cantidad, precio);
         tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenenciaVendedor));
         tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenenciaGanador));
 

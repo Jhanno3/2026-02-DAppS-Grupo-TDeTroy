@@ -1,6 +1,8 @@
 package com.tdetroy.valuacion.model;
 
+import com.tdetroy.valuacion.common.Monetario;
 import com.tdetroy.valuacion.common.exceptions.TenenciaInsuficienteException;
+import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.Getter;
@@ -14,6 +16,12 @@ import lombok.Getter;
  * #liberarReserva} y {@link #ejecutarReserva}, que validan la invariante {@code cantidadReservada ≤
  * cantidad} en la propia entidad (constitution.md §2) — mismo criterio que la invariante de 100
  * tokens en {@link Jugador}, nunca sólo validada en el Service que las invoca.
+ *
+ * <p><b>Costo de adquisición (costo promedio ponderado):</b> {@code costoTotal} es lo que el
+ * usuario pagó por los {@code cantidad} tokens que tiene hoy. Cada compra suma {@code cantidad ×
+ * precio pagado}; cada salida de tokens ({@link #debitar}, {@link #ejecutarReserva}) descuenta la
+ * parte proporcional, así que vender nunca cambia el {@link #precioPromedioCompra()} de lo que
+ * queda. Reservar/liberar no lo tocan: los tokens reservados siguen siendo del usuario.
  */
 @Getter
 public class TenenciaToken {
@@ -23,6 +31,7 @@ public class TenenciaToken {
     private final UUID jugadorId;
     private int cantidad;
     private int cantidadReservada;
+    private BigDecimal costoTotal;
 
     private TenenciaToken(UUID usuarioId, UUID jugadorId) {
         validarCampos(usuarioId, jugadorId);
@@ -32,6 +41,7 @@ public class TenenciaToken {
         this.jugadorId = jugadorId;
         this.cantidad = 0;
         this.cantidadReservada = 0;
+        this.costoTotal = Monetario.CERO;
     }
 
     /**
@@ -44,12 +54,18 @@ public class TenenciaToken {
     }
 
     private TenenciaToken(
-            UUID id, UUID usuarioId, UUID jugadorId, int cantidad, int cantidadReservada) {
+            UUID id,
+            UUID usuarioId,
+            UUID jugadorId,
+            int cantidad,
+            int cantidadReservada,
+            BigDecimal costoTotal) {
         this.id = id;
         this.usuarioId = usuarioId;
         this.jugadorId = jugadorId;
         this.cantidad = cantidad;
         this.cantidadReservada = cantidadReservada;
+        this.costoTotal = costoTotal;
     }
 
     /**
@@ -58,8 +74,13 @@ public class TenenciaToken {
      * diferencia de {@link #abrir}, no valida las invariantes de alta.
      */
     public static TenenciaToken reconstruir(
-            UUID id, UUID usuarioId, UUID jugadorId, int cantidad, int cantidadReservada) {
-        return new TenenciaToken(id, usuarioId, jugadorId, cantidad, cantidadReservada);
+            UUID id,
+            UUID usuarioId,
+            UUID jugadorId,
+            int cantidad,
+            int cantidadReservada,
+            BigDecimal costoTotal) {
+        return new TenenciaToken(id, usuarioId, jugadorId, cantidad, cantidadReservada, costoTotal);
     }
 
     /** Cantidad disponible para venta al sistema o para publicar en una nueva oferta P2P. */
@@ -68,18 +89,29 @@ public class TenenciaToken {
     }
 
     /**
-     * Acredita {@code cantidad} a la tenencia (compra al sistema, compra P2P, reintegro por
-     * cancelación de oferta o por baja de jugador).
+     * Acredita {@code cantidad} tokens comprados a {@code precioUnitario} (compra al sistema,
+     * compra P2P o adjudicación de subasta): suma {@code cantidad × precioUnitario} al costo de
+     * adquisición.
      *
-     * @throws IllegalArgumentException si {@code cantidad} no es mayor a cero
+     * @throws IllegalArgumentException si {@code cantidad} no es mayor a cero, o si {@code
+     *     precioUnitario} no es mayor a cero
      */
-    public void acreditar(int cantidad) {
+    public void acreditar(int cantidad, BigDecimal precioUnitario) {
         requirePositivo(cantidad, "cantidad");
+        Objects.requireNonNull(precioUnitario, "precioUnitario no puede ser null");
+        if (precioUnitario.signum() <= 0) {
+            throw new IllegalArgumentException(
+                    "precioUnitario debe ser mayor a cero, fue " + precioUnitario);
+        }
         this.cantidad += cantidad;
+        this.costoTotal =
+                Monetario.escalar(
+                        costoTotal.add(precioUnitario.multiply(BigDecimal.valueOf(cantidad))));
     }
 
     /**
-     * Debita {@code cantidad} de la tenencia (venta al sistema, UC-10).
+     * Debita {@code cantidad} de la tenencia (venta al sistema, UC-10; retiro por baja de jugador),
+     * descontando su parte proporcional del costo de adquisición.
      *
      * @throws IllegalArgumentException si {@code cantidad} no es mayor a cero
      * @throws TenenciaInsuficienteException si {@code cantidad} supera {@link #disponible()}
@@ -89,7 +121,7 @@ public class TenenciaToken {
         if (cantidad > disponible()) {
             throw new TenenciaInsuficienteException(cantidad, disponible());
         }
-        this.cantidad -= cantidad;
+        retirar(cantidad);
     }
 
     /**
@@ -127,7 +159,7 @@ public class TenenciaToken {
     /**
      * Ejecuta {@code cantidad} de la reserva: sale de la tenencia por completo (venta P2P
      * concretada contra la oferta del vendedor, UC-17) — descuenta {@code cantidad} y {@code
-     * cantidadReservada} a la vez.
+     * cantidadReservada} a la vez, y la parte proporcional del costo de adquisición.
      *
      * @throws IllegalArgumentException si {@code cantidad} no es mayor a cero, o si supera {@code
      *     cantidadReservada}
@@ -139,8 +171,88 @@ public class TenenciaToken {
                     "cantidad a ejecutar (%d) no puede superar cantidadReservada actual (%d)"
                             .formatted(cantidad, cantidadReservada));
         }
-        this.cantidad -= cantidad;
+        retirar(cantidad);
         this.cantidadReservada -= cantidad;
+    }
+
+    /**
+     * Precio promedio pagado por token ({@code costoTotal / cantidad}); cero si la tenencia está
+     * vacía.
+     */
+    public BigDecimal precioPromedioCompra() {
+        if (cantidad == 0) {
+            return Monetario.CERO;
+        }
+        return costoTotal.divide(
+                BigDecimal.valueOf(cantidad), Monetario.ESCALA, Monetario.REDONDEO);
+    }
+
+    /** Valor de mercado de los tokens disponibles a {@code cotizacion}. */
+    public BigDecimal valorDisponible(BigDecimal cotizacion) {
+        return valorizar(cotizacion, disponible());
+    }
+
+    /** Valor de mercado de los tokens reservados (ofertas P2P / subastas) a {@code cotizacion}. */
+    public BigDecimal valorReservado(BigDecimal cotizacion) {
+        return valorizar(cotizacion, cantidadReservada);
+    }
+
+    /**
+     * Ganancia (positiva) o pérdida (negativa) no realizada de los tokens disponibles: valor a
+     * {@code cotizacion} menos lo que costaron. Ej.: 10 tokens comprados a 100 con cotización 120 →
+     * {@code 1200 - 1000 = +200}.
+     */
+    public BigDecimal gananciaPerdida(BigDecimal cotizacion) {
+        return valorDisponible(cotizacion).subtract(costoDisponible());
+    }
+
+    /**
+     * Rentabilidad porcentual de los tokens disponibles ({@code gananciaPerdida / costo × 100});
+     * cero si no tienen costo registrado.
+     */
+    public BigDecimal rentabilidad(BigDecimal cotizacion) {
+        BigDecimal costo = costoDisponible();
+        if (costo.signum() == 0) {
+            return Monetario.CERO;
+        }
+        return gananciaPerdida(cotizacion)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(costo, Monetario.ESCALA, Monetario.REDONDEO);
+    }
+
+    /**
+     * Costo de adquisición de los tokens disponibles: la parte proporcional de {@code costoTotal}
+     * (no {@code precioPromedio × disponibles}, que arrastraría el redondeo del promedio).
+     */
+    private BigDecimal costoDisponible() {
+        return costoProporcional(disponible());
+    }
+
+    /**
+     * Saca {@code cantidad} tokens descontando su costo proporcional; si la tenencia queda vacía,
+     * el costo vuelve a cero exacto (sin residuos de redondeo).
+     */
+    private void retirar(int cantidadRetirada) {
+        this.costoTotal = costoProporcional(cantidad - cantidadRetirada);
+        this.cantidad -= cantidadRetirada;
+    }
+
+    /** {@code costoTotal × parte / cantidad}, redondeado a escala monetaria. */
+    private BigDecimal costoProporcional(int parte) {
+        if (parte == cantidad) {
+            return costoTotal;
+        }
+        if (parte == 0) {
+            return Monetario.CERO;
+        }
+        return costoTotal
+                .multiply(BigDecimal.valueOf(parte))
+                .divide(BigDecimal.valueOf(cantidad), Monetario.ESCALA, Monetario.REDONDEO);
+    }
+
+    private static BigDecimal valorizar(BigDecimal cotizacion, int cantidad) {
+        Objects.requireNonNull(cotizacion, "cotizacion no puede ser null");
+        return Monetario.escalar(cotizacion.multiply(BigDecimal.valueOf(cantidad)));
     }
 
     private static void validarCampos(UUID usuarioId, UUID jugadorId) {

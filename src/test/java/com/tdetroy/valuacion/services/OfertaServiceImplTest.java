@@ -96,7 +96,7 @@ class OfertaServiceImplTest {
     private void stubTenenciaVendedor(int cantidad, int cantidadReservada) {
         TenenciaToken tenencia = TenenciaToken.abrir(vendedorId, jugadorId);
         if (cantidad > 0) {
-            tenencia.acreditar(cantidad);
+            tenencia.acreditar(cantidad, BigDecimal.TEN);
         }
         if (cantidadReservada > 0) {
             tenencia.reservar(cantidadReservada);
