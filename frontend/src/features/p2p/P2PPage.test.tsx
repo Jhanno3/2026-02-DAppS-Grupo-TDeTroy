@@ -77,6 +77,7 @@ describe('P2PPage', () => {
       tenencias: [],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '1000.00',
     })
   })
@@ -201,10 +202,14 @@ describe('P2PPage', () => {
           cantidad: 8,
           cotizacionVigente: null,
           valor: '0.00',
+          precioPromedioCompra: '100.00',
+          gananciaPerdida: '0.00',
+          rentabilidad: '0.00',
         },
       ],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '1000.00',
     })
     const user = userEvent.setup()
@@ -240,10 +245,14 @@ describe('P2PPage', () => {
           cantidad: 8,
           cotizacionVigente: null,
           valor: '0.00',
+          precioPromedioCompra: '100.00',
+          gananciaPerdida: '0.00',
+          rentabilidad: '0.00',
         },
       ],
       valorEnVenta: '0.00',
       saldoEnPujas: '0.00',
+      gananciaPerdida: '0.00',
       valorTotal: '1000.00',
     })
     const user = userEvent.setup()

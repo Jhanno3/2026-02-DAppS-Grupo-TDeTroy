@@ -1,7 +1,5 @@
-package com.tdetroy.valuacion.services;
+package com.tdetroy.valuacion.model;
 
-import com.tdetroy.valuacion.entity.PesoMetricaEntity;
-import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -23,5 +21,5 @@ public interface EstrategiaCotizacionCalculator {
     BigDecimal calcularPuntaje(
             Map<String, Map<String, BigDecimal>> metricasPorSemana,
             Map<String, BigDecimal> metricasSemanaActual,
-            List<PesoMetricaEntity> pesosActivos);
+            List<PesoMetrica> pesosActivos);
 }

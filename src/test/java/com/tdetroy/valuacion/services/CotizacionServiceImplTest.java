@@ -23,6 +23,7 @@ import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.FuenteResultado;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
+import com.tdetroy.valuacion.model.SentidoMetrica;
 import com.tdetroy.valuacion.repositories.ConfiguracionCotizacionRepository;
 import com.tdetroy.valuacion.repositories.CotizacionHistoricaRepository;
 import com.tdetroy.valuacion.repositories.JugadorRepository;
@@ -98,7 +99,6 @@ class CotizacionServiceImplTest {
                 auditoriaService,
                 configuracionCotizacionRepository,
                 new ObjectMapper(),
-                List.of(new RendimientoTemporadaCalculator(), new RendimientoActualCalculator()),
                 self,
                 VALOR_INICIAL,
                 sensibilidad,
@@ -142,7 +142,9 @@ class CotizacionServiceImplTest {
         when(rendimientoPartidoRepository.findByJugadorIdAndSemanaCalculoGreaterThanEqual(
                         any(), any()))
                 .thenReturn(List.of());
-        when(cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(jugadorId))
+        when(cotizacionHistoricaRepository
+                        .findTopByJugadorIdAndSemanaLessThanOrderByFechaCalculoDesc(
+                                jugadorId, semanaActualEsperada()))
                 .thenReturn(Optional.empty());
 
         CotizacionHistorica cotizacion =
@@ -162,7 +164,9 @@ class CotizacionServiceImplTest {
                         any(), any()))
                 .thenReturn(List.of(rendimientoDe(semanaActualEsperada(), "{\"goles\":1}")));
         when(pesoMetricaRepository.findByActivoTrue()).thenReturn(List.of());
-        when(cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(jugadorId))
+        when(cotizacionHistoricaRepository
+                        .findTopByJugadorIdAndSemanaLessThanOrderByFechaCalculoDesc(
+                                jugadorId, semanaActualEsperada()))
                 .thenReturn(Optional.of(cotizacionAnteriorDe(new BigDecimal("150.00"))));
 
         CotizacionHistorica cotizacion =
@@ -177,7 +181,9 @@ class CotizacionServiceImplTest {
         when(rendimientoPartidoRepository.findByJugadorIdAndSemanaCalculoGreaterThanEqual(
                         any(), any()))
                 .thenReturn(List.of());
-        when(cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(jugadorId))
+        when(cotizacionHistoricaRepository
+                        .findTopByJugadorIdAndSemanaLessThanOrderByFechaCalculoDesc(
+                                jugadorId, semanaActualEsperada()))
                 .thenReturn(Optional.empty());
 
         CotizacionHistorica cotizacion =
@@ -195,7 +201,9 @@ class CotizacionServiceImplTest {
                 .thenReturn(historicoConMaximoEnLaSemanaActual());
         when(pesoMetricaRepository.findByActivoTrue())
                 .thenReturn(List.of(pesoDe("goles", "2.0000"), pesoDe("asistencias", "1.0000")));
-        when(cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(jugadorId))
+        when(cotizacionHistoricaRepository
+                        .findTopByJugadorIdAndSemanaLessThanOrderByFechaCalculoDesc(
+                                jugadorId, semanaActualEsperada()))
                 .thenReturn(Optional.of(cotizacionAnteriorDe(new BigDecimal("200.00"))));
 
         CotizacionHistorica cotizacion =
@@ -215,7 +223,9 @@ class CotizacionServiceImplTest {
                 .thenReturn(historicoConMaximoEnLaSemanaActual());
         when(pesoMetricaRepository.findByActivoTrue())
                 .thenReturn(List.of(pesoDe("goles", "2.0000"), pesoDe("asistencias", "1.0000")));
-        when(cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(jugadorId))
+        when(cotizacionHistoricaRepository
+                        .findTopByJugadorIdAndSemanaLessThanOrderByFechaCalculoDesc(
+                                jugadorId, semanaActualEsperada()))
                 .thenReturn(Optional.of(cotizacionAnteriorDe(new BigDecimal("200.00"))));
 
         CotizacionHistorica cotizacion =
@@ -236,7 +246,9 @@ class CotizacionServiceImplTest {
                 .thenReturn(historicoConMinimoEnLaSemanaActual());
         when(pesoMetricaRepository.findByActivoTrue())
                 .thenReturn(List.of(pesoDe("goles", "2.0000"), pesoDe("asistencias", "1.0000")));
-        when(cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(jugadorId))
+        when(cotizacionHistoricaRepository
+                        .findTopByJugadorIdAndSemanaLessThanOrderByFechaCalculoDesc(
+                                jugadorId, semanaActualEsperada()))
                 .thenReturn(Optional.of(cotizacionAnteriorDe(new BigDecimal("200.00"))));
 
         CotizacionHistorica cotizacion =
@@ -247,6 +259,36 @@ class CotizacionServiceImplTest {
         // clamp -> hubiese sido 200.00 * 0.00 = 0.00; con el clamp a -0.20, queda en
         // 200.00 * 0.80 = 160.00
         assertThat(cotizacion.getValor()).isEqualByComparingTo(new BigDecimal("160.00"));
+    }
+
+    @Test
+    void recalcularLaMismaSemana_parteDeLaSemanaAnteriorYNoAcumula() {
+        stubJugadorExistente();
+        when(rendimientoPartidoRepository.findByJugadorIdAndSemanaCalculoGreaterThanEqual(
+                        any(), any()))
+                .thenReturn(List.of());
+        // Vigente: un cálculo previo de ESTA semana (99.00); base: la semana anterior (100.00).
+        when(cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(jugadorId))
+                .thenReturn(Optional.of(cotizacionAnteriorDe(new BigDecimal("99.00"))));
+        when(cotizacionHistoricaRepository
+                        .findTopByJugadorIdAndSemanaLessThanOrderByFechaCalculoDesc(
+                                jugadorId, semanaActualEsperada()))
+                .thenReturn(Optional.of(cotizacionAnteriorDe(new BigDecimal("100.00"))));
+
+        CotizacionHistorica cotizacion =
+                service.calcularCotizacion(jugadorId, OrigenCotizacion.MANUAL, actorId);
+
+        // 100.00 × 0.99 = 99.00 (no 99.00 × 0.99 = 98.01): recalcular reemplaza, no acumula.
+        assertThat(cotizacion.getValor()).isEqualByComparingTo(new BigDecimal("99.00"));
+        // La auditoría registra lo que estaba vigente antes, aunque no haya sido la base.
+        verify(auditoriaService)
+                .registrar(
+                        eq(actorId),
+                        eq("RECALCULO_COTIZACION"),
+                        eq("Jugador"),
+                        eq(jugadorId),
+                        eq(new BigDecimal("99.00")),
+                        eq(new BigDecimal("99.00")));
     }
 
     // ---- auditoría ----
@@ -394,8 +436,11 @@ class CotizacionServiceImplTest {
                 .thenReturn(List.of(rendimientoDe(semanaActualEsperada(), "{\"rating\":10.0}")));
         when(pesoMetricaRepository.findByActivoTrue())
                 .thenReturn(List.of(pesoDe("rating", "1.0000")));
-        when(cotizacionHistoricaRepository.findTopByJugadorIdAndEstrategiaOrderByFechaCalculoDesc(
-                        jugadorId, EstrategiaCotizacion.RENDIMIENTO_ACTUAL))
+        when(cotizacionHistoricaRepository
+                        .findTopByJugadorIdAndEstrategiaAndSemanaLessThanOrderByFechaCalculoDesc(
+                                jugadorId,
+                                EstrategiaCotizacion.RENDIMIENTO_ACTUAL,
+                                semanaActualEsperada()))
                 .thenReturn(Optional.of(cotizacionAnteriorDe(new BigDecimal("100.00"))));
 
         CotizacionHistorica cotizacion =
@@ -593,6 +638,7 @@ class CotizacionServiceImplTest {
         entity.setClave(clave);
         entity.setPeso(new BigDecimal(peso));
         entity.setActivo(true);
+        entity.setSentido(SentidoMetrica.POSITIVO);
         return entity;
     }
 

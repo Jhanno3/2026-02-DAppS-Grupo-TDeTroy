@@ -26,6 +26,51 @@ class MovimientoTest {
     private static final Integer CANTIDAD_VALIDA = 5;
     private static final Instant FECHA_FIJA = Instant.parse("2026-01-01T00:00:00Z");
 
+    // ---- compra/venta contra el sistema: precio y monto calculados por el model ----
+
+    @Test
+    void compraSistema_pagaLaCotizacionCompleta() {
+        Movimiento compra =
+                Movimiento.compraSistema(USUARIO_ID, JUGADOR_ID, 10, new BigDecimal("100.00"));
+
+        assertThat(compra.getTipo()).isEqualTo(TipoMovimiento.COMPRA_SISTEMA);
+        assertThat(compra.getPrecioUnitario()).isEqualByComparingTo("100.00");
+        assertThat(compra.getMontoTotal()).isEqualByComparingTo("1000.00");
+        assertThat(compra.getContraparteUsuarioId()).isNull();
+    }
+
+    @Test
+    void ventaSistema_aplicaElDescuentoAlPrecioUnitario() {
+        Movimiento venta =
+                Movimiento.ventaSistema(
+                        USUARIO_ID, JUGADOR_ID, 3, new BigDecimal("33.33"), new BigDecimal("0.15"));
+
+        // 33.33 × 0.85 = 28.3305 -> 28.33; 28.33 × 3 = 84.99
+        assertThat(venta.getTipo()).isEqualTo(TipoMovimiento.VENTA_SISTEMA);
+        assertThat(venta.getPrecioUnitario()).isEqualByComparingTo("28.33");
+        assertThat(venta.getMontoTotal()).isEqualByComparingTo("84.99");
+    }
+
+    @Test
+    void ventaSistema_conDescuentoFueraDeRango_lanzaExcepcion() {
+        BigDecimal cotizacion = new BigDecimal("100.00");
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () ->
+                                Movimiento.ventaSistema(
+                                        USUARIO_ID, JUGADOR_ID, 1, cotizacion, BigDecimal.ONE));
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () ->
+                                Movimiento.ventaSistema(
+                                        USUARIO_ID,
+                                        JUGADOR_ID,
+                                        1,
+                                        cotizacion,
+                                        new BigDecimal("-0.01")));
+    }
+
     // ---- RECARGA_SALDO: caso feliz y cada campo que debe quedar en null ----
 
     @Test

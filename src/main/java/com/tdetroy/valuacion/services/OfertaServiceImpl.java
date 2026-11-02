@@ -1,6 +1,5 @@
 package com.tdetroy.valuacion.services;
 
-import com.tdetroy.valuacion.common.Monetario;
 import com.tdetroy.valuacion.common.exceptions.OfertaInsuficienteException;
 import com.tdetroy.valuacion.common.exceptions.OfertaNoAbiertaException;
 import com.tdetroy.valuacion.common.exceptions.OfertaNoPerteneceAlVendedorException;
@@ -124,7 +123,7 @@ public class OfertaServiceImpl implements OfertaService {
         }
 
         BigDecimal precioUnitario = oferta.getPrecioUnitario();
-        BigDecimal montoTotal = costoDe(cantidad, precioUnitario);
+        BigDecimal montoTotal = oferta.montoPor(cantidad);
 
         comprador.debitarSaldo(montoTotal);
         UUID vendedorId = oferta.getVendedorId();
@@ -134,7 +133,7 @@ public class OfertaServiceImpl implements OfertaService {
         TenenciaToken tenenciaVendedor = obtenerOAbrirTenencia(vendedorId, oferta.getJugadorId());
         tenenciaVendedor.ejecutarReserva(cantidad);
         TenenciaToken tenenciaComprador = obtenerOAbrirTenencia(compradorId, oferta.getJugadorId());
-        tenenciaComprador.acreditar(cantidad);
+        tenenciaComprador.acreditar(cantidad, precioUnitario);
 
         oferta.ejecutarContra(cantidad);
 
@@ -250,10 +249,6 @@ public class OfertaServiceImpl implements OfertaService {
                 .findByUsuarioIdAndJugadorId(usuarioId, jugadorId)
                 .map(TenenciaTokenEntity::aModelo)
                 .orElseGet(() -> TenenciaToken.abrir(usuarioId, jugadorId));
-    }
-
-    private static BigDecimal costoDe(int cantidad, BigDecimal precioUnitario) {
-        return Monetario.escalar(precioUnitario.multiply(BigDecimal.valueOf(cantidad)));
     }
 
     private Movimiento registrarMovimiento(

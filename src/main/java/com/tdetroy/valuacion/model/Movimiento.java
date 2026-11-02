@@ -1,5 +1,6 @@
 package com.tdetroy.valuacion.model;
 
+import com.tdetroy.valuacion.common.Monetario;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
@@ -90,6 +91,59 @@ public class Movimiento {
                 montoTotal,
                 contraparteUsuarioId,
                 Instant.now());
+    }
+
+    /**
+     * Compra de {@code cantidad} tokens al sistema (UC-09): se paga la cotización vigente completa,
+     * sin ajuste — {@code montoTotal = cotizacionVigente × cantidad}.
+     */
+    public static Movimiento compraSistema(
+            UUID usuarioId, UUID jugadorId, int cantidad, BigDecimal cotizacionVigente) {
+        Objects.requireNonNull(cotizacionVigente, "cotizacionVigente no puede ser null");
+        BigDecimal precioUnitario = Monetario.escalar(cotizacionVigente);
+        return registrar(
+                usuarioId,
+                jugadorId,
+                TipoMovimiento.COMPRA_SISTEMA,
+                cantidad,
+                precioUnitario,
+                montoDe(precioUnitario, cantidad),
+                null);
+    }
+
+    /**
+     * Venta de {@code cantidad} tokens al sistema (UC-10): el sistema paga la cotización vigente
+     * menos {@code descuento} ({@code app.token.descuento-venta-sistema}, ej. {@code 0.15} = 15%
+     * menos). El precio unitario se redondea antes de multiplicarlo por la cantidad, igual criterio
+     * que el resto de los valores monetarios del sistema.
+     *
+     * @throws IllegalArgumentException si {@code descuento} no está en {@code [0, 1)}
+     */
+    public static Movimiento ventaSistema(
+            UUID usuarioId,
+            UUID jugadorId,
+            int cantidad,
+            BigDecimal cotizacionVigente,
+            BigDecimal descuento) {
+        Objects.requireNonNull(cotizacionVigente, "cotizacionVigente no puede ser null");
+        Objects.requireNonNull(descuento, "descuento no puede ser null");
+        if (descuento.signum() < 0 || descuento.compareTo(BigDecimal.ONE) >= 0) {
+            throw new IllegalArgumentException("descuento debe estar en [0, 1), fue " + descuento);
+        }
+        BigDecimal precioUnitario =
+                Monetario.escalar(cotizacionVigente.multiply(BigDecimal.ONE.subtract(descuento)));
+        return registrar(
+                usuarioId,
+                jugadorId,
+                TipoMovimiento.VENTA_SISTEMA,
+                cantidad,
+                precioUnitario,
+                montoDe(precioUnitario, cantidad),
+                null);
+    }
+
+    private static BigDecimal montoDe(BigDecimal precioUnitario, int cantidad) {
+        return Monetario.escalar(precioUnitario.multiply(BigDecimal.valueOf(cantidad)));
     }
 
     /** Igual que {@link #registrar}, con {@code fecha} explícita (tests, reproducibilidad). */

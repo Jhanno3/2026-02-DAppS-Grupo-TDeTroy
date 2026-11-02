@@ -1,13 +1,9 @@
-package com.tdetroy.valuacion.services;
+package com.tdetroy.valuacion.model;
 
-import com.tdetroy.valuacion.entity.PesoMetricaEntity;
-import com.tdetroy.valuacion.model.EstrategiaCotizacion;
-import com.tdetroy.valuacion.model.SentidoMetrica;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.List;
 import java.util.Map;
-import org.springframework.stereotype.Component;
 
 /**
  * Estrategia {@link EstrategiaCotizacion#RENDIMIENTO_ACTUAL}: calcula el puntaje de rendimiento en
@@ -16,11 +12,10 @@ import org.springframework.stereotype.Component;
  *
  * <p>Evalúa las métricas registradas en la semana actual frente a referencias estándar absolutas de
  * rendimiento (ej. rating WhoScored centrado en 6.0, goles, asistencias y acciones positivas). Si
- * {@link PesoMetricaEntity#getSentido()} es {@link SentidoMetrica#NEGATIVO} (tarjetas: más nunca
- * debería mejorar la cotización), esa evaluación se invierte antes de ponderar. El puntaje final es
- * el promedio ponderado de esas valuaciones absolutas en el rango {@code [-1, 1]}.
+ * {@link PesoMetrica#getSentido()} es {@link SentidoMetrica#NEGATIVO} (tarjetas: más nunca debería
+ * mejorar la cotización), esa evaluación se invierte antes de ponderar. El puntaje final es el
+ * promedio ponderado de esas valuaciones absolutas en el rango {@code [-1, 1]}.
  */
-@Component
 public class RendimientoActualCalculator implements EstrategiaCotizacionCalculator {
 
     private static final BigDecimal RATING_NEUTRO = new BigDecimal("6.0");
@@ -35,20 +30,24 @@ public class RendimientoActualCalculator implements EstrategiaCotizacionCalculat
     public BigDecimal calcularPuntaje(
             Map<String, Map<String, BigDecimal>> metricasPorSemana,
             Map<String, BigDecimal> metricasSemanaActual,
-            List<PesoMetricaEntity> pesosActivos) {
+            List<PesoMetrica> pesosActivos) {
         if (metricasSemanaActual == null || metricasSemanaActual.isEmpty()) {
             return BigDecimal.ZERO;
         }
 
+        // Promedio ponderado: sum(peso * puntajeMetrica) / sum(peso).
         BigDecimal sumaPonderada = BigDecimal.ZERO;
         BigDecimal sumaPesos = BigDecimal.ZERO;
 
-        for (PesoMetricaEntity pesoMetrica : pesosActivos) {
+        for (PesoMetrica pesoMetrica : pesosActivos) {
+            // Una métrica con peso pero sin dato esta semana no participa (ni suma su peso).
             BigDecimal valorActual = metricasSemanaActual.get(pesoMetrica.getClave());
             if (valorActual == null) {
                 continue;
             }
 
+            // Valor crudo -> puntaje en [-1, 1] contra una referencia fija; las métricas de
+            // sentido NEGATIVO (tarjetas) se invierten para que resten.
             BigDecimal puntajeMetrica = evaluarMetricaAbsoluta(pesoMetrica.getClave(), valorActual);
             BigDecimal puntajeConSentido =
                     pesoMetrica.getSentido() == SentidoMetrica.NEGATIVO

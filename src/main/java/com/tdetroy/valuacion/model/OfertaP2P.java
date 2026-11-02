@@ -1,5 +1,6 @@
 package com.tdetroy.valuacion.model;
 
+import com.tdetroy.valuacion.common.Monetario;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
@@ -217,6 +218,14 @@ public class OfertaP2P {
     public boolean estaVencida(Instant ahora) {
         Objects.requireNonNull(ahora, "ahora no puede ser null");
         return ahora.isAfter(fechaVencimiento);
+    }
+
+    /**
+     * Monto que paga un comprador por {@code cantidad} tokens de esta oferta: siempre el precio
+     * publicado, sin ajuste ni descuento por volumen (UC-17) — {@code precioUnitario × cantidad}.
+     */
+    public BigDecimal montoPor(int cantidad) {
+        return Monetario.escalar(precioUnitario.multiply(BigDecimal.valueOf(cantidad)));
     }
 
     private static void validarCampos(

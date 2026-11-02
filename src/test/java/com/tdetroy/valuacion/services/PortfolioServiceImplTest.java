@@ -13,6 +13,7 @@ import com.tdetroy.valuacion.model.CotizacionHistorica;
 import com.tdetroy.valuacion.model.EstadoSubasta;
 import com.tdetroy.valuacion.model.IncrementoPuja;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
+import com.tdetroy.valuacion.model.Portfolio;
 import com.tdetroy.valuacion.model.Subasta;
 import com.tdetroy.valuacion.model.TenenciaToken;
 import com.tdetroy.valuacion.model.Usuario;
@@ -78,7 +79,7 @@ class PortfolioServiceImplTest {
         stubUsuarioConSaldo(new BigDecimal("50.00"));
         UUID jugadorId = UUID.randomUUID();
         TenenciaToken tenencia = TenenciaToken.abrir(usuarioId, jugadorId);
-        tenencia.acreditar(4);
+        tenencia.acreditar(4, BigDecimal.TEN);
         when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
                 .thenReturn(List.of(TenenciaTokenEntity.desde(tenencia)));
         CotizacionHistorica cotizacion =
@@ -90,11 +91,11 @@ class PortfolioServiceImplTest {
         when(cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(jugadorId))
                 .thenReturn(Optional.of(CotizacionHistoricaEntity.desde(cotizacion)));
 
-        PortfolioService.Portfolio portfolio = service.obtenerDe(usuarioId);
+        Portfolio portfolio = service.obtenerDe(usuarioId);
 
         assertThat(portfolio.saldoVirtual()).isEqualByComparingTo("50.00");
         assertThat(portfolio.tenencias()).hasSize(1);
-        PortfolioService.TenenciaPortfolio tenenciaPortfolio = portfolio.tenencias().get(0);
+        Portfolio.TenenciaPortfolio tenenciaPortfolio = portfolio.tenencias().get(0);
         assertThat(tenenciaPortfolio.jugadorId()).isEqualTo(jugadorId);
         assertThat(tenenciaPortfolio.cantidad()).isEqualTo(4);
         assertThat(tenenciaPortfolio.cotizacionVigente()).isEqualByComparingTo("25.00");
@@ -108,15 +109,15 @@ class PortfolioServiceImplTest {
         stubUsuarioConSaldo(BigDecimal.ZERO);
         UUID jugadorId = UUID.randomUUID();
         TenenciaToken tenencia = TenenciaToken.abrir(usuarioId, jugadorId);
-        tenencia.acreditar(2);
+        tenencia.acreditar(2, BigDecimal.TEN);
         when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
                 .thenReturn(List.of(TenenciaTokenEntity.desde(tenencia)));
         when(cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(jugadorId))
                 .thenReturn(Optional.empty());
 
-        PortfolioService.Portfolio portfolio = service.obtenerDe(usuarioId);
+        Portfolio portfolio = service.obtenerDe(usuarioId);
 
-        PortfolioService.TenenciaPortfolio tenenciaPortfolio = portfolio.tenencias().get(0);
+        Portfolio.TenenciaPortfolio tenenciaPortfolio = portfolio.tenencias().get(0);
         assertThat(tenenciaPortfolio.cotizacionVigente()).isEqualByComparingTo(VALOR_INICIAL);
         assertThat(tenenciaPortfolio.valor()).isEqualByComparingTo("200.00");
         assertThat(portfolio.valorTotal()).isEqualByComparingTo("200.00");
@@ -128,9 +129,9 @@ class PortfolioServiceImplTest {
         UUID jugadorUno = UUID.randomUUID();
         UUID jugadorDos = UUID.randomUUID();
         TenenciaToken tenenciaUno = TenenciaToken.abrir(usuarioId, jugadorUno);
-        tenenciaUno.acreditar(3);
+        tenenciaUno.acreditar(3, BigDecimal.TEN);
         TenenciaToken tenenciaDos = TenenciaToken.abrir(usuarioId, jugadorDos);
-        tenenciaDos.acreditar(5);
+        tenenciaDos.acreditar(5, BigDecimal.TEN);
         when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
                 .thenReturn(
                         List.of(
@@ -141,7 +142,7 @@ class PortfolioServiceImplTest {
         when(cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(jugadorDos))
                 .thenReturn(Optional.empty());
 
-        PortfolioService.Portfolio portfolio = service.obtenerDe(usuarioId);
+        Portfolio portfolio = service.obtenerDe(usuarioId);
 
         // (3 * 100.00) + (5 * 100.00) + 10.00 saldo = 810.00
         assertThat(portfolio.tenencias()).hasSize(2);
@@ -154,7 +155,7 @@ class PortfolioServiceImplTest {
         when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
                 .thenReturn(List.of());
 
-        PortfolioService.Portfolio portfolio = service.obtenerDe(usuarioId);
+        Portfolio portfolio = service.obtenerDe(usuarioId);
 
         assertThat(portfolio.tenencias()).isEmpty();
         assertThat(portfolio.saldoVirtual()).isEqualByComparingTo("30.00");
@@ -166,10 +167,10 @@ class PortfolioServiceImplTest {
         stubUsuarioConSaldo(BigDecimal.ZERO);
         UUID jugadorParcial = UUID.randomUUID();
         TenenciaToken parcial = TenenciaToken.abrir(usuarioId, jugadorParcial);
-        parcial.acreditar(5);
+        parcial.acreditar(5, BigDecimal.TEN);
         parcial.reservar(2);
         TenenciaToken todaEnVenta = TenenciaToken.abrir(usuarioId, UUID.randomUUID());
-        todaEnVenta.acreditar(1);
+        todaEnVenta.acreditar(1, BigDecimal.TEN);
         todaEnVenta.reservar(1);
         when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
                 .thenReturn(
@@ -180,11 +181,11 @@ class PortfolioServiceImplTest {
                         jugadorParcial))
                 .thenReturn(Optional.empty());
 
-        PortfolioService.Portfolio portfolio = service.obtenerDe(usuarioId);
+        Portfolio portfolio = service.obtenerDe(usuarioId);
 
         // la tenencia con todo reservado no aparece; la parcial muestra sólo 3 disponibles
         assertThat(portfolio.tenencias()).hasSize(1);
-        PortfolioService.TenenciaPortfolio tenenciaPortfolio = portfolio.tenencias().get(0);
+        Portfolio.TenenciaPortfolio tenenciaPortfolio = portfolio.tenencias().get(0);
         assertThat(tenenciaPortfolio.jugadorId()).isEqualTo(jugadorParcial);
         assertThat(tenenciaPortfolio.cantidad()).isEqualTo(3);
         // 3 × 100.00 (valor inicial)
@@ -212,7 +213,7 @@ class PortfolioServiceImplTest {
         when(subastaRepository.findByMejorPostorIdAndEstado(usuarioId, EstadoSubasta.ACTIVA))
                 .thenReturn(List.of(SubastaEntity.desde(subasta)));
 
-        PortfolioService.Portfolio portfolio = service.obtenerDe(usuarioId);
+        Portfolio portfolio = service.obtenerDe(usuarioId);
 
         // 3 × 20.00 reservados en la puja, fuera del saldo disponible
         assertThat(portfolio.saldoEnPujas()).isEqualByComparingTo("60.00");

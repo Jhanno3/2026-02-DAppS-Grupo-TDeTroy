@@ -131,7 +131,7 @@ class TokenServiceImplTest {
     private void stubTenenciaConReserva(int cantidad, int cantidadReservada) {
         TenenciaToken tenencia = TenenciaToken.abrir(usuarioId, jugadorId);
         if (cantidad > 0) {
-            tenencia.acreditar(cantidad);
+            tenencia.acreditar(cantidad, BigDecimal.TEN);
         }
         if (cantidadReservada > 0) {
             tenencia.reservar(cantidadReservada);

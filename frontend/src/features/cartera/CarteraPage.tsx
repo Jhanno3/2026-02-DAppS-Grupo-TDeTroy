@@ -9,10 +9,6 @@ import {
 import { obtenerPortfolio, type TenenciaPortfolio } from '../../api/portfolio'
 import { listarSubastas, type SubastaResponse } from '../../api/subastas'
 import { listarJugadores, type JugadorResponse } from '../../api/jugadores'
-import {
-  listarMisMovimientos,
-  type MovimientoResponse,
-} from '../../api/movimientos'
 import { useAuth } from '../auth/AuthContext'
 import { Avatar } from '../../shared/components/Avatar'
 import { formatMoney } from '../../shared/format'
@@ -24,40 +20,35 @@ const formatoFechaHora = new Intl.DateTimeFormat('es-AR', {
 })
 
 /**
- * Costo promedio de compra de un jugador: suma de (cantidad × precioUnitario) de cada compra
- * -contra el sistema o P2P, da igual quién fue el vendedor- dividido la cantidad total comprada,
- * ponderado por cantidad (no es el promedio simple de los precios unitarios). Es el costo
- * promedio ponderado estándar: sólo lo mueven las compras nuevas, nunca una venta parcial — vender
- * una parte de la tenencia no cambia el costo promedio de lo que queda. `null` si todavía no hay
- * ninguna compra registrada para ese jugador (no debería pasar para una tenencia con `cantidad >
- * 0`, pero una venta/compensación podría dejar movimientos inconsistentes en un dato de prueba).
+ * `-12.5` / `"-12.50"` → true. Jackson serializa los `BigDecimal` como número JSON, aunque los
+ * tipos de `api/` los declaren `string`: igual que `formatMoney`, siempre pasar por `Number()`.
  */
-function costoPromedioDeCompra(
-  movimientos: MovimientoResponse[],
-  jugadorId: string,
-): number | null {
-  const compras = movimientos.filter(
-    (m) =>
-      m.jugadorId === jugadorId &&
-      (m.tipo === 'COMPRA_SISTEMA' ||
-        m.tipo === 'COMPRA_P2P' ||
-        m.tipo === 'COMPRA_SUBASTA'),
-  )
-  const cantidadComprada = compras.reduce((acc, m) => acc + m.cantidad, 0)
-  if (cantidadComprada === 0) return null
+function esNegativo(valor: string | number): boolean {
+  return Number(valor) < 0
+}
 
-  const montoInvertido = compras.reduce(
-    (acc, m) => acc + m.cantidad * Number(m.precioUnitario),
-    0,
-  )
-  return montoInvertido / cantidadComprada
+/** Ganancia con signo explícito (`+ $ 200,00` / `- $ 100,00`). */
+function formatGananciaPerdida(valor: string | number): string {
+  const numero = Number(valor)
+  return `${numero < 0 ? '-' : '+'} ${formatMoney(Math.abs(numero))}`
+}
+
+/** Rentabilidad con signo explícito (`+20,00 %`). */
+function formatRentabilidad(valor: string | number): string {
+  const numero = Number(valor)
+  const texto = Math.abs(numero).toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+  return `${numero < 0 ? '-' : '+'}${texto} %`
 }
 
 /**
  * UC-11: cartera del usuario autenticado. `GET /portfolios/me` sólo trae `jugadorId` por tenencia
  * (plan.md §2.5: sin entidad `Portfolio` propia) — se cruza con el catálogo público (UC-07) acá
- * para mostrar nombre/foto/club, y con el historial propio (UC-12) para el costo promedio de
- * compra, en vez de pedirle cualquiera de las dos cosas al backend. Las tenencias se muestran como
+ * para mostrar nombre/foto/club. Precio promedio de compra, ganancia/pérdida y rentabilidad vienen
+ * calculados por el backend (constitution.md: el frontend nunca calcula valores financieros). Las
+ * tenencias se muestran como
  * tarjetas, mismo formato que el catálogo de {@code MercadoPage} (UC-07), para que el usuario
  * reconozca el mismo jugador en los dos lugares.
  *
@@ -78,12 +69,6 @@ export function CarteraPage() {
   const jugadores = useQuery({
     queryKey: ['jugadores'],
     queryFn: listarJugadores,
-  })
-
-  const movimientos = useQuery({
-    queryKey: ['movimientos', 'me'],
-    queryFn: () => listarMisMovimientos(token!),
-    enabled: Boolean(token),
   })
 
   const ofertas = useQuery({
@@ -107,8 +92,7 @@ export function CarteraPage() {
       ]),
   })
 
-  const isLoading =
-    portfolio.isLoading || jugadores.isLoading || movimientos.isLoading
+  const isLoading = portfolio.isLoading || jugadores.isLoading
   const isError = portfolio.isError || jugadores.isError
 
   const jugadoresPorId = new Map((jugadores.data ?? []).map((j) => [j.id, j]))
@@ -147,6 +131,18 @@ export function CarteraPage() {
                 <dd>{formatMoney(portfolio.data.valorTotal)}</dd>
               </div>
               <div>
+                <dt>Ganancia / pérdida</dt>
+                <dd
+                  className={
+                    esNegativo(portfolio.data.gananciaPerdida)
+                      ? styles.down
+                      : styles.up
+                  }
+                >
+                  {formatGananciaPerdida(portfolio.data.gananciaPerdida)}
+                </dd>
+              </div>
+              <div>
                 <dt>Saldo disponible</dt>
                 <dd>{formatMoney(portfolio.data.saldoVirtual)}</dd>
               </div>
@@ -178,10 +174,6 @@ export function CarteraPage() {
                     key={tenencia.jugadorId}
                     tenencia={tenencia}
                     jugador={jugadoresPorId.get(tenencia.jugadorId)}
-                    costoPromedio={costoPromedioDeCompra(
-                      movimientos.data ?? [],
-                      tenencia.jugadorId,
-                    )}
                   />
                 ))}
               </section>
@@ -346,12 +338,13 @@ function FilaOfertaPropia({
 function CartaTenencia({
   tenencia,
   jugador,
-  costoPromedio,
 }: {
   tenencia: TenenciaPortfolio
   jugador: JugadorResponse | undefined
-  costoPromedio: number | null
 }) {
+  const claseResultado = esNegativo(tenencia.gananciaPerdida)
+    ? styles.down
+    : styles.up
   return (
     <Link to={`/jugadores/${tenencia.jugadorId}`} className={styles.card}>
       <div className={styles.cardPhoto}>
@@ -384,9 +377,14 @@ function CartaTenencia({
           <strong>{formatMoney(tenencia.valor)}</strong>
         </div>
         <div className={styles.costoPromedio}>
-          <span>Costo promedio de compra</span>
-          <span>
-            {costoPromedio !== null ? formatMoney(costoPromedio) : '—'}
+          <span>Precio promedio de compra</span>
+          <span>{formatMoney(tenencia.precioPromedioCompra)}</span>
+        </div>
+        <div className={styles.resultado}>
+          <span>Ganancia / pérdida</span>
+          <span className={claseResultado}>
+            {formatGananciaPerdida(tenencia.gananciaPerdida)} (
+            {formatRentabilidad(tenencia.rentabilidad)})
           </span>
         </div>
         <span className={styles.cta}>Comprar / vender</span>

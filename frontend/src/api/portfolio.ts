@@ -5,6 +5,12 @@ export interface TenenciaPortfolio {
   cantidad: number
   cotizacionVigente: string | null
   valor: string
+  /** Lo que se pagó en promedio por token (costo promedio ponderado, lo calcula el backend). */
+  precioPromedioCompra: string
+  /** `valor` menos lo que costaron estos tokens: positivo = ganancia, negativo = pérdida. */
+  gananciaPerdida: string
+  /** `gananciaPerdida` en porcentaje sobre el costo (`"20.00"` = +20%). */
+  rentabilidad: string
 }
 
 export interface PortfolioResponse {
@@ -16,6 +22,8 @@ export interface PortfolioResponse {
   /** Saldo reservado como mejor postor de subastas activas — fuera de `saldoVirtual`, pero incluido
    * en `valorTotal` (UC-18). */
   saldoEnPujas: string
+  /** Suma de la ganancia/pérdida de todas las `tenencias`. */
+  gananciaPerdida: string
   valorTotal: string
 }
 

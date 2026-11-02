@@ -158,6 +158,27 @@
   color: var(--muted);
 }
 
+.resultado {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.resultado span:last-child {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.up {
+  color: var(--accent);
+}
+
+.down {
+  color: var(--down);
+}
+
 .cta {
   display: flex;
   align-items: center;

@@ -408,7 +408,7 @@ class SubastaServiceImplTest {
 
     private void darTokens(UUID usuarioId, int cantidad) {
         TenenciaToken tenencia = TenenciaToken.abrir(usuarioId, jugadorId);
-        tenencia.acreditar(cantidad);
+        tenencia.acreditar(cantidad, BigDecimal.TEN);
         tenencias.put(clave(usuarioId, jugadorId), TenenciaTokenEntity.desde(tenencia));
     }
 

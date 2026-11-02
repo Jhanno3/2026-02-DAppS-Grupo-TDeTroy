@@ -299,7 +299,7 @@ class JugadorServiceImplTest {
 
     private void stubTenenciaDe(UUID usuarioId, UUID jugadorId, int cantidad) {
         TenenciaToken tenencia = TenenciaToken.abrir(usuarioId, jugadorId);
-        tenencia.acreditar(cantidad);
+        tenencia.acreditar(cantidad, BigDecimal.TEN);
         when(tenenciaTokenRepository.findByJugadorIdAndCantidadGreaterThan(jugadorId, 0))
                 .thenReturn(List.of(TenenciaTokenEntity.desde(tenencia)));
     }
@@ -425,7 +425,7 @@ class JugadorServiceImplTest {
 
         // El vendedor tiene 10 en tenencia, 6 reservados en la oferta publicada.
         TenenciaToken tenenciaVendedor = TenenciaToken.abrir(vendedorId, jugadorId);
-        tenenciaVendedor.acreditar(10);
+        tenenciaVendedor.acreditar(10, BigDecimal.TEN);
         tenenciaVendedor.reservar(6);
         when(tenenciaTokenRepository.findByUsuarioIdAndJugadorId(vendedorId, jugadorId))
                 .thenReturn(Optional.of(TenenciaTokenEntity.desde(tenenciaVendedor)));

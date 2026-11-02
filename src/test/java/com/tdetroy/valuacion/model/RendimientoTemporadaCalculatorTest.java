@@ -1,10 +1,7 @@
-package com.tdetroy.valuacion.services;
+package com.tdetroy.valuacion.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.tdetroy.valuacion.entity.PesoMetricaEntity;
-import com.tdetroy.valuacion.model.EstrategiaCotizacion;
-import com.tdetroy.valuacion.model.SentidoMetrica;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -42,10 +39,9 @@ class RendimientoTemporadaCalculatorTest {
         Map<String, Map<String, BigDecimal>> historico =
                 Map.of("2026-W01", Map.of("goles", new BigDecimal("2")));
         Map<String, BigDecimal> semanaActual = Map.of("goles", new BigDecimal("2"));
-        PesoMetricaEntity pesoGoles = new PesoMetricaEntity();
-        pesoGoles.setClave("goles");
-        pesoGoles.setPeso(new BigDecimal("1.0"));
-        pesoGoles.setActivo(true);
+        PesoMetrica pesoGoles =
+                PesoMetrica.configurar(
+                        "goles", new BigDecimal("1.0"), true, SentidoMetrica.POSITIVO);
 
         BigDecimal puntaje =
                 calculator.calcularPuntaje(historico, semanaActual, List.of(pesoGoles));
@@ -60,10 +56,9 @@ class RendimientoTemporadaCalculatorTest {
                         "2026-W01", Map.of("goles", new BigDecimal("0")),
                         "2026-W02", Map.of("goles", new BigDecimal("2")));
         Map<String, BigDecimal> semanaActual = Map.of("goles", new BigDecimal("2"));
-        PesoMetricaEntity pesoGoles = new PesoMetricaEntity();
-        pesoGoles.setClave("goles");
-        pesoGoles.setPeso(new BigDecimal("1.0"));
-        pesoGoles.setActivo(true);
+        PesoMetrica pesoGoles =
+                PesoMetrica.configurar(
+                        "goles", new BigDecimal("1.0"), true, SentidoMetrica.POSITIVO);
 
         BigDecimal puntaje =
                 calculator.calcularPuntaje(historico, semanaActual, List.of(pesoGoles));
@@ -79,10 +74,9 @@ class RendimientoTemporadaCalculatorTest {
                         "2026-W01", Map.of("goles", new BigDecimal("0")),
                         "2026-W02", Map.of("goles", new BigDecimal("2")));
         Map<String, BigDecimal> semanaActual = Map.of("goles", new BigDecimal("0"));
-        PesoMetricaEntity pesoGoles = new PesoMetricaEntity();
-        pesoGoles.setClave("goles");
-        pesoGoles.setPeso(new BigDecimal("1.0"));
-        pesoGoles.setActivo(true);
+        PesoMetrica pesoGoles =
+                PesoMetrica.configurar(
+                        "goles", new BigDecimal("1.0"), true, SentidoMetrica.POSITIVO);
 
         BigDecimal puntaje =
                 calculator.calcularPuntaje(historico, semanaActual, List.of(pesoGoles));
@@ -98,11 +92,9 @@ class RendimientoTemporadaCalculatorTest {
                         "2026-W01", Map.of("redCard", new BigDecimal("0")),
                         "2026-W02", Map.of("redCard", new BigDecimal("2")));
         Map<String, BigDecimal> semanaActual = Map.of("redCard", new BigDecimal("2"));
-        PesoMetricaEntity pesoRedCard = new PesoMetricaEntity();
-        pesoRedCard.setClave("redCard");
-        pesoRedCard.setPeso(new BigDecimal("1.0"));
-        pesoRedCard.setActivo(true);
-        pesoRedCard.setSentido(SentidoMetrica.NEGATIVO);
+        PesoMetrica pesoRedCard =
+                PesoMetrica.configurar(
+                        "redCard", new BigDecimal("1.0"), true, SentidoMetrica.NEGATIVO);
 
         BigDecimal puntaje =
                 calculator.calcularPuntaje(historico, semanaActual, List.of(pesoRedCard));

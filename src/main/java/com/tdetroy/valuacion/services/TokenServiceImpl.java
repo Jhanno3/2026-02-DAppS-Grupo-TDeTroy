@@ -1,6 +1,5 @@
 package com.tdetroy.valuacion.services;
 
-import com.tdetroy.valuacion.common.Monetario;
 import com.tdetroy.valuacion.common.exceptions.RecursoNoEncontradoException;
 import com.tdetroy.valuacion.entity.CotizacionHistoricaEntity;
 import com.tdetroy.valuacion.entity.JugadorEntity;
@@ -10,7 +9,6 @@ import com.tdetroy.valuacion.entity.UsuarioEntity;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.model.Movimiento;
 import com.tdetroy.valuacion.model.TenenciaToken;
-import com.tdetroy.valuacion.model.TipoMovimiento;
 import com.tdetroy.valuacion.model.Usuario;
 import com.tdetroy.valuacion.repositories.CotizacionHistoricaRepository;
 import com.tdetroy.valuacion.repositories.JugadorRepository;
@@ -60,25 +58,20 @@ public class TokenServiceImpl implements TokenService {
     public Movimiento comprar(UUID usuarioId, UUID jugadorId, int cantidad) {
         Usuario usuario = obtenerUsuario(usuarioId);
         Jugador jugador = obtenerJugador(jugadorId);
-        BigDecimal cotizacionVigente = cotizacionVigenteDe(jugadorId);
-        BigDecimal costoTotal = costoDe(cantidad, cotizacionVigente);
+        Movimiento compra =
+                Movimiento.compraSistema(
+                        usuarioId, jugadorId, cantidad, cotizacionVigenteDe(jugadorId));
 
-        usuario.debitarSaldo(costoTotal);
+        usuario.debitarSaldo(compra.getMontoTotal());
         jugador.emitirTokens(cantidad);
         TenenciaToken tenencia = obtenerOAbrirTenencia(usuarioId, jugadorId);
-        tenencia.acreditar(cantidad);
+        tenencia.acreditar(cantidad, compra.getPrecioUnitario());
 
         usuarioRepository.save(UsuarioEntity.desde(usuario));
         jugadorRepository.save(JugadorEntity.desde(jugador));
         tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenencia));
 
-        return registrarMovimiento(
-                usuarioId,
-                jugadorId,
-                TipoMovimiento.COMPRA_SISTEMA,
-                cantidad,
-                cotizacionVigente,
-                costoTotal);
+        return guardar(compra);
     }
 
     @Override
@@ -89,44 +82,26 @@ public class TokenServiceImpl implements TokenService {
         TenenciaToken tenencia = obtenerOAbrirTenencia(usuarioId, jugadorId);
 
         tenencia.debitar(cantidad);
-        BigDecimal cotizacionVigente = cotizacionVigenteDe(jugadorId);
-        BigDecimal precioVenta = precioVentaSistemaDe(cotizacionVigente);
-        BigDecimal montoTotal = costoDe(cantidad, precioVenta);
-        usuario.acreditarSaldo(montoTotal);
+        // El descuento de venta al sistema lo aplica Movimiento#ventaSistema (UC-10).
+        Movimiento venta =
+                Movimiento.ventaSistema(
+                        usuarioId,
+                        jugadorId,
+                        cantidad,
+                        cotizacionVigenteDe(jugadorId),
+                        descuentoVentaSistema);
+        usuario.acreditarSaldo(venta.getMontoTotal());
         jugador.liberarTokens(cantidad);
 
         tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenencia));
         usuarioRepository.save(UsuarioEntity.desde(usuario));
         jugadorRepository.save(JugadorEntity.desde(jugador));
 
-        return registrarMovimiento(
-                usuarioId,
-                jugadorId,
-                TipoMovimiento.VENTA_SISTEMA,
-                cantidad,
-                precioVenta,
-                montoTotal);
+        return guardar(venta);
     }
 
-    private Movimiento registrarMovimiento(
-            UUID usuarioId,
-            UUID jugadorId,
-            TipoMovimiento tipo,
-            int cantidad,
-            BigDecimal precioUnitario,
-            BigDecimal montoTotal) {
-        return movimientoRepository
-                .save(
-                        MovimientoEntity.desde(
-                                Movimiento.registrar(
-                                        usuarioId,
-                                        jugadorId,
-                                        tipo,
-                                        cantidad,
-                                        precioUnitario,
-                                        montoTotal,
-                                        null)))
-                .aModelo();
+    private Movimiento guardar(Movimiento movimiento) {
+        return movimientoRepository.save(MovimientoEntity.desde(movimiento)).aModelo();
     }
 
     private Usuario obtenerUsuario(UUID usuarioId) {
@@ -155,22 +130,5 @@ public class TokenServiceImpl implements TokenService {
                 .findTopByJugadorIdOrderByFechaCalculoDesc(jugadorId)
                 .map(CotizacionHistoricaEntity::getValor)
                 .orElse(valorInicial);
-    }
-
-    private static BigDecimal costoDe(int cantidad, BigDecimal cotizacionVigente) {
-        return Monetario.escalar(cotizacionVigente.multiply(BigDecimal.valueOf(cantidad)));
-    }
-
-    /**
-     * Precio unitario que paga el sistema al comprarle tokens a un usuario (UC-10): {@code
-     * app.token.descuento-venta-sistema} por debajo de la cotización vigente — nunca la cotización
-     * completa, a diferencia de {@link #comprar} y de toda operación P2P ({@code
-     * OfertaServiceImpl}, UC-17). Redondeado antes de multiplicarlo por la cantidad en {@link
-     * #costoDe}, igual criterio que el resto de los valores monetarios del sistema (constitution.md
-     * §2, {@link Monetario}).
-     */
-    private BigDecimal precioVentaSistemaDe(BigDecimal cotizacionVigente) {
-        return Monetario.escalar(
-                cotizacionVigente.multiply(BigDecimal.ONE.subtract(descuentoVentaSistema)));
     }
 }
