@@ -150,7 +150,7 @@ function generateSql() {
       const cotId = `${cotHash.substring(0,8)}-${cotHash.substring(8,12)}-4${cotHash.substring(13,16)}-b${cotHash.substring(17,20)}-${cotHash.substring(20,32)}`;
       
       const valor = (baseVal * factorSemanal[w]).toFixed(2);
-      const origen = w === 0 ? 'INICIAL' : 'SEMANAL';
+      const origen = 'AUTOMATICO';
 
       sqlStatements.push(`
 INSERT INTO cotizaciones_historicas (id, jugador_id, semana, valor, origen, fecha_calculo, estrategia)
@@ -186,6 +186,17 @@ ON CONFLICT (jugador_id) DO UPDATE SET
   fecha_actualizacion = EXCLUDED.fecha_actualizacion;`);
   }
 
+  sqlStatements.push(`
+UPDATE jugadores j
+SET cotizacion_vigente_id = sub.id
+FROM (
+    SELECT DISTINCT ON (jugador_id) id, jugador_id
+    FROM cotizaciones_historicas
+    ORDER BY jugador_id, fecha_calculo DESC
+) sub
+WHERE j.id = sub.jugador_id AND (j.cotizacion_vigente_id IS NULL OR j.cotizacion_vigente_id != sub.id);
+`);
+
   sqlStatements.push('COMMIT;');
 
   const outSqlPath = path.join(__dirname, 'import_players.sql');
@@ -195,3 +206,4 @@ ON CONFLICT (jugador_id) DO UPDATE SET
 }
 
 generateSql();
+
