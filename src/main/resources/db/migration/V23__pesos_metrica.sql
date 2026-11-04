@@ -1,11 +1,12 @@
--- V22: Ponderacion de metricas por posicion de jugador (Arquero, Defensor, Centrocampista, Delantero)
+-- V23: Ponderacion de metricas por posicion de jugador (Arquero, Defensor, Centrocampista, Delantero)
 -- y configuracion dinamica de pesos en runtime.
 
 -- 1. Agregar columna posicion con default 'GENERAL'
-ALTER TABLE pesos_metrica ADD COLUMN posicion VARCHAR(50) NOT NULL DEFAULT 'GENERAL';
+ALTER TABLE pesos_metrica ADD COLUMN IF NOT EXISTS posicion VARCHAR(50) NOT NULL DEFAULT 'GENERAL';
 
 -- 2. Eliminar clave primaria simple y crear clave primaria compuesta (clave, posicion)
-ALTER TABLE pesos_metrica DROP CONSTRAINT pesos_metrica_pkey;
+ALTER TABLE pesos_metrica DROP CONSTRAINT IF EXISTS pesos_metrica_pkey;
+ALTER TABLE pesos_metrica DROP CONSTRAINT IF EXISTS pk_pesos_metrica;
 ALTER TABLE pesos_metrica ADD CONSTRAINT pk_pesos_metrica PRIMARY KEY (clave, posicion);
 
 -- 3. Poblar las ponderaciones por posicion basadas en las metricas existentes
@@ -51,3 +52,4 @@ SELECT clave, 'Arquero',
        END,
        activo, sentido FROM pesos_metrica WHERE posicion = 'GENERAL'
 ON CONFLICT (clave, posicion) DO NOTHING;
+
