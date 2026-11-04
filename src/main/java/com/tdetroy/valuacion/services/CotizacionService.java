@@ -49,13 +49,15 @@ public interface CotizacionService {
     void recalcular(OrigenCotizacion origen, EstrategiaCotizacion estrategia, UUID actorId);
 
     /**
-     * Historial cronologico completo de cotizaciones de {@code jugadorId} (todas las estrategias).
+     * Historial cronologico de cotizaciones de {@code jugadorId} (todas las estrategias), con sólo
+     * la última de cada semana: los recálculos anteriores de esa semana quedan persistidos, pero no
+     * se devuelven.
      */
     List<CotizacionHistorica> obtenerHistorial(UUID jugadorId);
 
     /**
      * Historial cronologico de cotizaciones de {@code jugadorId} para una {@code estrategia}
-     * puntual.
+     * puntual, con sólo la última de cada semana.
      */
     List<CotizacionHistorica> obtenerHistorial(UUID jugadorId, EstrategiaCotizacion estrategia);
 

@@ -158,6 +158,43 @@ class CotizacionHistoricaRepositoryIT extends PostgresIntegrationTest {
         assertThat(valorDe(iniciales, jugadorA)).isEqualByComparingTo("100.00");
     }
 
+    @Test
+    void findValoresIniciales_conRecalculosDeLaPrimeraSemana_devuelveElUltimoDeEsaSemana() {
+        UUID jugadorA = UUID.randomUUID();
+        guardar(jugadorA, "2026-W06", "104.39", Instant.parse("2026-02-05T03:00:00Z"));
+        guardar(jugadorA, "2026-W06", "107.80", Instant.parse("2026-02-09T03:00:00Z"));
+        guardar(jugadorA, "2026-W07", "110.00", Instant.parse("2026-02-16T03:00:00Z"));
+        entityManager.clear();
+
+        List<ValorPorJugadorProjection> iniciales =
+                cotizacionHistoricaRepository.findValoresIniciales();
+
+        assertThat(valorDe(iniciales, jugadorA)).isEqualByComparingTo("107.80");
+    }
+
+    @Test
+    void findValoresIniciales_conUnaSolaSemana_coincideConLaVigente() {
+        UUID jugadorA = UUID.randomUUID();
+        guardar(jugadorA, "2026-W06", "104.39", Instant.parse("2026-02-05T03:00:00Z"));
+        guardar(jugadorA, "2026-W06", "107.80", Instant.parse("2026-02-09T03:00:00Z"));
+        entityManager.clear();
+
+        ValorPorJugadorProjection inicial =
+                filaDe(cotizacionHistoricaRepository.findValoresIniciales(), jugadorA);
+        ValorPorJugadorProjection vigente =
+                filaDe(cotizacionHistoricaRepository.findValoresVigentes(), jugadorA);
+
+        assertThat(inicial.getFechaCalculo()).isEqualTo(vigente.getFechaCalculo());
+    }
+
+    private static ValorPorJugadorProjection filaDe(
+            List<ValorPorJugadorProjection> filas, UUID jugadorId) {
+        return filas.stream()
+                .filter(f -> f.getJugadorId().equals(jugadorId))
+                .findFirst()
+                .orElseThrow();
+    }
+
     private void guardar(UUID jugadorId, String semana, String valor, Instant fechaCalculo) {
         cotizacionHistoricaRepository.saveAndFlush(
                 CotizacionHistoricaEntity.desde(

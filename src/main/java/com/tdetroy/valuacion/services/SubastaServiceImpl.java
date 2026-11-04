@@ -249,7 +249,7 @@ public class SubastaServiceImpl implements SubastaService {
         BigDecimal monto = subasta.montoComprometido();
 
         TenenciaToken tenenciaVendedor = obtenerOAbrirTenencia(vendedorId, subasta.getJugadorId());
-        tenenciaVendedor.ejecutarReserva(cantidad);
+        tenenciaVendedor.ejecutarReserva(cantidad, monto);
         TenenciaToken tenenciaGanador = obtenerOAbrirTenencia(ganadorId, subasta.getJugadorId());
         tenenciaGanador.acreditar(cantidad, precio);
         tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenenciaVendedor));

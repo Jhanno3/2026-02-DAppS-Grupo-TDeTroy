@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -192,5 +193,48 @@ class CotizacionHistoricaTest {
                         JUGADOR_ID, SEMANA, VALOR, OrigenCotizacion.AUTOMATICO, FECHA_CALCULO_FIJA);
 
         assertThat(primera.getId()).isNotEqualTo(segunda.getId());
+    }
+
+    private static CotizacionHistorica cotizacionDe(String semana, String valor) {
+        return CotizacionHistorica.calcular(
+                JUGADOR_ID,
+                semana,
+                new BigDecimal(valor),
+                OrigenCotizacion.MANUAL,
+                FECHA_CALCULO_FIJA);
+    }
+
+    @Test
+    void ultimaDeCadaSemana_conVariosCalculosDeUnaSemana_dejaElUltimo() {
+        List<CotizacionHistorica> resultado =
+                CotizacionHistorica.ultimaDeCadaSemana(
+                        List.of(
+                                cotizacionDe("2026-W44", "104.39"),
+                                cotizacionDe("2026-W44", "108.97"),
+                                cotizacionDe("2026-W44", "107.80")));
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getValor()).isEqualByComparingTo("107.80");
+    }
+
+    @Test
+    void ultimaDeCadaSemana_conVariasSemanas_mantieneElOrdenCronologico() {
+        List<CotizacionHistorica> resultado =
+                CotizacionHistorica.ultimaDeCadaSemana(
+                        List.of(
+                                cotizacionDe("2026-W43", "100.00"),
+                                cotizacionDe("2026-W44", "104.39"),
+                                cotizacionDe("2026-W44", "107.80"),
+                                cotizacionDe("2026-W45", "110.00")));
+
+        assertThat(resultado)
+                .extracting(CotizacionHistorica::getSemana)
+                .containsExactly("2026-W43", "2026-W44", "2026-W45");
+        assertThat(resultado.get(1).getValor()).isEqualByComparingTo("107.80");
+    }
+
+    @Test
+    void ultimaDeCadaSemana_sinCotizaciones_devuelveListaVacia() {
+        assertThat(CotizacionHistorica.ultimaDeCadaSemana(List.of())).isEmpty();
     }
 }

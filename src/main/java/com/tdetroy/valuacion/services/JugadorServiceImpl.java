@@ -167,9 +167,9 @@ public class JugadorServiceImpl implements JugadorService {
     }
 
     /**
-     * {@code null} si el jugador nunca tuvo cotización, o si tuvo una sola (vigente == inicial,
-     * mismo {@code fechaCalculo}: no hay desde dónde medir variación) -- mismo criterio que tenía
-     * el cálculo que antes hacía el frontend con el historial completo (plan.md §3bis).
+     * {@code null} si el jugador nunca tuvo cotización, o si sólo tiene una semana cotizada
+     * (vigente == inicial, mismo {@code fechaCalculo}: no hay desde dónde medir variación) -- mismo
+     * criterio que el historial, que muestra una cotización por semana (plan.md §3bis).
      */
     private static BigDecimal variacion(
             ValorPorJugadorProjection vigente, ValorPorJugadorProjection inicial) {
@@ -384,13 +384,13 @@ public class JugadorServiceImpl implements JugadorService {
             TenenciaToken tenencia = tenenciaEntity.aModelo();
             UUID usuarioId = tenencia.getUsuarioId();
             int cantidadRetirada = tenencia.getCantidad();
-            tenencia.debitar(cantidadRetirada);
-            tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenencia));
-
-            Usuario usuario = obtenerUsuario(usuarioId);
             BigDecimal monto =
                     Monetario.escalar(
                             cotizacionReferencia.multiply(BigDecimal.valueOf(cantidadRetirada)));
+            tenencia.debitar(cantidadRetirada, monto);
+            tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenencia));
+
+            Usuario usuario = obtenerUsuario(usuarioId);
             usuario.acreditarSaldo(monto);
             usuarioRepository.save(UsuarioEntity.desde(usuario));
 

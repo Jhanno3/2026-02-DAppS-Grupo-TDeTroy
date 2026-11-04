@@ -11,8 +11,8 @@ import java.util.UUID;
  * suma del valor de todas las tenencias más el saldo virtual disponible"). {@code valorEnVenta} son
  * los tokens reservados en ofertas P2P abiertas y subastas activas, y {@code saldoEnPujas} el saldo
  * reservado como mejor postor de subastas: ninguno de los dos está disponible para operar, pero
- * ambos se incluyen en {@code valorTotal}. {@code gananciaPerdida} es la suma de la de cada
- * tenencia.
+ * ambos se incluyen en {@code valorTotal}. {@code gananciaPerdida} es el resultado total del
+ * usuario: lo realizado en ventas más lo no realizado de sus tokens, reservados incluidos.
  */
 public record PortfolioResponse(
         BigDecimal saldoVirtual,

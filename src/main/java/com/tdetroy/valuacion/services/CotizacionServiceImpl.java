@@ -274,11 +274,12 @@ public class CotizacionServiceImpl implements CotizacionService {
         if (!jugadorRepository.existsById(jugadorId)) {
             throw new RecursoNoEncontradoException(ENTIDAD_JUGADOR, jugadorId);
         }
-        return cotizacionHistoricaRepository
-                .findByJugadorIdOrderByFechaCalculoAsc(jugadorId)
-                .stream()
-                .map(CotizacionHistoricaEntity::aModelo)
-                .toList();
+        return CotizacionHistorica.ultimaDeCadaSemana(
+                cotizacionHistoricaRepository
+                        .findByJugadorIdOrderByFechaCalculoAsc(jugadorId)
+                        .stream()
+                        .map(CotizacionHistoricaEntity::aModelo)
+                        .toList());
     }
 
     @Override
@@ -291,11 +292,12 @@ public class CotizacionServiceImpl implements CotizacionService {
         if (estrategia == null) {
             return obtenerHistorial(jugadorId);
         }
-        return cotizacionHistoricaRepository
-                .findByJugadorIdAndEstrategiaOrderByFechaCalculoAsc(jugadorId, estrategia)
-                .stream()
-                .map(CotizacionHistoricaEntity::aModelo)
-                .toList();
+        return CotizacionHistorica.ultimaDeCadaSemana(
+                cotizacionHistoricaRepository
+                        .findByJugadorIdAndEstrategiaOrderByFechaCalculoAsc(jugadorId, estrategia)
+                        .stream()
+                        .map(CotizacionHistoricaEntity::aModelo)
+                        .toList());
     }
 
     @Override

@@ -25,7 +25,8 @@ import org.springframework.data.jpa.repository.Query;
  * consultable.
  *
  * <p>{@link #findValoresVigentes} y {@link #findValoresIniciales} (plan.md S3bis) traen, en una
- * sola consulta cada una, el valor mas reciente/mas antiguo de *todos* los jugadores a la vez --
+ * sola consulta cada una, el valor mas reciente y el ultimo de la primera semana de *todos* los
+ * jugadores a la vez -- mismo criterio que el historial, que muestra una cotizacion por semana --,
  * usadas por {@code JugadorServiceImpl#listarMercado} para armar precio y variacion del listado
  * paginado de Mercado sin pedir la cotizacion jugador por jugador (antes N+1 desde el cliente).
  * {@code DISTINCT ON (jugador_id)} es sintaxis propia de Postgres (ya el unico motor soportado por
@@ -77,7 +78,7 @@ public interface CotizacionHistoricaRepository
                     "SELECT jugador_id AS \"jugadorId\", valor AS \"valor\", fecha_calculo AS"
                             + " \"fechaCalculo\" FROM (SELECT DISTINCT ON (jugador_id) jugador_id,"
                             + " valor, fecha_calculo FROM cotizaciones_historicas ORDER BY"
-                            + " jugador_id, fecha_calculo ASC) t",
+                            + " jugador_id, semana ASC, fecha_calculo DESC) t",
             nativeQuery = true)
     List<ValorPorJugadorProjection> findValoresIniciales();
 }

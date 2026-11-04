@@ -40,6 +40,9 @@ public class TenenciaTokenEntity {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal costoTotal;
 
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal gananciaRealizada;
+
     /** Traduce {@code tenencia} a la fila que persiste {@code repositories/}. */
     public static TenenciaTokenEntity desde(TenenciaToken tenencia) {
         TenenciaTokenEntity entity = new TenenciaTokenEntity();
@@ -49,12 +52,19 @@ public class TenenciaTokenEntity {
         entity.cantidad = tenencia.getCantidad();
         entity.cantidadReservada = tenencia.getCantidadReservada();
         entity.costoTotal = tenencia.getCostoTotal();
+        entity.gananciaRealizada = tenencia.getGananciaRealizada();
         return entity;
     }
 
     /** Reconstruye el objeto de dominio a partir de esta fila ya persistida. */
     public TenenciaToken aModelo() {
         return TenenciaToken.reconstruir(
-                id, usuarioId, jugadorId, cantidad, cantidadReservada, costoTotal);
+                id,
+                usuarioId,
+                jugadorId,
+                cantidad,
+                cantidadReservada,
+                costoTotal,
+                gananciaRealizada);
     }
 }

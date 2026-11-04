@@ -55,7 +55,7 @@ public class PortfolioServiceImpl implements PortfolioService {
                                 () -> new RecursoNoEncontradoException(ENTIDAD_USUARIO, usuarioId));
 
         List<TenenciaToken> tenencias =
-                tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0).stream()
+                tenenciaTokenRepository.findByUsuarioId(usuarioId).stream()
                         .map(TenenciaTokenEntity::aModelo)
                         .toList();
         Map<UUID, BigDecimal> cotizacionesVigentes = new HashMap<>();

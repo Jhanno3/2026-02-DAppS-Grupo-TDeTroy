@@ -87,18 +87,20 @@ class TenenciaTokenRepositoryIT extends PostgresIntegrationTest {
     }
 
     @Test
-    void findByUsuarioIdAndCantidadGreaterThan_soloTraeLasTenenciasConCantidadPositiva() {
+    void findByUsuarioId_traeTambienLasTenenciasVaciasYSuGananciaRealizada() {
         UUID usuarioId = UUID.randomUUID();
-        TenenciaToken conTokens = TenenciaToken.abrir(usuarioId, UUID.randomUUID());
-        conTokens.acreditar(5, BigDecimal.TEN);
-        TenenciaToken sinTokens = TenenciaToken.abrir(usuarioId, UUID.randomUUID());
-        tenenciaTokenRepository.saveAndFlush(TenenciaTokenEntity.desde(conTokens));
-        tenenciaTokenRepository.saveAndFlush(TenenciaTokenEntity.desde(sinTokens));
+        TenenciaToken vendida = TenenciaToken.abrir(usuarioId, UUID.randomUUID());
+        vendida.acreditar(5, BigDecimal.TEN);
+        vendida.debitar(5, new BigDecimal("80"));
+        TenenciaToken deOtroUsuario = TenenciaToken.abrir(UUID.randomUUID(), UUID.randomUUID());
+        tenenciaTokenRepository.saveAndFlush(TenenciaTokenEntity.desde(vendida));
+        tenenciaTokenRepository.saveAndFlush(TenenciaTokenEntity.desde(deOtroUsuario));
         entityManager.clear();
 
-        var resultado = tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0);
+        var resultado = tenenciaTokenRepository.findByUsuarioId(usuarioId);
 
         assertThat(resultado).hasSize(1);
-        assertThat(resultado.get(0).getId()).isEqualTo(conTokens.getId());
+        assertThat(resultado.get(0).getId()).isEqualTo(vendida.getId());
+        assertThat(resultado.get(0).getGananciaRealizada()).isEqualByComparingTo("30.00");
     }
 }

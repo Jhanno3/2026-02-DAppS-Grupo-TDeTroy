@@ -10,23 +10,22 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * Repositorio Spring Data JPA sobre {@link TenenciaTokenEntity} (plan.md §2.5). {@link
  * #findByUsuarioIdAndJugadorId} (T5.1) es la primera consulta propia, agregada por {@code
  * TokenServiceImpl} para resolver la tenencia de un par usuario/jugador antes de acreditarla
- * (primera compra) o debitarla (venta). {@link #findByUsuarioIdAndCantidadGreaterThan} (T5.3) la
- * agrega {@code PortfolioServiceImpl} para listar las tenencias de un usuario con {@code cantidad >
- * 0} (UC-11: un usuario que vendió toda su tenencia de un jugador no debe seguir apareciendo en su
- * portfolio, aunque la fila siga existiendo con {@code cantidad = 0}) — mismo criterio que {@link
- * MovimientoRepository} para no anticipar una forma de consulta que todavía no se pidió. La
- * unicidad del par {@code usuarioId}/{@code jugadorId} está protegida a nivel de esquema por la
- * constraint {@code uk_tenencias_token_usuario_jugador} (V6__tenencias_token.sql). {@link
+ * (primera compra) o debitarla (venta). {@link #findByUsuarioId} (T5.3) la agrega {@code
+ * PortfolioServiceImpl} para valorizar las tenencias de un usuario (UC-11), incluidas las que
+ * quedaron con {@code cantidad = 0}: no se muestran como posición, pero conservan la ganancia
+ * realizada de lo vendido — mismo criterio que {@link MovimientoRepository} para no anticipar una
+ * forma de consulta que todavía no se pidió. La unicidad del par {@code usuarioId}/{@code
+ * jugadorId} está protegida a nivel de esquema por la constraint {@code
+ * uk_tenencias_token_usuario_jugador} (V6__tenencias_token.sql). {@link
  * #findByJugadorIdAndCantidadGreaterThan} (T6.6) la agrega {@code JugadorServiceImpl.darDeBaja}
  * para encontrar, dado un jugador, a todos los usuarios con tenencia a compensar (UC-15) — la
- * contracara de {@link #findByUsuarioIdAndCantidadGreaterThan}, que recorre por usuario en vez de
- * por jugador.
+ * contracara de {@link #findByUsuarioId}, que recorre por usuario en vez de por jugador.
  */
 public interface TenenciaTokenRepository extends JpaRepository<TenenciaTokenEntity, UUID> {
 
     Optional<TenenciaTokenEntity> findByUsuarioIdAndJugadorId(UUID usuarioId, UUID jugadorId);
 
-    List<TenenciaTokenEntity> findByUsuarioIdAndCantidadGreaterThan(UUID usuarioId, int cantidad);
+    List<TenenciaTokenEntity> findByUsuarioId(UUID usuarioId);
 
     List<TenenciaTokenEntity> findByJugadorIdAndCantidadGreaterThan(UUID jugadorId, int cantidad);
 }
