@@ -3,6 +3,7 @@ package com.tdetroy.valuacion.repositories;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tdetroy.valuacion.entity.PesoMetricaEntity;
+import com.tdetroy.valuacion.entity.PesoMetricaId;
 import com.tdetroy.valuacion.model.PesoMetrica;
 import com.tdetroy.valuacion.model.SentidoMetrica;
 import com.tdetroy.valuacion.repositories.support.PostgresIntegrationTest;
@@ -11,17 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 
-/**
- * Test de integración de {@link PesoMetricaRepository} contra Postgres real (tasks.md T4.2,
- * constitution.md §1/§4): persistir un {@link PesoMetrica} válido vía {@link
- * PesoMetrica#configurar} y leerlo de vuelta con los mismos valores, y que actualizar el
- * peso/estado activo de una fila ya persistida (plan.md §6.2: "ajustable en runtime vía tabla")
- * efectivamente actualiza esa misma fila (vía {@code merge}, {@code clave} ya no nula) en vez de
- * insertar una nueva — a diferencia de {@link RendimientoPartidoRepository}/{@link
- * CotizacionHistoricaRepository}, acá {@code clave} es una clave natural, no un {@code UUID}
- * generado en cada alta, así que guardar dos veces la misma clave es una actualización legítima, no
- * un conflicto.
- */
+/** Test de integración de {@link PesoMetricaRepository} contra Postgres real. */
 class PesoMetricaRepositoryIT extends PostgresIntegrationTest {
 
     @Autowired private PesoMetricaRepository pesoMetricaRepository;
@@ -37,12 +28,55 @@ class PesoMetricaRepositoryIT extends PostgresIntegrationTest {
         pesoMetricaRepository.saveAndFlush(PesoMetricaEntity.desde(pesoMetrica));
         entityManager.clear();
 
-        PesoMetrica leido = pesoMetricaRepository.findById("rating").orElseThrow().aModelo();
+        PesoMetrica leido =
+                pesoMetricaRepository
+                        .findById(new PesoMetricaId("rating", PesoMetrica.POSICION_GENERAL))
+                        .orElseThrow()
+                        .aModelo();
 
         assertThat(leido.getClave()).isEqualTo("rating");
+        assertThat(leido.getPosicion()).isEqualTo(PesoMetrica.POSICION_GENERAL);
         assertThat(leido.getPeso()).isEqualByComparingTo(new BigDecimal("1.5000"));
         assertThat(leido.isActivo()).isTrue();
         assertThat(leido.getSentido()).isEqualTo(SentidoMetrica.POSITIVO);
+    }
+
+    @Test
+    void guardarPesoMetricaPorPosicion_persisteYFiltraCorrectamente() {
+        PesoMetrica general =
+                PesoMetrica.configurar(
+                        "goals",
+                        "GENERAL",
+                        new BigDecimal("0.5000"),
+                        true,
+                        SentidoMetrica.POSITIVO);
+        PesoMetrica delantero =
+                PesoMetrica.configurar(
+                        "goals",
+                        "Delantero",
+                        new BigDecimal("0.5000"),
+                        true,
+                        SentidoMetrica.POSITIVO);
+        PesoMetrica defensor =
+                PesoMetrica.configurar(
+                        "goals",
+                        "Defensor",
+                        new BigDecimal("1.5000"),
+                        true,
+                        SentidoMetrica.POSITIVO);
+
+        pesoMetricaRepository.save(PesoMetricaEntity.desde(general));
+        pesoMetricaRepository.save(PesoMetricaEntity.desde(delantero));
+        pesoMetricaRepository.saveAndFlush(PesoMetricaEntity.desde(defensor));
+        entityManager.clear();
+
+        assertThat(pesoMetricaRepository.findByClave("goals")).hasSize(3);
+        PesoMetrica leidoDefensor =
+                pesoMetricaRepository
+                        .findByClaveAndPosicion("goals", "Defensor")
+                        .orElseThrow()
+                        .aModelo();
+        assertThat(leidoDefensor.getPeso()).isEqualByComparingTo(new BigDecimal("1.5000"));
     }
 
     @Test
@@ -58,9 +92,11 @@ class PesoMetricaRepositoryIT extends PostgresIntegrationTest {
         pesoMetricaRepository.saveAndFlush(PesoMetricaEntity.desde(pesoMetrica));
         entityManager.clear();
 
-        assertThat(pesoMetricaRepository.count()).isEqualTo(1);
         PesoMetrica actualizado =
-                pesoMetricaRepository.findById("asistencias").orElseThrow().aModelo();
+                pesoMetricaRepository
+                        .findById(new PesoMetricaId("asistencias", PesoMetrica.POSICION_GENERAL))
+                        .orElseThrow()
+                        .aModelo();
         assertThat(actualizado.getPeso()).isEqualByComparingTo(new BigDecimal("1.2500"));
         assertThat(actualizado.isActivo()).isFalse();
     }

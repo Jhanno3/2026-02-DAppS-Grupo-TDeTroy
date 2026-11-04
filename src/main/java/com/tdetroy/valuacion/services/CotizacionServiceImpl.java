@@ -22,12 +22,14 @@ import com.tdetroy.valuacion.repositories.PesoMetricaRepository;
 import com.tdetroy.valuacion.repositories.RendimientoPartidoRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -164,18 +166,20 @@ public class CotizacionServiceImpl implements CotizacionService {
         Map<String, BigDecimal> metricasSemanaActual =
                 metricasPorSemana.getOrDefault(semanaActual, Map.of());
 
-        // Variación de la semana: la decide el model (decay si no hay datos, si no puntaje de la
-        // estrategia × sensibilidad acotado a ±20%) con los pesos activos de pesos_metrica.
+        // Variación de la semana: la decide el model con los pesos resueltos para la posición del
+        // jugador.
         List<PesoMetrica> pesosActivos =
                 pesoMetricaRepository.findByActivoTrue().stream()
                         .map(PesoMetricaEntity::aModelo)
                         .toList();
+        List<PesoMetrica> pesosEfectivos =
+                resolverPesosParaPosicion(pesosActivos, jugadorEntity.getPosicion());
         AjusteCotizacion ajuste =
                 AjusteCotizacion.calcular(
                         estrategiaEfectiva,
                         metricasPorSemana,
                         metricasSemanaActual,
-                        pesosActivos,
+                        pesosEfectivos,
                         sensibilidad,
                         decayInactividad);
 
@@ -365,6 +369,52 @@ public class CotizacionServiceImpl implements CotizacionService {
                 ConfiguracionCotizacion.ID,
                 Map.of("estrategiaDefault", anterior),
                 Map.of("estrategiaDefault", estrategia));
+    }
+
+    /**
+     * Resuelve los pesos efectivos para la posición de un jugador a partir de los pesos activos:
+     * para cada métrica, busca si hay un peso configurado específicamente para la posición del
+     * jugador; si no existe, utiliza el peso configurado para 'GENERAL'.
+     */
+    public static List<PesoMetrica> resolverPesosParaPosicion(
+            List<PesoMetrica> pesosActivos, String posicionJugador) {
+        if (pesosActivos == null || pesosActivos.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, List<PesoMetrica>> porClave =
+                pesosActivos.stream().collect(Collectors.groupingBy(PesoMetrica::getClave));
+
+        List<PesoMetrica> resultado = new ArrayList<>();
+        for (Map.Entry<String, List<PesoMetrica>> entry : porClave.entrySet()) {
+            List<PesoMetrica> lista = entry.getValue();
+
+            Optional<PesoMetrica> especifica =
+                    lista.stream()
+                            .filter(
+                                    p ->
+                                            p.getPosicion() != null
+                                                    && posicionJugador != null
+                                                    && p.getPosicion()
+                                                            .equalsIgnoreCase(
+                                                                    posicionJugador.trim()))
+                            .findFirst();
+
+            if (especifica.isPresent()) {
+                resultado.add(especifica.get());
+            } else {
+                lista.stream()
+                        .filter(
+                                p ->
+                                        p.getPosicion() == null
+                                                || p.getPosicion()
+                                                        .equalsIgnoreCase(
+                                                                PesoMetrica.POSICION_GENERAL))
+                        .findFirst()
+                        .ifPresent(resultado::add);
+            }
+        }
+        return resultado;
     }
 
     private Map<String, Map<String, BigDecimal>> agruparPorSemana(

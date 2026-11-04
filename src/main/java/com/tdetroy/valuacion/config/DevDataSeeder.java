@@ -2,6 +2,7 @@ package com.tdetroy.valuacion.config;
 
 import com.tdetroy.valuacion.common.Monetario;
 import com.tdetroy.valuacion.entity.PesoMetricaEntity;
+import com.tdetroy.valuacion.entity.PesoMetricaId;
 import com.tdetroy.valuacion.entity.UsuarioEntity;
 import com.tdetroy.valuacion.model.PesoMetrica;
 import com.tdetroy.valuacion.model.RolUsuario;
@@ -123,14 +124,19 @@ public class DevDataSeeder implements CommandLineRunner {
                 "minsPlayed", new PesoDefecto(new BigDecimal("0.3000"), SentidoMetrica.POSITIVO));
 
         for (Map.Entry<String, PesoDefecto> entry : pesosPorDefecto.entrySet()) {
-            if (pesoMetricaRepository.existsById(entry.getKey())) {
+            if (pesoMetricaRepository.existsById(
+                    new PesoMetricaId(entry.getKey(), PesoMetrica.POSICION_GENERAL))) {
                 continue;
             }
             PesoDefecto defecto = entry.getValue();
             pesoMetricaRepository.save(
                     PesoMetricaEntity.desde(
                             PesoMetrica.configurar(
-                                    entry.getKey(), defecto.peso(), true, defecto.sentido())));
+                                    entry.getKey(),
+                                    PesoMetrica.POSICION_GENERAL,
+                                    defecto.peso(),
+                                    true,
+                                    defecto.sentido())));
         }
     }
 

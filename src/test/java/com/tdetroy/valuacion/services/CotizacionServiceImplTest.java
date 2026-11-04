@@ -23,6 +23,7 @@ import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.FuenteResultado;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
+import com.tdetroy.valuacion.model.PesoMetrica;
 import com.tdetroy.valuacion.model.SentidoMetrica;
 import com.tdetroy.valuacion.repositories.ConfiguracionCotizacionRepository;
 import com.tdetroy.valuacion.repositories.CotizacionHistoricaRepository;
@@ -453,6 +454,45 @@ class CotizacionServiceImplTest {
         // rating 10.0 -> puntaje 1.0 * sensibilidad 0.20 = +0.20 -> 100 * 1.20 = 120.00
         assertThat(cotizacion.getValor()).isEqualByComparingTo(new BigDecimal("120.00"));
         assertThat(cotizacion.getEstrategia()).isEqualTo(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
+    }
+
+    @Test
+    void resolverPesosParaPosicion_conPosicionEspecifica_usaElPesoDeEsaPosicion() {
+        PesoMetrica general =
+                PesoMetrica.configurar(
+                        "goals", "GENERAL", new BigDecimal("0.5"), true, SentidoMetrica.POSITIVO);
+        PesoMetrica delantero =
+                PesoMetrica.configurar(
+                        "goals", "Delantero", new BigDecimal("0.5"), true, SentidoMetrica.POSITIVO);
+        PesoMetrica defensor =
+                PesoMetrica.configurar(
+                        "goals", "Defensor", new BigDecimal("1.5"), true, SentidoMetrica.POSITIVO);
+
+        List<PesoMetrica> resueltos =
+                CotizacionServiceImpl.resolverPesosParaPosicion(
+                        List.of(general, delantero, defensor), "Defensor");
+
+        assertThat(resueltos).hasSize(1);
+        assertThat(resueltos.getFirst().getPeso()).isEqualByComparingTo("1.5");
+        assertThat(resueltos.getFirst().getPosicion()).isEqualTo("Defensor");
+    }
+
+    @Test
+    void resolverPesosParaPosicion_sinPosicionEspecifica_usaFallbackGeneral() {
+        PesoMetrica general =
+                PesoMetrica.configurar(
+                        "goals", "GENERAL", new BigDecimal("0.5"), true, SentidoMetrica.POSITIVO);
+        PesoMetrica delantero =
+                PesoMetrica.configurar(
+                        "goals", "Delantero", new BigDecimal("0.5"), true, SentidoMetrica.POSITIVO);
+
+        List<PesoMetrica> resueltos =
+                CotizacionServiceImpl.resolverPesosParaPosicion(
+                        List.of(general, delantero), "Mediocampista");
+
+        assertThat(resueltos).hasSize(1);
+        assertThat(resueltos.getFirst().getPeso()).isEqualByComparingTo("0.5");
+        assertThat(resueltos.getFirst().getPosicion()).isEqualTo("GENERAL");
     }
 
     @Test
