@@ -5,6 +5,7 @@ import com.tdetroy.valuacion.dto.response.EstrategiaCotizacionResponse;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.OrigenCotizacion;
 import com.tdetroy.valuacion.services.CotizacionService;
+import com.tdetroy.valuacion.services.RendimientoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,12 +16,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Disparo manual del recalculo de cotizacion (plan.md S3/S6.4, UC-13, tasks.md T4.6). {@code POST
- * /cotizaciones/recalculo} invoca exactamente el mismo {@link CotizacionService#recalcular} que el
- * job semanal (constitution.md S2: nunca una segunda implementacion del algoritmo), sobre todos los
- * jugadores {@code ACTIVO} del catalogo, sin seleccion de un jugador puntual ni ningun campo de
- * tipo cotizacion/valor en el request -- por eso no toma {@code @RequestBody}: el endpoint solo
- * dispara, nunca fija un precio (constitution.md S2).
+ * Disparo manual del recalculo de cotizacion (plan.md S3/S6.4, UC-13, tasks.md T4.6) e ingesta
+ * administrativa de rendimiento/fixtures. {@code POST /cotizaciones/recalculo} invoca exactamente
+ * el mismo {@link CotizacionService#recalcular} que el job semanal (constitution.md S2: nunca una
+ * segunda implementacion del algoritmo), sobre todos los jugadores {@code ACTIVO} del catalogo, sin
+ * seleccion de un jugador puntual ni ningun campo de tipo cotizacion/valor en el request -- por eso
+ * no toma {@code @RequestBody}: el endpoint solo dispara, nunca fija un precio (constitution.md
+ * S2).
  *
  * <p>Permite seleccionar opcionalmente la {@link EstrategiaCotizacion} a recalcular vía query
  * parameter {@code ?estrategia=...}.
@@ -33,9 +35,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class CotizacionController {
 
     private final CotizacionService cotizacionService;
+    private final RendimientoService rendimientoService;
 
-    public CotizacionController(CotizacionService cotizacionService) {
+    public CotizacionController(
+            CotizacionService cotizacionService, RendimientoService rendimientoService) {
         this.cotizacionService = cotizacionService;
+        this.rendimientoService = rendimientoService;
     }
 
     @PostMapping("/recalculo")
@@ -44,6 +49,25 @@ public class CotizacionController {
             @RequestParam(required = false) EstrategiaCotizacion estrategia,
             @AuthenticationPrincipal UsuarioPrincipal principal) {
         cotizacionService.recalcular(OrigenCotizacion.MANUAL, estrategia, principal.getUsuarioId());
+        return ResponseEntity.accepted().build();
+    }
+
+    /**
+     * Disparo manual de la ingesta de rendimiento (WhoScored scraping) por un administrador para
+     * desarrollo, testing o sincronización fuera de la ventana semanal del cron.
+     */
+    @PostMapping("/ingesta-rendimiento")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> ingestarRendimiento() {
+        rendimientoService.ingestarRendimiento();
+        return ResponseEntity.accepted().build();
+    }
+
+    /** Disparo manual de la ingesta de fixtures (Football-Data.org) por un administrador. */
+    @PostMapping("/ingesta-fixtures")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> ingestarFixtures() {
+        rendimientoService.ingestarFixtures();
         return ResponseEntity.accepted().build();
     }
 
