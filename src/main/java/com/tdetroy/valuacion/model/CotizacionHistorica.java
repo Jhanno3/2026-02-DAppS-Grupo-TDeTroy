@@ -3,6 +3,8 @@ package com.tdetroy.valuacion.model;
 import com.tdetroy.valuacion.common.Monetario;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -153,6 +155,23 @@ public class CotizacionHistorica {
                 origen,
                 EstrategiaCotizacion.RENDIMIENTO_TEMPORADA,
                 fechaCalculo);
+    }
+
+    /**
+     * Deja sólo la última cotización de cada semana: recalcular una semana agrega una fila nueva
+     * (append-only), pero para quien consulta el historial cuenta el último valor calculado.
+     *
+     * @param cronologicas cotizaciones ordenadas de la más vieja a la más nueva
+     * @return una cotización por semana, en el mismo orden
+     */
+    public static List<CotizacionHistorica> ultimaDeCadaSemana(
+            List<CotizacionHistorica> cronologicas) {
+        Objects.requireNonNull(cronologicas, "cronologicas no puede ser null");
+        LinkedHashMap<String, CotizacionHistorica> porSemana = new LinkedHashMap<>();
+        for (CotizacionHistorica cotizacion : cronologicas) {
+            porSemana.putLast(cotizacion.getSemana(), cotizacion);
+        }
+        return List.copyOf(porSemana.values());
     }
 
     private static void validarCampos(
