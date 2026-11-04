@@ -409,6 +409,7 @@ class CotizacionServiceImplTest {
         when(jugadorRepository.existsById(jugadorId)).thenReturn(true);
         CotizacionHistoricaEntity primera = cotizacionAnteriorDe(new BigDecimal("100.00"));
         CotizacionHistoricaEntity segunda = cotizacionAnteriorDe(new BigDecimal("105.50"));
+        segunda.setSemana("2026-W02");
         when(cotizacionHistoricaRepository.findByJugadorIdOrderByFechaCalculoAsc(jugadorId))
                 .thenReturn(List.of(primera, segunda));
 
@@ -417,6 +418,38 @@ class CotizacionServiceImplTest {
         assertThat(historial).hasSize(2);
         assertThat(historial.get(0).getValor()).isEqualByComparingTo(new BigDecimal("100.00"));
         assertThat(historial.get(1).getValor()).isEqualByComparingTo(new BigDecimal("105.50"));
+    }
+
+    @Test
+    void obtenerHistorial_conRecalculosDeUnaSemana_devuelveSoloElUltimo() {
+        when(jugadorRepository.existsById(jugadorId)).thenReturn(true);
+        when(cotizacionHistoricaRepository.findByJugadorIdOrderByFechaCalculoAsc(jugadorId))
+                .thenReturn(
+                        List.of(
+                                cotizacionAnteriorDe(new BigDecimal("104.39")),
+                                cotizacionAnteriorDe(new BigDecimal("107.80"))));
+
+        List<CotizacionHistorica> historial = service.obtenerHistorial(jugadorId);
+
+        assertThat(historial).hasSize(1);
+        assertThat(historial.get(0).getValor()).isEqualByComparingTo(new BigDecimal("107.80"));
+    }
+
+    @Test
+    void obtenerHistorial_conEstrategiaYRecalculosDeUnaSemana_devuelveSoloElUltimo() {
+        when(jugadorRepository.existsById(jugadorId)).thenReturn(true);
+        when(cotizacionHistoricaRepository.findByJugadorIdAndEstrategiaOrderByFechaCalculoAsc(
+                        jugadorId, EstrategiaCotizacion.RENDIMIENTO_ACTUAL))
+                .thenReturn(
+                        List.of(
+                                cotizacionAnteriorDe(new BigDecimal("104.39")),
+                                cotizacionAnteriorDe(new BigDecimal("107.80"))));
+
+        List<CotizacionHistorica> historial =
+                service.obtenerHistorial(jugadorId, EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
+
+        assertThat(historial).hasSize(1);
+        assertThat(historial.get(0).getValor()).isEqualByComparingTo(new BigDecimal("107.80"));
     }
 
     @Test

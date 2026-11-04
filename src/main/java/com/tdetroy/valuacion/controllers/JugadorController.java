@@ -88,10 +88,10 @@ public class JugadorController {
     }
 
     /**
-     * UC-08: historial cronológico de cotizaciones de un jugador puntual, incluidos los dados de
-     * baja (su cotización queda congelada en el último registro, UC-15). 404 vía {@code
-     * RecursoNoEncontradoException} si el jugador no existe. Permite filtrar opcionalmente por
-     * {@link EstrategiaCotizacion} vía {@code ?estrategia=...}.
+     * UC-08: historial cronológico de cotizaciones de un jugador puntual, con la última de cada
+     * semana, incluidos los dados de baja (su cotización queda congelada en el último registro,
+     * UC-15). 404 vía {@code RecursoNoEncontradoException} si el jugador no existe. Permite filtrar
+     * opcionalmente por {@link EstrategiaCotizacion} vía {@code ?estrategia=...}.
      */
     /**
      * UC-16: ranking de jugadores segÃºn la estrategia solicitada (pÃºblico).
