@@ -165,7 +165,10 @@ export function TradePanel({
               value={cantidad}
               onChange={(e) =>
                 setCantidad(
-                  Math.min(max, Math.max(1, parseInt(e.target.value, 10) || 1)),
+                  Math.min(
+                    max,
+                    Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+                  ),
                 )
               }
             />

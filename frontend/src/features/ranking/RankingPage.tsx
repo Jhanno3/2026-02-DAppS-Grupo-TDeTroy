@@ -31,8 +31,8 @@ export function RankingPage() {
     if (!variacion) {
       return <span className={`${styles.variacion} ${styles.neutra}`}>-</span>
     }
-    const num = parseFloat(variacion)
-    if (isNaN(num) || num === 0) {
+    const num = Number.parseFloat(variacion)
+    if (Number.isNaN(num) || num === 0) {
       return (
         <span className={`${styles.variacion} ${styles.neutra}`}>0.00%</span>
       )
