@@ -34,9 +34,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * Cubre {@link PortfolioServiceImpl} (tasks.md T5.3, UC-11): combina tenencias con {@code cantidad
- * > 0} y su cotización vigente (o el valor inicial si el jugador nunca tuvo cálculo), calcula el
- * valor total como tenencias + saldo, y devuelve un portfolio vacío para un usuario sin tenencias.
+ * Cubre {@link PortfolioServiceImpl} (tasks.md T5.3, UC-11): combina las tenencias del usuario y su
+ * cotización vigente (o el valor inicial si el jugador nunca tuvo cálculo), calcula el valor total
+ * como tenencias + saldo, y devuelve un portfolio vacío para un usuario sin tenencias.
  */
 @ExtendWith(MockitoExtension.class)
 class PortfolioServiceImplTest {
@@ -80,7 +80,7 @@ class PortfolioServiceImplTest {
         UUID jugadorId = UUID.randomUUID();
         TenenciaToken tenencia = TenenciaToken.abrir(usuarioId, jugadorId);
         tenencia.acreditar(4, BigDecimal.TEN);
-        when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
+        when(tenenciaTokenRepository.findByUsuarioId(usuarioId))
                 .thenReturn(List.of(TenenciaTokenEntity.desde(tenencia)));
         CotizacionHistorica cotizacion =
                 CotizacionHistorica.calcular(
@@ -110,7 +110,7 @@ class PortfolioServiceImplTest {
         UUID jugadorId = UUID.randomUUID();
         TenenciaToken tenencia = TenenciaToken.abrir(usuarioId, jugadorId);
         tenencia.acreditar(2, BigDecimal.TEN);
-        when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
+        when(tenenciaTokenRepository.findByUsuarioId(usuarioId))
                 .thenReturn(List.of(TenenciaTokenEntity.desde(tenencia)));
         when(cotizacionHistoricaRepository.findTopByJugadorIdOrderByFechaCalculoDesc(jugadorId))
                 .thenReturn(Optional.empty());
@@ -132,7 +132,7 @@ class PortfolioServiceImplTest {
         tenenciaUno.acreditar(3, BigDecimal.TEN);
         TenenciaToken tenenciaDos = TenenciaToken.abrir(usuarioId, jugadorDos);
         tenenciaDos.acreditar(5, BigDecimal.TEN);
-        when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
+        when(tenenciaTokenRepository.findByUsuarioId(usuarioId))
                 .thenReturn(
                         List.of(
                                 TenenciaTokenEntity.desde(tenenciaUno),
@@ -152,8 +152,7 @@ class PortfolioServiceImplTest {
     @Test
     void obtenerDe_sinTenencias_devuelvePortfolioVacioConElSaldo() {
         stubUsuarioConSaldo(new BigDecimal("30.00"));
-        when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
-                .thenReturn(List.of());
+        when(tenenciaTokenRepository.findByUsuarioId(usuarioId)).thenReturn(List.of());
 
         Portfolio portfolio = service.obtenerDe(usuarioId);
 
@@ -172,7 +171,7 @@ class PortfolioServiceImplTest {
         TenenciaToken todaEnVenta = TenenciaToken.abrir(usuarioId, UUID.randomUUID());
         todaEnVenta.acreditar(1, BigDecimal.TEN);
         todaEnVenta.reservar(1);
-        when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
+        when(tenenciaTokenRepository.findByUsuarioId(usuarioId))
                 .thenReturn(
                         List.of(
                                 TenenciaTokenEntity.desde(parcial),
@@ -199,8 +198,7 @@ class PortfolioServiceImplTest {
     @Test
     void obtenerDe_comoMejorPostorDeUnaSubasta_sumaElSaldoReservadoAlValorTotal() {
         stubUsuarioConSaldo(new BigDecimal("40.00"));
-        when(tenenciaTokenRepository.findByUsuarioIdAndCantidadGreaterThan(usuarioId, 0))
-                .thenReturn(List.of());
+        when(tenenciaTokenRepository.findByUsuarioId(usuarioId)).thenReturn(List.of());
         Subasta subasta =
                 Subasta.crear(
                         UUID.randomUUID(),
@@ -219,6 +217,38 @@ class PortfolioServiceImplTest {
         assertThat(portfolio.saldoEnPujas()).isEqualByComparingTo("60.00");
         assertThat(portfolio.saldoVirtual()).isEqualByComparingTo("40.00");
         assertThat(portfolio.valorTotal()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    void obtenerDe_conTenenciaVendidaPorCompleto_noLaMuestraPeroCuentaSuGananciaRealizada() {
+        stubUsuarioConSaldo(BigDecimal.ZERO);
+        TenenciaToken vendida = TenenciaToken.abrir(usuarioId, UUID.randomUUID());
+        vendida.acreditar(10, new BigDecimal("100"));
+        vendida.reservar(10);
+        vendida.ejecutarReserva(10, new BigDecimal("1500"));
+        when(tenenciaTokenRepository.findByUsuarioId(usuarioId))
+                .thenReturn(List.of(TenenciaTokenEntity.desde(vendida)));
+
+        Portfolio portfolio = service.obtenerDe(usuarioId);
+
+        assertThat(portfolio.tenencias()).isEmpty();
+        assertThat(portfolio.gananciaPerdida()).isEqualByComparingTo("500.00");
+    }
+
+    @Test
+    void obtenerDe_conTokensReservados_mantieneSuGananciaNoRealizada() {
+        stubUsuarioConSaldo(BigDecimal.ZERO);
+        TenenciaToken tenencia = TenenciaToken.abrir(usuarioId, UUID.randomUUID());
+        tenencia.acreditar(10, new BigDecimal("80"));
+        tenencia.reservar(10);
+        when(tenenciaTokenRepository.findByUsuarioId(usuarioId))
+                .thenReturn(List.of(TenenciaTokenEntity.desde(tenencia)));
+
+        Portfolio portfolio = service.obtenerDe(usuarioId);
+
+        // 10 × (100.00 valor inicial - 80 de costo), aunque no haya ninguno disponible
+        assertThat(portfolio.tenencias()).isEmpty();
+        assertThat(portfolio.gananciaPerdida()).isEqualByComparingTo("200.00");
     }
 
     @Test

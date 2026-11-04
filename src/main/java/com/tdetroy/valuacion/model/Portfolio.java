@@ -16,7 +16,9 @@ import java.util.UUID;
  * @param valorEnVenta tokens reservados en ofertas P2P abiertas y subastas activas, a cotización
  *     vigente: no están disponibles para operar, pero siguen siendo del usuario
  * @param saldoEnPujas saldo reservado como mejor postor de subastas activas (UC-18)
- * @param gananciaPerdida suma de la ganancia/pérdida no realizada de {@code tenencias}
+ * @param gananciaPerdida resultado total del usuario: lo realizado en ventas (sistema, P2P, subasta
+ *     y compensación por baja) más lo no realizado de sus tokens, reservados incluidos (ver {@link
+ *     TenenciaToken#resultadoTotal}). No es la suma de {@code tenencias}, que sólo mira disponibles
  * @param valorTotal saldo + tenencias + valor en venta + saldo en pujas
  */
 public record Portfolio(
@@ -45,6 +47,7 @@ public record Portfolio(
     /**
      * Valoriza las tenencias del usuario.
      *
+     * @param tenencias todas las del usuario, también las vacías: conservan la ganancia realizada
      * @param cotizacionesVigentes cotización vigente de cada jugador presente en {@code tenencias}
      * @param subastasComoMejorPostor subastas activas donde el usuario es el mejor postor
      * @throws IllegalArgumentException si falta la cotización de algún jugador de {@code tenencias}
@@ -83,7 +86,14 @@ public record Portfolio(
         BigDecimal valorPosiciones =
                 sumar(posiciones.stream().map(TenenciaPortfolio::valor).toList());
         BigDecimal gananciaPerdida =
-                sumar(posiciones.stream().map(TenenciaPortfolio::gananciaPerdida).toList());
+                sumar(
+                        tenencias.stream()
+                                .map(
+                                        tenencia ->
+                                                tenencia.resultadoTotal(
+                                                        cotizacionDe(
+                                                                tenencia, cotizacionesVigentes)))
+                                .toList());
         BigDecimal valorTotal =
                 Monetario.escalar(
                         saldoVirtual.add(valorPosiciones).add(valorEnVenta).add(saldoEnPujas));

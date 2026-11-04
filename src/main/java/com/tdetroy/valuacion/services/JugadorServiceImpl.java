@@ -384,13 +384,13 @@ public class JugadorServiceImpl implements JugadorService {
             TenenciaToken tenencia = tenenciaEntity.aModelo();
             UUID usuarioId = tenencia.getUsuarioId();
             int cantidadRetirada = tenencia.getCantidad();
-            tenencia.debitar(cantidadRetirada);
-            tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenencia));
-
-            Usuario usuario = obtenerUsuario(usuarioId);
             BigDecimal monto =
                     Monetario.escalar(
                             cotizacionReferencia.multiply(BigDecimal.valueOf(cantidadRetirada)));
+            tenencia.debitar(cantidadRetirada, monto);
+            tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenencia));
+
+            Usuario usuario = obtenerUsuario(usuarioId);
             usuario.acreditarSaldo(monto);
             usuarioRepository.save(UsuarioEntity.desde(usuario));
 
