@@ -78,6 +78,15 @@ export function listarMercado(
   )
 }
 
+/** UC-16: ranking de jugadores segÃºn la estrategia solicitada (pÃºblico). */
+export function obtenerRanking(
+  estrategia: 'cotizacion' | 'variacion-semanal' = 'cotizacion',
+): Promise<JugadorConPrecioResponse[]> {
+  return apiFetch<JugadorConPrecioResponse[]>(
+    `/jugadores/ranking?estrategia=${estrategia}`,
+  )
+}
+
 export interface DatosIdentificatoriosJugador {
   nombre: string
   club: string

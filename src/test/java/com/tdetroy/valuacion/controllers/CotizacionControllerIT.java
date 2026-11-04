@@ -75,6 +75,56 @@ class CotizacionControllerIT {
                 .hasStatus(202);
     }
 
+    // ---- POST /cotizaciones/ingesta-rendimiento (ADMIN) ----
+
+    @Test
+    void ingestarRendimiento_sinToken_responde401() {
+        mvc.post().uri("/api/v1/cotizaciones/ingesta-rendimiento").assertThat().hasStatus(401);
+    }
+
+    @Test
+    void ingestarRendimiento_conTokenUser_responde403() {
+        mvc.post()
+                .uri("/api/v1/cotizaciones/ingesta-rendimiento")
+                .header("Authorization", "Bearer " + tokenUser())
+                .assertThat()
+                .hasStatus(403);
+    }
+
+    @Test
+    void ingestarRendimiento_conTokenAdmin_responde202() {
+        mvc.post()
+                .uri("/api/v1/cotizaciones/ingesta-rendimiento")
+                .header("Authorization", "Bearer " + tokenAdmin())
+                .assertThat()
+                .hasStatus(202);
+    }
+
+    // ---- POST /cotizaciones/ingesta-fixtures (ADMIN) ----
+
+    @Test
+    void ingestarFixtures_sinToken_responde401() {
+        mvc.post().uri("/api/v1/cotizaciones/ingesta-fixtures").assertThat().hasStatus(401);
+    }
+
+    @Test
+    void ingestarFixtures_conTokenUser_responde403() {
+        mvc.post()
+                .uri("/api/v1/cotizaciones/ingesta-fixtures")
+                .header("Authorization", "Bearer " + tokenUser())
+                .assertThat()
+                .hasStatus(403);
+    }
+
+    @Test
+    void ingestarFixtures_conTokenAdmin_responde202() {
+        mvc.post()
+                .uri("/api/v1/cotizaciones/ingesta-fixtures")
+                .header("Authorization", "Bearer " + tokenAdmin())
+                .assertThat()
+                .hasStatus(202);
+    }
+
     // ---- PUT /cotizaciones/estrategia (ADMIN) ----
 
     @Test

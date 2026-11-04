@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { darDeBajaJugador, listarJugadores } from '../../api/jugadores'
-import { dispararRecalculoManual } from '../../api/cotizaciones'
+import {
+  dispararIngestaRendimiento,
+  dispararRecalculoManual,
+} from '../../api/cotizaciones'
 import { ApiError } from '../../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Button } from '../../shared/components/Button'
@@ -10,7 +13,8 @@ import styles from './AdminJugadoresPage.module.css'
 
 /**
  * Panel ADMIN: catálogo con acciones de alta/edición/baja (UC-03/UC-04/UC-15), recarga de saldo
- * (UC-14, página propia) y disparo manual del recálculo de cotización (UC-13).
+ * (UC-14, página propia), sincronización de WhoScored y disparo manual del recálculo de cotización
+ * (UC-13).
  */
 export function AdminJugadoresPage() {
   const { token } = useAuth()
@@ -23,11 +27,27 @@ export function AdminJugadoresPage() {
     queryFn: listarJugadores,
   })
 
+  const ingestaRendimientoMutation = useMutation({
+    mutationFn: () => dispararIngestaRendimiento(token!),
+    onSuccess: async () => {
+      setMensaje('Sincronización con WhoScored completada con éxito.')
+      await queryClient.invalidateQueries({ queryKey: ['jugadores'] })
+      await queryClient.invalidateQueries({ queryKey: ['ranking'] })
+    },
+    onError: (err) =>
+      setMensaje(
+        err instanceof ApiError
+          ? err.message
+          : 'No se pudo sincronizar con WhoScored.',
+      ),
+  })
+
   const recalculoMutation = useMutation({
     mutationFn: () => dispararRecalculoManual(token!),
     onSuccess: async () => {
       setMensaje('Recálculo de cotización disparado correctamente.')
       await queryClient.invalidateQueries({ queryKey: ['jugadores'] })
+      await queryClient.invalidateQueries({ queryKey: ['ranking'] })
     },
     onError: (err) =>
       setMensaje(
@@ -43,6 +63,7 @@ export function AdminJugadoresPage() {
     onSuccess: async () => {
       setMensaje(null)
       await queryClient.invalidateQueries({ queryKey: ['jugadores'] })
+      await queryClient.invalidateQueries({ queryKey: ['ranking'] })
     },
     onError: (err) =>
       setMensaje(
@@ -68,6 +89,16 @@ export function AdminJugadoresPage() {
           <LinkButton to="/admin/saldo" variant="secondary" small>
             Recargar saldo
           </LinkButton>
+          <Button
+            variant="secondary"
+            small
+            onClick={() => ingestaRendimientoMutation.mutate()}
+            disabled={ingestaRendimientoMutation.isPending}
+          >
+            {ingestaRendimientoMutation.isPending
+              ? 'Sincronizando WhoScored…'
+              : '⚡ Sincronizar WhoScored'}
+          </Button>
           <Button
             variant="secondary"
             small
@@ -99,7 +130,7 @@ export function AdminJugadoresPage() {
               <th>Posición</th>
               <th>Tokens disponibles</th>
               <th>Estado</th>
-              <th></th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -109,40 +140,38 @@ export function AdminJugadoresPage() {
                 <td>{jugador.club}</td>
                 <td>{jugador.liga}</td>
                 <td>{jugador.posicion}</td>
-                <td>{jugador.tokensDisponibles} / 100</td>
+                <td>{jugador.tokensDisponibles}</td>
                 <td>
                   <span
-                    className={`${styles.badge} ${
+                    className={
                       jugador.estado === 'ACTIVO'
-                        ? styles.badgeActivo
-                        : styles.badgeInactivo
-                    }`}
+                        ? styles.estadoActivo
+                        : styles.estadoBaja
+                    }
                   >
                     {jugador.estado}
                   </span>
                 </td>
-                <td>
-                  <div className={styles.filaAcciones}>
-                    <LinkButton
-                      to={`/admin/jugadores/${jugador.id}/editar`}
-                      variant="secondary"
+                <td className={styles.acciones}>
+                  <LinkButton
+                    to={`/admin/jugadores/${jugador.id}/editar`}
+                    variant="secondary"
+                    small
+                  >
+                    Editar
+                  </LinkButton>
+                  {jugador.estado === 'ACTIVO' && (
+                    <Button
+                      variant="ghost"
                       small
+                      onClick={() => handleBaja(jugador.id, jugador.nombre)}
+                      disabled={jugadorEnBaja === jugador.id}
                     >
-                      Editar
-                    </LinkButton>
-                    {jugador.estado === 'ACTIVO' && (
-                      <Button
-                        variant="ghost"
-                        small
-                        onClick={() => handleBaja(jugador.id, jugador.nombre)}
-                        disabled={jugadorEnBaja === jugador.id}
-                      >
-                        {jugadorEnBaja === jugador.id
-                          ? 'Dando de baja…'
-                          : 'Dar de baja'}
-                      </Button>
-                    )}
-                  </div>
+                      {jugadorEnBaja === jugador.id
+                        ? 'Dando de baja…'
+                        : 'Dar de baja'}
+                    </Button>
+                  )}
                 </td>
               </tr>
             ))}

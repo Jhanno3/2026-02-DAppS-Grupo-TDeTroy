@@ -582,4 +582,23 @@ class JugadorControllerIT {
                 .contains("\"asistencias\":3")
                 .contains("\"tarjetasAmarillas\":1");
     }
+
+    // ---- GET /jugadores/ranking (UC-16, pÃºblico) ----
+
+    @Test
+    void obtenerRanking_sinAutenticacion_responde200() {
+        crearYObtenerId("Jugador Ranking " + UUID.randomUUID());
+
+        mvc.get().uri("/api/v1/jugadores/ranking").assertThat().hasStatus(200);
+    }
+
+    @Test
+    void obtenerRanking_conEstrategiaVariacion_responde200() {
+        crearYObtenerId("Jugador Ranking Suba " + UUID.randomUUID());
+
+        mvc.get()
+                .uri("/api/v1/jugadores/ranking?estrategia=variacion-semanal")
+                .assertThat()
+                .hasStatus(200);
+    }
 }

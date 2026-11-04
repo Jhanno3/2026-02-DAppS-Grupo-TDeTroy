@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as client from './client'
-import { dispararRecalculoManual } from './cotizaciones'
+import {
+  dispararIngestaFixtures,
+  dispararIngestaRendimiento,
+  dispararRecalculoManual,
+} from './cotizaciones'
 
 vi.mock('./client', async (importOriginal) => {
   const actual = await importOriginal<typeof client>()
@@ -19,5 +23,29 @@ describe('api/cotizaciones', () => {
       method: 'POST',
       token: 'admin-token',
     })
+  })
+
+  it('dispararIngestaRendimiento hace POST /cotizaciones/ingesta-rendimiento con el token', async () => {
+    await dispararIngestaRendimiento('admin-token')
+
+    expect(client.apiFetch).toHaveBeenCalledWith(
+      '/cotizaciones/ingesta-rendimiento',
+      {
+        method: 'POST',
+        token: 'admin-token',
+      },
+    )
+  })
+
+  it('dispararIngestaFixtures hace POST /cotizaciones/ingesta-fixtures con el token', async () => {
+    await dispararIngestaFixtures('admin-token')
+
+    expect(client.apiFetch).toHaveBeenCalledWith(
+      '/cotizaciones/ingesta-fixtures',
+      {
+        method: 'POST',
+        token: 'admin-token',
+      },
+    )
   })
 })

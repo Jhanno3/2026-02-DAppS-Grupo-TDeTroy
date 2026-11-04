@@ -1,2 +1,4 @@
 node_modules
 npm-debug.log*
+todos_los_jugadores.json
+import_players.sql

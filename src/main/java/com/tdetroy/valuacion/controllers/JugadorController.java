@@ -5,12 +5,14 @@ import com.tdetroy.valuacion.dto.request.CrearJugadorRequest;
 import com.tdetroy.valuacion.dto.request.EditarJugadorRequest;
 import com.tdetroy.valuacion.dto.response.CotizacionResponse;
 import com.tdetroy.valuacion.dto.response.EstadisticasTemporadaResponse;
+import com.tdetroy.valuacion.dto.response.JugadorConPrecioResponse;
 import com.tdetroy.valuacion.dto.response.JugadorResponse;
 import com.tdetroy.valuacion.dto.response.PaginaMercadoResponse;
 import com.tdetroy.valuacion.model.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.Jugador;
 import com.tdetroy.valuacion.services.CotizacionService;
 import com.tdetroy.valuacion.services.JugadorService;
+import com.tdetroy.valuacion.services.RankingService;
 import com.tdetroy.valuacion.services.RendimientoService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
@@ -41,14 +43,17 @@ public class JugadorController {
     private final JugadorService jugadorService;
     private final CotizacionService cotizacionService;
     private final RendimientoService rendimientoService;
+    private final RankingService rankingService;
 
     public JugadorController(
             JugadorService jugadorService,
             CotizacionService cotizacionService,
-            RendimientoService rendimientoService) {
+            RendimientoService rendimientoService,
+            RankingService rankingService) {
         this.jugadorService = jugadorService;
         this.cotizacionService = cotizacionService;
         this.rendimientoService = rendimientoService;
+        this.rankingService = rankingService;
     }
 
     /** UC-07: catálogo completo, incluidos los jugadores dados de baja (spec.md UC-07). */
@@ -88,6 +93,20 @@ public class JugadorController {
      * RecursoNoEncontradoException} si el jugador no existe. Permite filtrar opcionalmente por
      * {@link EstrategiaCotizacion} vía {@code ?estrategia=...}.
      */
+    /**
+     * UC-16: ranking de jugadores segÃºn la estrategia solicitada (pÃºblico).
+     *
+     * @param estrategia "cotizacion" o "variacion-semanal" (default: "cotizacion")
+     * @return lista ordenada con los mejores jugadores y su cotizaciÃ³n vigente
+     */
+    @GetMapping("/ranking")
+    public List<JugadorConPrecioResponse> obtenerRanking(
+            @RequestParam(required = false, defaultValue = "cotizacion") String estrategia) {
+        return rankingService.obtenerRanking(estrategia).stream()
+                .map(JugadorConPrecioResponse::desde)
+                .toList();
+    }
+
     @GetMapping("/{id}/cotizaciones")
     public List<CotizacionResponse> obtenerCotizaciones(
             @PathVariable UUID id,

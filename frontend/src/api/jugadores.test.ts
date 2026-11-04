@@ -9,6 +9,7 @@ import {
   listarMercado,
   obtenerEstadisticas,
   obtenerJugador,
+  obtenerRanking,
 } from './jugadores'
 
 vi.mock('./client', async (importOriginal) => {
@@ -168,6 +169,23 @@ describe('api/jugadores', () => {
       vi.mocked(client.apiFetch).mockResolvedValue(undefined)
 
       expect(await obtenerEstadisticas('jugador-1')).toBeNull()
+    })
+  })
+  describe('obtenerRanking', () => {
+    it('pide GET /jugadores/ranking con la estrategia por defecto', async () => {
+      await obtenerRanking()
+
+      expect(client.apiFetch).toHaveBeenCalledWith(
+        '/jugadores/ranking?estrategia=cotizacion',
+      )
+    })
+
+    it('pide GET /jugadores/ranking con la estrategia especificada', async () => {
+      await obtenerRanking('variacion-semanal')
+
+      expect(client.apiFetch).toHaveBeenCalledWith(
+        '/jugadores/ranking?estrategia=variacion-semanal',
+      )
     })
   })
 })

@@ -9,6 +9,7 @@ import { CarteraPage } from '../features/cartera/CarteraPage'
 import { MovimientosPage } from '../features/cartera/MovimientosPage'
 import { MercadoPage } from '../features/mercado/MercadoPage'
 import { P2PPage } from '../features/p2p/P2PPage'
+import { RankingPage } from '../features/ranking/RankingPage'
 import { SubastasPage } from '../features/subastas/SubastasPage'
 import { SubastaDetailPage } from '../features/subastas/SubastaDetailPage'
 import { CrearSubastaPage } from '../features/subastas/CrearSubastaPage'
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'registro', element: <RegistroPage /> },
       { path: 'mercado', element: <MercadoPage /> },
+      { path: 'ranking', element: <RankingPage /> },
       { path: 'p2p', element: <P2PPage /> },
       { path: 'jugadores/:id', element: <JugadorDetailPage /> },
       { path: 'jugadores/:id/p2p', element: <OfertaP2PJugadorPage /> },

@@ -43,6 +43,9 @@ export function RootLayout() {
             <NavLink to="/mercado" className={claseLink}>
               Mercado
             </NavLink>
+            <NavLink to="/ranking" className={claseLink}>
+              Ranking
+            </NavLink>
             <NavLink to="/p2p" className={claseLink}>
               P2P
             </NavLink>
