@@ -162,7 +162,7 @@ export function AdminJugadoresPage() {
                   </LinkButton>
                   {jugador.estado === 'ACTIVO' && (
                     <Button
-                      variant="danger"
+                      variant="ghost"
                       small
                       onClick={() => handleBaja(jugador.id, jugador.nombre)}
                       disabled={jugadorEnBaja === jugador.id}

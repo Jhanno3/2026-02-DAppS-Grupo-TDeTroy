@@ -71,6 +71,10 @@ describe('RootLayout', () => {
 
     expect(screen.getByText('user@example.com')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Mi cartera' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ranking' })).toHaveAttribute(
+      'href',
+      '/ranking',
+    )
     expect(screen.getByRole('link', { name: 'Mercado' })).toHaveAttribute(
       'aria-current',
       'page',

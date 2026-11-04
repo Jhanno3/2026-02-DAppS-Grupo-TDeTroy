@@ -37,6 +37,34 @@ const JUGADOR_2 = {
   fotoUrl: null,
 }
 
+const JUGADOR_3 = {
+  id: 'j3',
+  nombre: 'Kylian Mbappé',
+  club: 'Real Madrid',
+  posicion: 'Delantero',
+  fechaNacimiento: '1998-12-20',
+  nacionalidad: 'Francia',
+  liga: 'La Liga',
+  estado: 'ACTIVO' as const,
+  tokensDisponibles: 85,
+  fechaUltimaActualizacionRendimiento: null,
+  fotoUrl: null,
+}
+
+const JUGADOR_4 = {
+  id: 'j4',
+  nombre: 'Vinicius Jr',
+  club: 'Real Madrid',
+  posicion: 'Delantero',
+  fechaNacimiento: '2000-07-12',
+  nacionalidad: 'Brasil',
+  liga: 'La Liga',
+  estado: 'ACTIVO' as const,
+  tokensDisponibles: 80,
+  fechaUltimaActualizacionRendimiento: null,
+  fotoUrl: null,
+}
+
 const RANKING_MOCK: jugadoresApi.JugadorConPrecioResponse[] = [
   {
     jugador: JUGADOR_1,
@@ -47,6 +75,16 @@ const RANKING_MOCK: jugadoresApi.JugadorConPrecioResponse[] = [
     jugador: JUGADOR_2,
     precio: '120.00',
     variacionPorcentual: '-2.30',
+  },
+  {
+    jugador: JUGADOR_3,
+    precio: null,
+    variacionPorcentual: '0.00',
+  },
+  {
+    jugador: JUGADOR_4,
+    precio: '90.00',
+    variacionPorcentual: null,
   },
 ]
 
@@ -85,38 +123,53 @@ describe('RankingPage', () => {
     ).toHaveAttribute('aria-selected', 'false')
   })
 
-  it('renderiza la lista de jugadores ordenados con precios y variaciones', async () => {
+  it('renderiza la lista de jugadores ordenados con precios y variaciones para distintas posiciones', async () => {
     renderPagina()
 
     expect(await screen.findByText('Lionel Messi')).toBeInTheDocument()
     expect(screen.getByText('Erling Haaland')).toBeInTheDocument()
+    expect(screen.getByText('Kylian Mbappé')).toBeInTheDocument()
+    expect(screen.getByText('Vinicius Jr')).toBeInTheDocument()
 
-    // Puestos #1 y #2
+    // Puestos #1, #2, #3 y #4
     expect(screen.getByText('#1')).toBeInTheDocument()
     expect(screen.getByText('#2')).toBeInTheDocument()
+    expect(screen.getByText('#3')).toBeInTheDocument()
+    expect(screen.getByText('#4')).toBeInTheDocument()
 
-    // Precios formateados
+    // Precios formateados y precio nulo '-'
     expect(screen.getByText(formatMoney('150.00'))).toBeInTheDocument()
     expect(screen.getByText(formatMoney('120.00'))).toBeInTheDocument()
+    expect(screen.getAllByText('-').length).toBeGreaterThanOrEqual(1)
 
-    // Variaciones
+    // Variaciones: positiva, negativa, cero y nula
     expect(screen.getByText(/12\.50%/)).toBeInTheDocument()
     expect(screen.getByText(/2\.30%/)).toBeInTheDocument()
+    expect(screen.getByText('0.00%')).toBeInTheDocument()
   })
 
-  it('permite cambiar la estrategia de ranking a Mayor Crecimiento', async () => {
+  it('permite cambiar la estrategia de ranking y volver a la anterior', async () => {
     const user = userEvent.setup()
     renderPagina()
 
     const tabCrecimiento = screen.getByRole('tab', {
       name: /Mayor Crecimiento/i,
     })
-    await user.click(tabCrecimiento)
+    const tabCotizacion = screen.getByRole('tab', {
+      name: /Mayor Cotización/i,
+    })
 
+    // Cambiar a Mayor Crecimiento
+    await user.click(tabCrecimiento)
     expect(jugadoresApi.obtenerRanking).toHaveBeenCalledWith(
       'variacion-semanal',
     )
     expect(tabCrecimiento).toHaveAttribute('aria-selected', 'true')
+
+    // Volver a Mayor Cotización
+    await user.click(tabCotizacion)
+    expect(jugadoresApi.obtenerRanking).toHaveBeenCalledWith('cotizacion')
+    expect(tabCotizacion).toHaveAttribute('aria-selected', 'true')
   })
 
   it('muestra estado vacío si el ranking no tiene elementos', async () => {
@@ -126,6 +179,19 @@ describe('RankingPage', () => {
     expect(
       await screen.findByText(
         'No hay jugadores disponibles para armar el ranking en este momento.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('muestra mensaje de error si la carga del ranking falla', async () => {
+    vi.mocked(jugadoresApi.obtenerRanking).mockRejectedValue(
+      new Error('Network error'),
+    )
+    renderPagina()
+
+    expect(
+      await screen.findByText(
+        'No se pudo cargar el ranking. Intente nuevamente más tarde.',
       ),
     ).toBeInTheDocument()
   })
