@@ -81,7 +81,7 @@ public class TokenServiceImpl implements TokenService {
         Jugador jugador = obtenerJugador(jugadorId);
         TenenciaToken tenencia = obtenerOAbrirTenencia(usuarioId, jugadorId);
 
-        tenencia.debitar(cantidad);
+        tenencia.validarDebito(cantidad);
         // El descuento de venta al sistema lo aplica Movimiento#ventaSistema (UC-10).
         Movimiento venta =
                 Movimiento.ventaSistema(
@@ -90,6 +90,7 @@ public class TokenServiceImpl implements TokenService {
                         cantidad,
                         cotizacionVigenteDe(jugadorId),
                         descuentoVentaSistema);
+        tenencia.debitar(cantidad, venta.getMontoTotal());
         usuario.acreditarSaldo(venta.getMontoTotal());
         jugador.liberarTokens(cantidad);
 

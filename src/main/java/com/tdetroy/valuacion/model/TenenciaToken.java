@@ -22,6 +22,10 @@ import lombok.Getter;
  * precio pagado}; cada salida de tokens ({@link #debitar}, {@link #ejecutarReserva}) descuenta la
  * parte proporcional, así que vender nunca cambia el {@link #precioPromedioCompra()} de lo que
  * queda. Reservar/liberar no lo tocan: los tokens reservados siguen siendo del usuario.
+ *
+ * <p><b>Ganancia realizada:</b> {@code gananciaRealizada} acumula, por cada salida de tokens, lo
+ * cobrado menos el costo de lo que salió. Sobrevive a la tenencia: sigue contando aunque {@code
+ * cantidad} llegue a cero. Ver {@link #resultadoTotal}.
  */
 @Getter
 public class TenenciaToken {
@@ -32,6 +36,7 @@ public class TenenciaToken {
     private int cantidad;
     private int cantidadReservada;
     private BigDecimal costoTotal;
+    private BigDecimal gananciaRealizada;
 
     private TenenciaToken(UUID usuarioId, UUID jugadorId) {
         validarCampos(usuarioId, jugadorId);
@@ -42,6 +47,7 @@ public class TenenciaToken {
         this.cantidad = 0;
         this.cantidadReservada = 0;
         this.costoTotal = Monetario.CERO;
+        this.gananciaRealizada = Monetario.CERO;
     }
 
     /**
@@ -59,13 +65,15 @@ public class TenenciaToken {
             UUID jugadorId,
             int cantidad,
             int cantidadReservada,
-            BigDecimal costoTotal) {
+            BigDecimal costoTotal,
+            BigDecimal gananciaRealizada) {
         this.id = id;
         this.usuarioId = usuarioId;
         this.jugadorId = jugadorId;
         this.cantidad = cantidad;
         this.cantidadReservada = cantidadReservada;
         this.costoTotal = costoTotal;
+        this.gananciaRealizada = gananciaRealizada;
     }
 
     /**
@@ -79,8 +87,16 @@ public class TenenciaToken {
             UUID jugadorId,
             int cantidad,
             int cantidadReservada,
-            BigDecimal costoTotal) {
-        return new TenenciaToken(id, usuarioId, jugadorId, cantidad, cantidadReservada, costoTotal);
+            BigDecimal costoTotal,
+            BigDecimal gananciaRealizada) {
+        return new TenenciaToken(
+                id,
+                usuarioId,
+                jugadorId,
+                cantidad,
+                cantidadReservada,
+                costoTotal,
+                gananciaRealizada);
     }
 
     /** Cantidad disponible para venta al sistema o para publicar en una nueva oferta P2P. */
@@ -111,17 +127,30 @@ public class TenenciaToken {
 
     /**
      * Debita {@code cantidad} de la tenencia (venta al sistema, UC-10; retiro por baja de jugador),
-     * descontando su parte proporcional del costo de adquisición.
+     * descontando su parte proporcional del costo de adquisición y realizando su resultado.
+     *
+     * @param montoCobrado lo que recibe el usuario por estos tokens
+     * @throws IllegalArgumentException si {@code cantidad} no es mayor a cero, o si {@code
+     *     montoCobrado} es negativo
+     * @throws TenenciaInsuficienteException si {@code cantidad} supera {@link #disponible()}
+     */
+    public void debitar(int cantidad, BigDecimal montoCobrado) {
+        validarDebito(cantidad);
+        retirar(cantidad, montoCobrado);
+    }
+
+    /**
+     * Valida que se puedan debitar {@code cantidad} tokens sin mutar nada, para cortar antes de
+     * calcular el monto a cobrar.
      *
      * @throws IllegalArgumentException si {@code cantidad} no es mayor a cero
      * @throws TenenciaInsuficienteException si {@code cantidad} supera {@link #disponible()}
      */
-    public void debitar(int cantidad) {
+    public void validarDebito(int cantidad) {
         requirePositivo(cantidad, "cantidad");
         if (cantidad > disponible()) {
             throw new TenenciaInsuficienteException(cantidad, disponible());
         }
-        retirar(cantidad);
     }
 
     /**
@@ -158,20 +187,22 @@ public class TenenciaToken {
 
     /**
      * Ejecuta {@code cantidad} de la reserva: sale de la tenencia por completo (venta P2P
-     * concretada contra la oferta del vendedor, UC-17) — descuenta {@code cantidad} y {@code
-     * cantidadReservada} a la vez, y la parte proporcional del costo de adquisición.
+     * concretada contra la oferta del vendedor, UC-17, o adjudicación de subasta, UC-18) —
+     * descuenta {@code cantidad} y {@code cantidadReservada} a la vez, y la parte proporcional del
+     * costo de adquisición, realizando su resultado.
      *
-     * @throws IllegalArgumentException si {@code cantidad} no es mayor a cero, o si supera {@code
-     *     cantidadReservada}
+     * @param montoCobrado lo que recibe el vendedor por estos tokens
+     * @throws IllegalArgumentException si {@code cantidad} no es mayor a cero, si supera {@code
+     *     cantidadReservada}, o si {@code montoCobrado} es negativo
      */
-    public void ejecutarReserva(int cantidad) {
+    public void ejecutarReserva(int cantidad, BigDecimal montoCobrado) {
         requirePositivo(cantidad, "cantidad");
         if (cantidad > cantidadReservada) {
             throw new IllegalArgumentException(
                     "cantidad a ejecutar (%d) no puede superar cantidadReservada actual (%d)"
                             .formatted(cantidad, cantidadReservada));
         }
-        retirar(cantidad);
+        retirar(cantidad, montoCobrado);
         this.cantidadReservada -= cantidad;
     }
 
@@ -207,6 +238,15 @@ public class TenenciaToken {
     }
 
     /**
+     * Resultado total de la tenencia: lo ya realizado en ventas más lo no realizado de todos los
+     * tokens que quedan, reservados incluidos. Ej.: 10 tokens comprados a 100, 5 vendidos a 150 y
+     * cotización 120 → {@code 250 + (600 - 500) = +350}.
+     */
+    public BigDecimal resultadoTotal(BigDecimal cotizacion) {
+        return gananciaRealizada.add(valorizar(cotizacion, cantidad)).subtract(costoTotal);
+    }
+
+    /**
      * Rentabilidad porcentual de los tokens disponibles ({@code gananciaPerdida / costo × 100});
      * cero si no tienen costo registrado.
      */
@@ -229,11 +269,21 @@ public class TenenciaToken {
     }
 
     /**
-     * Saca {@code cantidad} tokens descontando su costo proporcional; si la tenencia queda vacía,
-     * el costo vuelve a cero exacto (sin residuos de redondeo).
+     * Saca {@code cantidad} tokens descontando su costo proporcional y sumando a {@code
+     * gananciaRealizada} lo cobrado menos ese costo; si la tenencia queda vacía, el costo vuelve a
+     * cero exacto (sin residuos de redondeo).
      */
-    private void retirar(int cantidadRetirada) {
-        this.costoTotal = costoProporcional(cantidad - cantidadRetirada);
+    private void retirar(int cantidadRetirada, BigDecimal montoCobrado) {
+        Objects.requireNonNull(montoCobrado, "montoCobrado no puede ser null");
+        if (montoCobrado.signum() < 0) {
+            throw new IllegalArgumentException(
+                    "montoCobrado no puede ser negativo, fue " + montoCobrado);
+        }
+        BigDecimal costoRestante = costoProporcional(cantidad - cantidadRetirada);
+        BigDecimal costoRetirado = costoTotal.subtract(costoRestante);
+        this.gananciaRealizada =
+                Monetario.escalar(gananciaRealizada.add(montoCobrado).subtract(costoRetirado));
+        this.costoTotal = costoRestante;
         this.cantidad -= cantidadRetirada;
     }
 

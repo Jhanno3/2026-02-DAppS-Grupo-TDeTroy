@@ -131,7 +131,7 @@ public class OfertaServiceImpl implements OfertaService {
         vendedor.acreditarSaldo(montoTotal);
 
         TenenciaToken tenenciaVendedor = obtenerOAbrirTenencia(vendedorId, oferta.getJugadorId());
-        tenenciaVendedor.ejecutarReserva(cantidad);
+        tenenciaVendedor.ejecutarReserva(cantidad, montoTotal);
         TenenciaToken tenenciaComprador = obtenerOAbrirTenencia(compradorId, oferta.getJugadorId());
         tenenciaComprador.acreditar(cantidad, precioUnitario);
 
