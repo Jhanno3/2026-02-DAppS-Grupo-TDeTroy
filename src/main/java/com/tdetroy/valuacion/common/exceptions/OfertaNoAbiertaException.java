@@ -1,6 +1,6 @@
 package com.tdetroy.valuacion.common.exceptions;
 
-import com.tdetroy.valuacion.model.EstadoOferta;
+import com.tdetroy.valuacion.model.mercado.EstadoOferta;
 import java.util.UUID;
 
 /**
