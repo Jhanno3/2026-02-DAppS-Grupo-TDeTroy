@@ -3,7 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 // Mapa de jugadores que ya existían previamente en DB para preservar sus UUIDs
-const EXISTING_PLAYERS_MAP = {
+const JUGADORES_EXISTENTES = {
   'federico valverde': '0a094b31-6069-4933-b627-32384487204b',
   'pedri': '9814d137-7fd5-4d45-a737-b89f647cdd4d',
   'vinicius junior': '45133008-d549-4935-84b3-6c1d4d76541e',
@@ -43,97 +43,97 @@ const EXISTING_PLAYERS_MAP = {
   'giovani lo celso': '906a9958-74ba-4be8-add2-4ebe9050cc8c'
 };
 
-function normalizeName(str) {
-  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+function normalizarNombre(texto) {
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
-function escapeSql(str) {
-  if (!str) return '';
-  return str.replace(/'/g, "''");
+function escaparSql(texto) {
+  if (!texto) return '';
+  return texto.replace(/'/g, "''");
 }
 
-function generateSql() {
-  const jsonPath = path.join(__dirname, 'todos_los_jugadores.json');
-  if (!fs.existsSync(jsonPath)) {
-    console.error(`No existe el archivo ${jsonPath}`);
+function generarSql() {
+  const rutaJson = path.join(__dirname, 'todos_los_jugadores.json');
+  if (!fs.existsSync(rutaJson)) {
+    console.error(`No existe el archivo ${rutaJson}`);
     process.exit(1);
   }
 
-  const players = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-  console.log(`Leídos ${players.length} jugadores desde JSON`);
+  const jugadores = JSON.parse(fs.readFileSync(rutaJson, 'utf-8'));
+  console.log(`Leídos ${jugadores.length} jugadores desde JSON`);
 
-  const sqlStatements = [];
-  sqlStatements.push('-- Ingesta masiva de jugadores y cotizaciones reales de las 5 Grandes Ligas');
-  sqlStatements.push('BEGIN;');
+  const sentenciasSql = [];
+  sentenciasSql.push('-- Ingesta masiva de jugadores y cotizaciones reales de las 5 Grandes Ligas');
+  sentenciasSql.push('BEGIN;');
 
-  const weeks = [
-    { semana: '2026-W39', date: '2026-09-28 03:00:00+00' },
-    { semana: '2026-W40', date: '2026-10-05 03:00:00+00' },
-    { semana: '2026-W41', date: '2026-10-12 03:00:00+00' },
-    { semana: '2026-W42', date: '2026-10-19 03:00:00+00' },
-    { semana: '2026-W43', date: '2026-10-26 03:00:00+00' },
-    { semana: '2026-W44', date: '2026-11-02 03:00:00+00' }
+  const semanas = [
+    { semana: '2026-W39', fecha: '2026-09-28 03:00:00+00' },
+    { semana: '2026-W40', fecha: '2026-10-05 03:00:00+00' },
+    { semana: '2026-W41', fecha: '2026-10-12 03:00:00+00' },
+    { semana: '2026-W42', fecha: '2026-10-19 03:00:00+00' },
+    { semana: '2026-W43', fecha: '2026-10-26 03:00:00+00' },
+    { semana: '2026-W44', fecha: '2026-11-02 03:00:00+00' }
   ];
 
   // Tracking para evitar duplicados en la corrida
-  const processedNames = new Set();
-  let countByLeague = {};
+  const nombresProcesados = new Set();
+  let cantidadPorLiga = {};
 
-  for (let i = 0; i < players.length; i++) {
-    const p = players[i];
-    const norm = normalizeName(p.nombre);
-    const key = `${norm}_${p.liga}`;
-    if (processedNames.has(key)) continue;
-    processedNames.add(key);
+  for (let i = 0; i < jugadores.length; i++) {
+    const p = jugadores[i];
+    const nombreNormalizado = normalizarNombre(p.nombre);
+    const clave = `${nombreNormalizado}_${p.liga}`;
+    if (nombresProcesados.has(clave)) continue;
+    nombresProcesados.add(clave);
 
-    countByLeague[p.liga] = (countByLeague[p.liga] || 0) + 1;
+    cantidadPorLiga[p.liga] = (cantidadPorLiga[p.liga] || 0) + 1;
 
-    let jugadorId = EXISTING_PLAYERS_MAP[norm];
+    let jugadorId = JUGADORES_EXISTENTES[nombreNormalizado];
     if (!jugadorId) {
       // Deterministic UUID basado en nombre y liga para reproducibilidad
       const hash = crypto.createHash('md5').update(`${p.nombre}_${p.liga}_${p.club}`).digest('hex');
       jugadorId = `${hash.substring(0,8)}-${hash.substring(8,12)}-4${hash.substring(13,16)}-a${hash.substring(17,20)}-${hash.substring(20,32)}`;
     }
 
-    const birthYear = 2026 - (p.edad || 24);
-    const birthDate = `${birthYear}-06-15`;
-    const safeName = escapeSql(p.nombre);
-    const safeClub = escapeSql(p.club);
-    const safeLiga = escapeSql(p.liga);
-    const safePos = escapeSql(p.posicion);
-    const safeNac = escapeSql(p.nacionalidad);
-    const safeFoto = escapeSql(p.fotoUrl || '');
+    const anioNacimiento = 2026 - (p.edad || 24);
+    const fechaNacimiento = `${anioNacimiento}-06-15`;
+    const nombreSql = escaparSql(p.nombre);
+    const clubSql = escaparSql(p.club);
+    const ligaSql = escaparSql(p.liga);
+    const posicionSql = escaparSql(p.posicion);
+    const nacionalidadSql = escaparSql(p.nacionalidad);
+    const fotoSql = escaparSql(p.fotoUrl || '');
 
     // Calcular cotizaciones históricas basadas en su rating y métricas
     // Base de cotización según rating WhoScored
-    let baseVal = 70.0;
+    let valorBase = 70.0;
     if (p.rating >= 7.60) {
-      baseVal = 170.0 + (p.rating - 7.60) * 100.0; // 170 - 220
+      valorBase = 170.0 + (p.rating - 7.60) * 100.0; // 170 - 220
     } else if (p.rating >= 7.30) {
-      baseVal = 130.0 + (p.rating - 7.30) * 133.0; // 130 - 170
+      valorBase = 130.0 + (p.rating - 7.30) * 133.0; // 130 - 170
     } else if (p.rating >= 7.00) {
-      baseVal = 100.0 + (p.rating - 7.00) * 100.0; // 100 - 130
+      valorBase = 100.0 + (p.rating - 7.00) * 100.0; // 100 - 130
     } else if (p.rating >= 6.70) {
-      baseVal = 70.0 + (p.rating - 6.70) * 100.0; // 70 - 100
+      valorBase = 70.0 + (p.rating - 6.70) * 100.0; // 70 - 100
     } else {
-      baseVal = 40.0 + Math.max(0, p.rating - 6.00) * 42.0; // 40 - 70
+      valorBase = 40.0 + Math.max(0, p.rating - 6.00) * 42.0; // 40 - 70
     }
 
     // Variación semanal dinámica basada en rendimiento y perfil
     // Unos suben mucho (Mayor Crecimiento), otros son estables, otros bajan
-    const seed = (p.nombre.charCodeAt(0) + p.nombre.length * 7) % 5;
+    const perfil = (p.nombre.charCodeAt(0) + p.nombre.length * 7) % 5;
     let factorSemanal = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
 
-    if (seed === 0) {
+    if (perfil === 0) {
       // Gran alza (+15% a +25%)
       factorSemanal = [0.85, 0.88, 0.92, 0.96, 1.02, 1.08];
-    } else if (seed === 1) {
+    } else if (perfil === 1) {
       // Alza constante moderada (+8% a +14%)
       factorSemanal = [0.91, 0.93, 0.95, 0.97, 1.00, 1.03];
-    } else if (seed === 2) {
+    } else if (perfil === 2) {
       // Muy estable (+- 2%)
       factorSemanal = [0.99, 1.01, 0.98, 1.00, 1.01, 1.00];
-    } else if (seed === 3) {
+    } else if (perfil === 3) {
       // Salto reciente en semanas 43-44 (+12%)
       factorSemanal = [0.93, 0.93, 0.94, 0.95, 1.01, 1.06];
     } else {
@@ -144,28 +144,28 @@ function generateSql() {
     let vigenteCotizacionId = null;
 
     // Generar las 6 cotizaciones históricas
-    for (let w = 0; w < weeks.length; w++) {
-      const wk = weeks[w];
-      const cotHash = crypto.createHash('md5').update(`${jugadorId}_${wk.semana}`).digest('hex');
-      const cotId = `${cotHash.substring(0,8)}-${cotHash.substring(8,12)}-4${cotHash.substring(13,16)}-b${cotHash.substring(17,20)}-${cotHash.substring(20,32)}`;
+    for (let w = 0; w < semanas.length; w++) {
+      const semanaCotizada = semanas[w];
+      const hashCotizacion = crypto.createHash('md5').update(`${jugadorId}_${semanaCotizada.semana}`).digest('hex');
+      const cotizacionId = `${hashCotizacion.substring(0,8)}-${hashCotizacion.substring(8,12)}-4${hashCotizacion.substring(13,16)}-b${hashCotizacion.substring(17,20)}-${hashCotizacion.substring(20,32)}`;
       
-      const valor = (baseVal * factorSemanal[w]).toFixed(2);
+      const valor = (valorBase * factorSemanal[w]).toFixed(2);
       const origen = 'AUTOMATICO';
 
-      sqlStatements.push(`
+      sentenciasSql.push(`
 INSERT INTO cotizaciones_historicas (id, jugador_id, semana, valor, origen, fecha_calculo, estrategia)
-VALUES ('${cotId}', '${jugadorId}', '${wk.semana}', ${valor}, '${origen}', '${wk.date}', 'RENDIMIENTO_ACTUAL')
+VALUES ('${cotizacionId}', '${jugadorId}', '${semanaCotizada.semana}', ${valor}, '${origen}', '${semanaCotizada.fecha}', 'RENDIMIENTO_ACTUAL')
 ON CONFLICT (id) DO UPDATE SET valor = EXCLUDED.valor, fecha_calculo = EXCLUDED.fecha_calculo;`);
 
-      if (w === weeks.length - 1) {
-        vigenteCotizacionId = cotId;
+      if (w === semanas.length - 1) {
+        vigenteCotizacionId = cotizacionId;
       }
     }
 
     // Upsert Jugador
-    sqlStatements.push(`
+    sentenciasSql.push(`
 INSERT INTO jugadores (id, nombre, club, posicion, fecha_nacimiento, nacionalidad, estado, tokens_emitidos, cotizacion_vigente_id, fecha_ultima_actualizacion_rendimiento, foto_url, liga)
-VALUES ('${jugadorId}', '${safeName}', '${safeClub}', '${safePos}', '${birthDate}', '${safeNac}', 'ACTIVO', 0, '${vigenteCotizacionId}', '2026-11-03 23:00:00+00', '${safeFoto}', '${safeLiga}')
+VALUES ('${jugadorId}', '${nombreSql}', '${clubSql}', '${posicionSql}', '${fechaNacimiento}', '${nacionalidadSql}', 'ACTIVO', 0, '${vigenteCotizacionId}', '2026-11-03 23:00:00+00', '${fotoSql}', '${ligaSql}')
 ON CONFLICT (id) DO UPDATE SET
   club = EXCLUDED.club,
   posicion = EXCLUDED.posicion,
@@ -178,7 +178,7 @@ ON CONFLICT (id) DO UPDATE SET
 
     // Upsert Rendimiento Acumulado WhoScored
     const metricasJson = JSON.stringify(p.metricas).replace(/'/g, "''");
-    sqlStatements.push(`
+    sentenciasSql.push(`
 INSERT INTO rendimientos_acumulados_whoscored (jugador_id, metricas, fecha_actualizacion)
 VALUES ('${jugadorId}', '${metricasJson}'::jsonb, '2026-11-03 23:00:00+00')
 ON CONFLICT (jugador_id) DO UPDATE SET
@@ -186,7 +186,7 @@ ON CONFLICT (jugador_id) DO UPDATE SET
   fecha_actualizacion = EXCLUDED.fecha_actualizacion;`);
   }
 
-  sqlStatements.push(`
+  sentenciasSql.push(`
 UPDATE jugadores j
 SET cotizacion_vigente_id = sub.id
 FROM (
@@ -197,13 +197,13 @@ FROM (
 WHERE j.id = sub.jugador_id AND (j.cotizacion_vigente_id IS NULL OR j.cotizacion_vigente_id != sub.id);
 `);
 
-  sqlStatements.push('COMMIT;');
+  sentenciasSql.push('COMMIT;');
 
-  const outSqlPath = path.join(__dirname, 'import_players.sql');
-  fs.writeFileSync(outSqlPath, sqlStatements.join('\n'), 'utf-8');
-  console.log(`\nGenerado SQL con ${sqlStatements.length} sentencias en ${outSqlPath}`);
-  console.log('Jugadores procesados por liga:', JSON.stringify(countByLeague, null, 2));
+  const rutaSql = path.join(__dirname, 'import_players.sql');
+  fs.writeFileSync(rutaSql, sentenciasSql.join('\n'), 'utf-8');
+  console.log(`\nGenerado SQL con ${sentenciasSql.length} sentencias en ${rutaSql}`);
+  console.log('Jugadores procesados por liga:', JSON.stringify(cantidadPorLiga, null, 2));
 }
 
-generateSql();
+generarSql();
 

@@ -9,8 +9,8 @@ import { Avatar } from '../../shared/components/Avatar'
 import { Button } from '../../shared/components/Button'
 import { SelectorJugadorPropio } from '../../shared/components/SelectorJugadorPropio'
 import { jugadoresConTokensDe } from '../../shared/jugadoresConTokens'
-import { formatMoney } from '../../shared/format'
-import { formatRestante, useMsRestantes } from './cuentaRegresiva'
+import { formatearMoneda } from '../../shared/format'
+import { formatearRestante, useMsRestantes } from './cuentaRegresiva'
 import styles from './Subastas.module.css'
 
 // Por debajo de esto el reloj se marca como urgente.
@@ -21,7 +21,7 @@ const UMBRAL_URGENTE_MS = 2 * 60 * 1000
  * que el precio y el reloj de cada subasta sigan las pujas de otros usuarios.
  */
 export function SubastasPage() {
-  const { token, user, isAuthenticated } = useAuth()
+  const { token, usuario, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [selectorAbierto, setSelectorAbierto] = useState(false)
 
@@ -52,7 +52,7 @@ export function SubastasPage() {
     [portfolio.data, jugadoresPorId],
   )
 
-  function handleCrearSubasta() {
+  function manejarCrearSubasta() {
     if (!isAuthenticated) {
       void navigate('/login')
       return
@@ -72,7 +72,7 @@ export function SubastasPage() {
               subasta.
             </p>
           </div>
-          <Button variant="primary" onClick={handleCrearSubasta}>
+          <Button variant="primary" onClick={manejarCrearSubasta}>
             Crear subasta
           </Button>
         </div>
@@ -95,7 +95,7 @@ export function SubastasPage() {
                 key={subasta.id}
                 subasta={subasta}
                 jugador={jugadoresPorId.get(subasta.jugadorId)}
-                usuarioId={user?.usuarioId}
+                usuarioId={usuario?.usuarioId}
               />
             ))}
           </section>
@@ -152,7 +152,7 @@ function TarjetaSubasta({
         <small>
           {subasta.precioActual ? 'Mejor puja' : 'Precio inicial'} · por token
         </small>
-        <strong>{formatMoney(precio)}</strong>
+        <strong>{formatearMoneda(precio)}</strong>
       </div>
 
       <div className={styles.cardPie}>
@@ -165,9 +165,9 @@ function TarjetaSubasta({
           className={`${styles.reloj} ${
             restante < UMBRAL_URGENTE_MS ? styles.relojUrgente : ''
           }`}
-          aria-label={`Cierra en ${formatRestante(restante)}`}
+          aria-label={`Cierra en ${formatearRestante(restante)}`}
         >
-          {restante > 0 ? formatRestante(restante) : 'Cerrando…'}
+          {restante > 0 ? formatearRestante(restante) : 'Cerrando…'}
         </span>
       </div>
     </Link>

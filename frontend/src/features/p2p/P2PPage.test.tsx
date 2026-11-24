@@ -65,7 +65,7 @@ describe('P2PPage', () => {
   beforeEach(() => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: 'fake-token',
-      user: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
+      usuario: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
       isAuthenticated: true,
       login: vi.fn(),
       logout: vi.fn(),
@@ -160,7 +160,7 @@ describe('P2PPage', () => {
   it('sin sesión y en una oferta ajena, invita a iniciar sesión en vez de mostrar el form de compra', async () => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: null,
-      user: null,
+      usuario: null,
       isAuthenticated: false,
       login: vi.fn(),
       logout: vi.fn(),
@@ -178,7 +178,7 @@ describe('P2PPage', () => {
   it('sin sesión, "Crear nueva oferta" navega a /login', async () => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: null,
-      user: null,
+      usuario: null,
       isAuthenticated: false,
       login: vi.fn(),
       logout: vi.fn(),

@@ -15,7 +15,7 @@ import { Avatar } from '../../shared/components/Avatar'
 import { Button } from '../../shared/components/Button'
 import { SelectorJugadorPropio } from '../../shared/components/SelectorJugadorPropio'
 import { jugadoresConTokensDe } from '../../shared/jugadoresConTokens'
-import { formatMoney } from '../../shared/format'
+import { formatearMoneda } from '../../shared/format'
 import styles from './P2PPage.module.css'
 
 const formatoFechaHora = new Intl.DateTimeFormat('es-AR', {
@@ -30,7 +30,7 @@ const formatoFechaHora = new Intl.DateTimeFormat('es-AR', {
  * del jugador; si se cumple el tiempo límite sin venderse, el sistema la cancela sola.
  */
 export function P2PPage() {
-  const { token, user, isAuthenticated } = useAuth()
+  const { token, usuario, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [cantidades, setCantidades] = useState<Record<string, number>>({})
@@ -64,7 +64,7 @@ export function P2PPage() {
     [portfolio.data, jugadorPorId],
   )
 
-  function handleCrearOferta() {
+  function manejarCrearOferta() {
     if (!isAuthenticated) {
       void navigate('/login')
       return
@@ -80,7 +80,7 @@ export function P2PPage() {
     await queryClient.invalidateQueries({ queryKey: ['ofertas'] })
   }
 
-  const comprarMutation = useMutation({
+  const mutacionComprar = useMutation({
     mutationFn: ({
       ofertaId,
       cantidad,
@@ -100,7 +100,7 @@ export function P2PPage() {
       ),
   })
 
-  const cancelarMutation = useMutation({
+  const mutacionCancelar = useMutation({
     mutationFn: (ofertaId: string) => cancelarOferta(ofertaId, token!),
     onSuccess: async () => {
       setError(null)
@@ -133,7 +133,7 @@ export function P2PPage() {
               (UC-17).
             </p>
           </div>
-          <Button variant="primary" onClick={handleCrearOferta}>
+          <Button variant="primary" onClick={manejarCrearOferta}>
             Crear nueva oferta
           </Button>
         </div>
@@ -163,7 +163,7 @@ export function P2PPage() {
                   key={oferta.id}
                   oferta={oferta}
                   jugador={jugadorPorId.get(oferta.jugadorId)}
-                  esPropia={oferta.vendedorId === user?.usuarioId}
+                  esPropia={oferta.vendedorId === usuario?.usuarioId}
                   isAuthenticated={isAuthenticated}
                   cantidad={cantidadDe(oferta.id)}
                   onCantidadChange={(cantidad) =>
@@ -173,14 +173,14 @@ export function P2PPage() {
                     }))
                   }
                   onComprar={() =>
-                    comprarMutation.mutate({
+                    mutacionComprar.mutate({
                       ofertaId: oferta.id,
                       cantidad: cantidadDe(oferta.id),
                     })
                   }
-                  onCancelar={() => cancelarMutation.mutate(oferta.id)}
+                  onCancelar={() => mutacionCancelar.mutate(oferta.id)}
                   procesando={
-                    comprarMutation.isPending || cancelarMutation.isPending
+                    mutacionComprar.isPending || mutacionCancelar.isPending
                   }
                 />
               ))
@@ -243,7 +243,7 @@ function TarjetaOferta({
       </Link>
 
       <div className={styles.cardPrice}>
-        <strong>{formatMoney(oferta.precioUnitario)}</strong>
+        <strong>{formatearMoneda(oferta.precioUnitario)}</strong>
         <span>por token</span>
       </div>
 

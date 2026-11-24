@@ -15,7 +15,7 @@ import { ApiError } from '../../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Avatar } from '../../shared/components/Avatar'
 import { Toast } from '../../shared/components/Toast'
-import { formatMoney } from '../../shared/format'
+import { formatearMoneda } from '../../shared/format'
 import styles from './OfertaP2PJugadorPage.module.css'
 
 const formatoFechaHora = new Intl.DateTimeFormat('es-AR', {
@@ -25,7 +25,7 @@ const formatoFechaHora = new Intl.DateTimeFormat('es-AR', {
 
 /**
  * UC-17: venta directa entre usuarios mediante oferta abierta, para un jugador puntual — vía
- * adicional que convive con la compra/venta contra el sistema ({@link TradePanel}) sin
+ * adicional que convive con la compra/venta contra el sistema ({@link PanelOperar}) sin
  * reemplazarla. El vendedor fija libremente, al publicar, el precio por token, la cantidad y un
  * tiempo límite en horas (si se cumple sin venderse, el sistema cancela la oferta automáticamente
  * y reintegra los tokens al vendedor). El campo de precio arranca con la cotización vigente sólo
@@ -33,7 +33,7 @@ const formatoFechaHora = new Intl.DateTimeFormat('es-AR', {
  */
 export function OfertaP2PJugadorPage() {
   const { id } = useParams<{ id: string }>()
-  const { token, user, isAuthenticated } = useAuth()
+  const { token, usuario, isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const [cantidadAPublicar, setCantidadAPublicar] = useState(1)
   // null = el usuario todavía no tocó el campo: se muestra la cotización vigente como punto de
@@ -85,7 +85,7 @@ export function OfertaP2PJugadorPage() {
     ])
   }
 
-  const publicarMutation = useMutation({
+  const mutacionPublicar = useMutation({
     mutationFn: () =>
       publicarOferta(
         id!,
@@ -110,7 +110,7 @@ export function OfertaP2PJugadorPage() {
       ),
   })
 
-  const comprarMutation = useMutation({
+  const mutacionComprar = useMutation({
     mutationFn: ({
       ofertaId,
       cantidad,
@@ -130,7 +130,7 @@ export function OfertaP2PJugadorPage() {
       ),
   })
 
-  const cancelarMutation = useMutation({
+  const mutacionCancelar = useMutation({
     mutationFn: (ofertaId: string) => cancelarOferta(ofertaId, token!),
     onSuccess: async () => {
       setError(null)
@@ -146,10 +146,10 @@ export function OfertaP2PJugadorPage() {
 
   const cerrarAvisoOfertaCreada = useCallback(() => setOfertaCreada(false), [])
 
-  function handlePublicar(event: FormEvent<HTMLFormElement>) {
+  function manejarPublicar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
-    publicarMutation.mutate()
+    mutacionPublicar.mutate()
   }
 
   function cantidadAComprarDe(ofertaId: string): number {
@@ -212,7 +212,7 @@ export function OfertaP2PJugadorPage() {
                 <FilaOferta
                   key={oferta.id}
                   oferta={oferta}
-                  esPropia={oferta.vendedorId === user?.usuarioId}
+                  esPropia={oferta.vendedorId === usuario?.usuarioId}
                   isAuthenticated={isAuthenticated}
                   cantidad={cantidadAComprarDe(oferta.id)}
                   onCantidadChange={(cantidad) =>
@@ -222,14 +222,14 @@ export function OfertaP2PJugadorPage() {
                     }))
                   }
                   onComprar={() =>
-                    comprarMutation.mutate({
+                    mutacionComprar.mutate({
                       ofertaId: oferta.id,
                       cantidad: cantidadAComprarDe(oferta.id),
                     })
                   }
-                  onCancelar={() => cancelarMutation.mutate(oferta.id)}
+                  onCancelar={() => mutacionCancelar.mutate(oferta.id)}
                   procesando={
-                    comprarMutation.isPending || cancelarMutation.isPending
+                    mutacionComprar.isPending || mutacionCancelar.isPending
                   }
                 />
               ))}
@@ -257,7 +257,7 @@ export function OfertaP2PJugadorPage() {
                 oferta.
               </p>
             ) : (
-              <form className={styles.formPublicar} onSubmit={handlePublicar}>
+              <form className={styles.formPublicar} onSubmit={manejarPublicar}>
                 <h3 className={styles.formTitulo}>
                   Publicar oferta (tenés {misCopias} disponibles)
                 </h3>
@@ -302,7 +302,7 @@ export function OfertaP2PJugadorPage() {
                     />
                     {cotizacionVigente !== null && (
                       <span className={styles.referencia}>
-                        Cotización actual: {formatMoney(cotizacionVigente)}
+                        Cotización actual: {formatearMoneda(cotizacionVigente)}
                       </span>
                     )}
                   </label>
@@ -324,9 +324,9 @@ export function OfertaP2PJugadorPage() {
                 <button
                   type="submit"
                   className={styles.btnPrimario}
-                  disabled={publicarMutation.isPending}
+                  disabled={mutacionPublicar.isPending}
                 >
-                  {publicarMutation.isPending
+                  {mutacionPublicar.isPending
                     ? 'Publicando…'
                     : 'Publicar oferta'}
                 </button>
@@ -373,7 +373,7 @@ function FilaOferta({
           {oferta.cantidadDisponible} / {oferta.cantidadPublicada} disponibles
         </span>
         <span className={styles.filaPrecio}>
-          {formatMoney(oferta.precioUnitario)} / token
+          {formatearMoneda(oferta.precioUnitario)} / token
         </span>
         <span className={styles.filaVence}>
           Vence {formatoFechaHora.format(new Date(oferta.fechaVencimiento))}

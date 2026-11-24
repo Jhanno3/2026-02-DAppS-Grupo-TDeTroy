@@ -63,7 +63,11 @@ describe('AdminJugadoresPage', () => {
   beforeEach(() => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: 'admin-jwt-token',
-      user: { usuarioId: 'u-admin', email: 'admin@example.com', rol: 'ADMIN' },
+      usuario: {
+        usuarioId: 'u-admin',
+        email: 'admin@example.com',
+        rol: 'ADMIN',
+      },
       isAuthenticated: true,
       login: vi.fn(),
       logout: vi.fn(),

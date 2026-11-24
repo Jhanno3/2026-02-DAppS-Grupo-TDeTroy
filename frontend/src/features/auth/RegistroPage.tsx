@@ -17,7 +17,7 @@ export function RegistroPage() {
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
 
-  const mutation = useMutation({
+  const mutacion = useMutation({
     mutationFn: registrar,
     onSuccess: () => {
       navigate('/login', {
@@ -26,13 +26,13 @@ export function RegistroPage() {
     },
   })
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function manejarEnvio(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    mutation.mutate({ email, password })
+    mutacion.mutate({ email, password })
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit}>
+    <form className={styles.form} onSubmit={manejarEnvio}>
       <h1>Crear cuenta</h1>
 
       <label className={styles.field}>
@@ -59,10 +59,10 @@ export function RegistroPage() {
         />
       </label>
 
-      {mutation.isError && (
+      {mutacion.isError && (
         <p className={styles.error} role="alert">
-          {mutation.error instanceof ApiError
-            ? mutation.error.message
+          {mutacion.error instanceof ApiError
+            ? mutacion.error.message
             : 'No se pudo crear la cuenta.'}
         </p>
       )}
@@ -70,9 +70,9 @@ export function RegistroPage() {
       <Button
         type="submit"
         className={styles.submit}
-        disabled={mutation.isPending}
+        disabled={mutacion.isPending}
       >
-        {mutation.isPending ? 'Creando cuenta…' : 'Crear cuenta'}
+        {mutacion.isPending ? 'Creando cuenta…' : 'Crear cuenta'}
       </Button>
 
       <p>

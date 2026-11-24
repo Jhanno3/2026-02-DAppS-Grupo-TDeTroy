@@ -7,12 +7,12 @@ import { useAuth } from '../auth/AuthContext'
  * `JugadorController`) — esto es sólo UX, nunca la autorización real.
  */
 export function AdminRoute() {
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, usuario } = useAuth()
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
-  if (user?.rol !== 'ADMIN') {
+  if (usuario?.rol !== 'ADMIN') {
     return <Navigate to="/" replace />
   }
   return <Outlet />

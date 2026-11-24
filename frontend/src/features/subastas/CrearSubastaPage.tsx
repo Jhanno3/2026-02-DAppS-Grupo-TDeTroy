@@ -7,7 +7,7 @@ import { obtenerPortfolio } from '../../api/portfolio'
 import { crearSubasta } from '../../api/subastas'
 import { useAuth } from '../auth/AuthContext'
 import { Avatar } from '../../shared/components/Avatar'
-import { formatMoney } from '../../shared/format'
+import { formatearMoneda } from '../../shared/format'
 import styles from './Subastas.module.css'
 
 const DURACIONES = [
@@ -73,7 +73,7 @@ export function CrearSubastaPage() {
     },
   })
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function manejarEnvio(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     crear.mutate()
   }
@@ -136,7 +136,7 @@ export function CrearSubastaPage() {
             </p>
           )}
           {disponibles > 0 && (
-            <form className={styles.form} onSubmit={handleSubmit}>
+            <form className={styles.form} onSubmit={manejarEnvio}>
               <h2>Nueva subasta (tenés {disponibles} disponibles)</h2>
 
               {crear.error && (
@@ -185,7 +185,7 @@ export function CrearSubastaPage() {
                   />
                   {cotizacionVigente !== null && (
                     <span className={styles.referencia}>
-                      Cotización actual: {formatMoney(cotizacionVigente)}
+                      Cotización actual: {formatearMoneda(cotizacionVigente)}
                     </span>
                   )}
                 </label>
@@ -207,7 +207,7 @@ export function CrearSubastaPage() {
 
               <p className={styles.hint}>
                 Precio de arranque total:{' '}
-                {formatMoney(precioInicial * cantidad)}
+                {formatearMoneda(precioInicial * cantidad)}
               </p>
 
               <button

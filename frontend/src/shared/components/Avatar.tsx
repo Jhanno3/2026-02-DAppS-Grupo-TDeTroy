@@ -22,7 +22,7 @@ function iniciales(nombre: string): string {
  */
 export function Avatar({ src, nombre, size = 'small' }: AvatarProps) {
   const [fallo, setFallo] = useState(false)
-  const sizeClass =
+  const claseTamanio =
     size === 'fill'
       ? styles.fill
       : size === 'large'
@@ -31,7 +31,7 @@ export function Avatar({ src, nombre, size = 'small' }: AvatarProps) {
 
   if (!src || fallo) {
     return (
-      <div className={`${styles.avatar} ${styles.placeholder} ${sizeClass}`}>
+      <div className={`${styles.avatar} ${styles.placeholder} ${claseTamanio}`}>
         {iniciales(nombre)}
       </div>
     )
@@ -43,7 +43,7 @@ export function Avatar({ src, nombre, size = 'small' }: AvatarProps) {
     // la misma foto en vez de dejarlo vacío (misma técnica que Spotify/YouTube para portadas
     // que no calzan con el contenedor).
     return (
-      <div className={`${styles.avatar} ${sizeClass} ${styles.fillWrapper}`}>
+      <div className={`${styles.avatar} ${claseTamanio} ${styles.fillWrapper}`}>
         <img
           src={src}
           alt=""
@@ -65,7 +65,7 @@ export function Avatar({ src, nombre, size = 'small' }: AvatarProps) {
     <img
       src={src}
       alt={`Foto de ${nombre}`}
-      className={`${styles.avatar} ${sizeClass}`}
+      className={`${styles.avatar} ${claseTamanio}`}
       loading="lazy"
       onError={() => setFallo(true)}
     />

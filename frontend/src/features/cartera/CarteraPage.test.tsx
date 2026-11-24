@@ -38,7 +38,7 @@ describe('CarteraPage', () => {
   beforeEach(() => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: 'fake-token',
-      user: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
+      usuario: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
       isAuthenticated: true,
       login: vi.fn(),
       logout: vi.fn(),
@@ -239,7 +239,7 @@ describe('CarteraPage — En venta en P2P', () => {
   beforeEach(() => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: 'fake-token',
-      user: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
+      usuario: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
       isAuthenticated: true,
       login: vi.fn(),
       logout: vi.fn(),
@@ -326,7 +326,7 @@ describe('CarteraPage — Subastas en curso', () => {
   beforeEach(() => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: 'fake-token',
-      user: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
+      usuario: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
       isAuthenticated: true,
       login: vi.fn(),
       logout: vi.fn(),

@@ -11,7 +11,7 @@ export interface JwtClaims {
  * (ej. mostrar el email/rol del usuario logueado). La firma la valida siempre el backend en cada
  * request; nunca hay que confiar en este decode para tomar una decisión de seguridad real.
  */
-export function decodeJwt(token: string): JwtClaims {
+export function decodificarJwt(token: string): JwtClaims {
   const payload = token.split('.')[1]
   if (!payload) {
     throw new Error('Token con formato inválido')

@@ -86,7 +86,7 @@ jobs:
       - run: npm run format:check
       - run: npm run test:coverage
         # Vitest + React Testing Library (src/**/*.test.{ts,tsx}): cubre api/, hooks de auth y los
-        # componentes con lógica propia (Avatar, CotizacionChart, TradePanel, MercadoPage,
+        # componentes con lógica propia (Avatar, CotizacionChart, PanelOperar, MercadoPage,
         # CarteraPage). Nunca corre e2e/*.e2e.spec.ts (Playwright) — vite.config.ts lo excluye
         # explícitamente del `include` de Vitest.
       - run: npm run build
