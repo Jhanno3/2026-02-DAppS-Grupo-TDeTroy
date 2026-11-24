@@ -6,10 +6,10 @@ import { comprarTokens, venderTokens } from '../../api/tokens'
 import { obtenerPortfolio } from '../../api/portfolio'
 import { ApiError } from '../../api/client'
 import { useAuth } from '../auth/AuthContext'
-import { formatMoney } from '../../shared/format'
-import styles from './TradePanel.module.css'
+import { formatearMoneda } from '../../shared/format'
+import styles from './PanelOperar.module.css'
 
-interface TradePanelProps {
+interface PanelOperarProps {
   jugadorId: string
   /** `null` cuando el jugador todavía no tiene ninguna cotización calculada (UC-08). */
   cotizacionVigente: number | null
@@ -34,12 +34,12 @@ const DESCUENTO_VENTA_SISTEMA = 0.15
  * precio que elija el usuario — `TokenServiceImpl` vuelve a calcular el monto real en el backend
  * igual, esto es sólo para mostrarle el total esperado antes de confirmar).
  */
-export function TradePanel({
+export function PanelOperar({
   jugadorId,
   cotizacionVigente,
   tokensDisponibles,
   estaActivo,
-}: TradePanelProps) {
+}: PanelOperarProps) {
   const { token, isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const [modo, setModo] = useState<Modo>('comprar')
@@ -56,7 +56,7 @@ export function TradePanel({
     portfolio.data?.tenencias.find((t) => t.jugadorId === jugadorId)
       ?.cantidad ?? 0
 
-  const mutation = useMutation({
+  const mutacion = useMutation({
     mutationFn: () =>
       modo === 'comprar'
         ? comprarTokens(jugadorId, cantidad, token!)
@@ -67,7 +67,7 @@ export function TradePanel({
         queryClient.invalidateQueries({ queryKey: ['jugadores', jugadorId] }),
       ])
       setConfirmacion(
-        `${modo === 'comprar' ? 'Compraste' : 'Vendiste'} ${movimiento.cantidad} token(s) por ${formatMoney(movimiento.montoTotal)}.`,
+        `${modo === 'comprar' ? 'Compraste' : 'Vendiste'} ${movimiento.cantidad} token(s) por ${formatearMoneda(movimiento.montoTotal)}.`,
       )
       setCantidad(1)
     },
@@ -107,10 +107,10 @@ export function TradePanel({
     setConfirmacion(null)
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function manejarEnvio(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setConfirmacion(null)
-    mutation.mutate()
+    mutacion.mutate()
   }
 
   return (
@@ -145,7 +145,7 @@ export function TradePanel({
             : 'No tenés tokens de este jugador para vender.'}
         </p>
       ) : (
-        <form className={styles.form} onSubmit={handleSubmit}>
+        <form className={styles.form} onSubmit={manejarEnvio}>
           <label className={styles.label} htmlFor="cantidad">
             Cantidad de tokens
           </label>
@@ -204,7 +204,9 @@ export function TradePanel({
           <div className={styles.resumen}>
             <div className={styles.kv}>
               <span>Precio por token</span>
-              <span className={styles.mono}>{formatMoney(precioUnitario)}</span>
+              <span className={styles.mono}>
+                {formatearMoneda(precioUnitario)}
+              </span>
             </div>
             <div className={styles.kv}>
               <span>Comisión</span>
@@ -216,22 +218,22 @@ export function TradePanel({
             </div>
             <div className={styles.total}>
               <span>Total</span>
-              <strong>{formatMoney(total)}</strong>
+              <strong>{formatearMoneda(total)}</strong>
             </div>
           </div>
 
           {modo === 'vender' && (
             <p className={styles.hint}>
               El sistema paga un {DESCUENTO_VENTA_SISTEMA * 100}% menos que la
-              cotización vigente ({formatMoney(cotizacionBase)}). Para elegir tu
-              propio precio, publicá una oferta en el Mercado P2P.
+              cotización vigente ({formatearMoneda(cotizacionBase)}). Para
+              elegir tu propio precio, publicá una oferta en el Mercado P2P.
             </p>
           )}
 
-          {mutation.error != null && (
+          {mutacion.error != null && (
             <p role="alert" className={styles.error}>
-              {mutation.error instanceof ApiError
-                ? mutation.error.message
+              {mutacion.error instanceof ApiError
+                ? mutacion.error.message
                 : 'No se pudo completar la operación.'}
             </p>
           )}
@@ -240,9 +242,9 @@ export function TradePanel({
           <button
             type="submit"
             className={styles.btnPrimary}
-            disabled={mutation.isPending}
+            disabled={mutacion.isPending}
           >
-            {mutation.isPending
+            {mutacion.isPending
               ? 'Procesando…'
               : `${modo === 'comprar' ? 'Comprar' : 'Vender'} ${cantidad} ${
                   cantidad === 1 ? 'token' : 'tokens'

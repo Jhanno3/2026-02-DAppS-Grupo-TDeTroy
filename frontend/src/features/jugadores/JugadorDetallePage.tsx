@@ -14,10 +14,10 @@ import { listarSubastas } from '../../api/subastas'
 import { ApiError } from '../../api/client'
 import { useTema } from '../../app/tema'
 import { Avatar } from '../../shared/components/Avatar'
-import { formatMoney } from '../../shared/format'
-import { CotizacionHistorialChart } from './CotizacionHistorialChart'
-import { TradePanel } from './TradePanel'
-import styles from './JugadorDetailPage.module.css'
+import { formatearMoneda } from '../../shared/format'
+import { GraficoCotizaciones } from './GraficoCotizaciones'
+import { PanelOperar } from './PanelOperar'
+import styles from './JugadorDetallePage.module.css'
 
 // fechaNacimiento es un LocalDate (sin huso horario) — forzar 'UTC' acá evita el clásico
 // off-by-one de `new Date('YYYY-MM-DD')` (se parsea como medianoche UTC) formateado después
@@ -51,7 +51,7 @@ const EMISION_TOTAL = 100
  * sistema (UC-09/UC-10), ofertas P2P (UC-17) y subastas (UC-18). Respeta el tema claro/oscuro
  * del usuario (ver `app/TemaProvider`).
  */
-export function JugadorDetailPage() {
+export function JugadorDetallePage() {
   const { id } = useParams<{ id: string }>()
   const { tema, alternar } = useTema()
   const [rango, setRango] = useState<Rango>('Todo')
@@ -158,7 +158,7 @@ export function JugadorDetailPage() {
                     <p role="alert">No se pudo cargar el historial.</p>
                   )}
                   {cotizaciones.data && (
-                    <CotizacionHistorialChart cotizaciones={historialVisible} />
+                    <GraficoCotizaciones cotizaciones={historialVisible} />
                   )}
                 </section>
 
@@ -172,7 +172,7 @@ export function JugadorDetailPage() {
 
               <aside className={styles.lateral}>
                 <section aria-label="Operar">
-                  <TradePanel
+                  <PanelOperar
                     jugadorId={data.id}
                     cotizacionVigente={cotizacionVigente}
                     tokensDisponibles={data.tokensDisponibles}
@@ -244,7 +244,7 @@ function Encabezado({
         <div className={styles.metrica} aria-label="Cotización">
           <span className={styles.metricaEtiqueta}>Cotización</span>
           <span className={styles.cotizacion}>
-            {vigente ? formatMoney(vigente.valor) : '—'}
+            {vigente ? formatearMoneda(vigente.valor) : '—'}
           </span>
           <span className={styles.metricaDetalle}>
             {!vigente ? (
@@ -404,7 +404,7 @@ function MercadoP2P({
           ? 'Todavía no hay ofertas entre usuarios para este jugador.'
           : `${abiertas.length} ${
               abiertas.length === 1 ? 'oferta abierta' : 'ofertas abiertas'
-            } · desde ${formatMoney(mejorPrecio!)} por token.`}
+            } · desde ${formatearMoneda(mejorPrecio!)} por token.`}
       </p>
     </section>
   )
@@ -450,7 +450,9 @@ function SubastasDelJugador({
                   {subasta.cantidadPujas === 1 ? 'puja' : 'pujas'}
                 </span>
                 <span className={styles.derivadaValor}>
-                  {formatMoney(subasta.precioActual ?? subasta.precioInicial)}
+                  {formatearMoneda(
+                    subasta.precioActual ?? subasta.precioInicial,
+                  )}
                 </span>
               </Link>
             </li>

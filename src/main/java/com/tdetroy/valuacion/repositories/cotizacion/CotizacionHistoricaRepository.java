@@ -24,7 +24,7 @@ import org.springframework.data.jpa.repository.Query;
  * cotizacion queda congelada en el ultimo registro, pero el historial hasta ese punto sigue siendo
  * consultable.
  *
- * <p>{@link #findValoresVigentes} y {@link #findValoresIniciales} (plan.md S3bis) traen, en una
+ * <p>{@link #buscarValoresVigentes} y {@link #buscarValoresIniciales} (plan.md S3bis) traen, en una
  * sola consulta cada una, el valor mas reciente y el ultimo de la primera semana de *todos* los
  * jugadores a la vez -- mismo criterio que el historial, que muestra una cotizacion por semana --,
  * usadas por {@code JugadorServiceImpl#listarMercado} para armar precio y variacion del listado
@@ -71,7 +71,7 @@ public interface CotizacionHistoricaRepository
                             + " valor, fecha_calculo FROM cotizaciones_historicas ORDER BY"
                             + " jugador_id, fecha_calculo DESC) t",
             nativeQuery = true)
-    List<ValorPorJugadorProjection> findValoresVigentes();
+    List<ValorPorJugadorProjection> buscarValoresVigentes();
 
     @Query(
             value =
@@ -80,5 +80,5 @@ public interface CotizacionHistoricaRepository
                             + " valor, fecha_calculo FROM cotizaciones_historicas ORDER BY"
                             + " jugador_id, semana ASC, fecha_calculo DESC) t",
             nativeQuery = true)
-    List<ValorPorJugadorProjection> findValoresIniciales();
+    List<ValorPorJugadorProjection> buscarValoresIniciales();
 }

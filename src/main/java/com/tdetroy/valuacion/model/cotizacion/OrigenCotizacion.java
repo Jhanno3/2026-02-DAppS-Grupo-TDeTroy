@@ -1,12 +1,6 @@
 package com.tdetroy.valuacion.model.cotizacion;
 
-/**
- * Disparador que produjo un {@link CotizacionHistorica} (plan.md §2.4, §6.4): {@code AUTOMATICO}
- * para el job semanal, {@code MANUAL} para el disparo vía {@code POST /cotizaciones/recalculo}
- * (UC-13, restringido a ADMIN). Ambos invocan exactamente el mismo algoritmo de {@code
- * CotizacionService} (constitution.md §2) — este valor sólo documenta el origen del disparo, nunca
- * cambia el cálculo en sí.
- */
+/** Qué disparó el cálculo: job semanal o recálculo de un ADMIN. No cambia el algoritmo. */
 public enum OrigenCotizacion {
     AUTOMATICO,
     MANUAL

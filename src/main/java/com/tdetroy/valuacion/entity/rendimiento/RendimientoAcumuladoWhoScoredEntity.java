@@ -35,13 +35,13 @@ public class RendimientoAcumuladoWhoScoredEntity {
     @Column(nullable = false)
     private Instant fechaActualizacion;
 
-    /** Traduce {@code snapshot} a la fila que persiste {@code repositories/}. */
+    /** Traduce {@code acumulado} a la fila que persiste {@code repositories/}. */
     public static RendimientoAcumuladoWhoScoredEntity desde(
-            RendimientoAcumuladoWhoScored snapshot) {
+            RendimientoAcumuladoWhoScored acumulado) {
         RendimientoAcumuladoWhoScoredEntity entity = new RendimientoAcumuladoWhoScoredEntity();
-        entity.jugadorId = snapshot.getJugadorId();
-        entity.metricas = snapshot.getMetricas();
-        entity.fechaActualizacion = snapshot.getFechaActualizacion();
+        entity.jugadorId = acumulado.getJugadorId();
+        entity.metricas = acumulado.getMetricas();
+        entity.fechaActualizacion = acumulado.getFechaActualizacion();
         return entity;
     }
 

@@ -114,9 +114,9 @@ public class JugadorServiceImpl implements JugadorService {
         List<Jugador> catalogoCompleto =
                 jugadorRepository.findAll().stream().map(JugadorEntity::aModelo).toList();
         Map<UUID, ValorPorJugadorProjection> vigentes =
-                porJugador(cotizacionHistoricaRepository.findValoresVigentes());
+                porJugador(cotizacionHistoricaRepository.buscarValoresVigentes());
         Map<UUID, ValorPorJugadorProjection> iniciales =
-                porJugador(cotizacionHistoricaRepository.findValoresIniciales());
+                porJugador(cotizacionHistoricaRepository.buscarValoresIniciales());
 
         List<String> posicionesDisponibles =
                 catalogoCompleto.stream()
@@ -130,8 +130,8 @@ public class JugadorServiceImpl implements JugadorService {
         List<JugadorConPrecio> conPrecio =
                 catalogoCompleto.stream()
                         .map(j -> aJugadorConPrecio(j, vigentes, iniciales))
-                        .filter(item -> coincidePosicion(item.jugador(), posicion))
-                        .filter(item -> coincideBusqueda(item.jugador(), busqueda))
+                        .filter(elemento -> coincidePosicion(elemento.jugador(), posicion))
+                        .filter(elemento -> coincideBusqueda(elemento.jugador(), busqueda))
                         .sorted(comparadorPara(OrdenMercado.desde(orden)))
                         .toList();
 
@@ -214,7 +214,7 @@ public class JugadorServiceImpl implements JugadorService {
      */
     private static Comparator<JugadorConPrecio> comparadorPara(OrdenMercado orden) {
         return switch (orden) {
-            case NOMBRE -> Comparator.comparing(item -> item.jugador().getNombre());
+            case NOMBRE -> Comparator.comparing(elemento -> elemento.jugador().getNombre());
             case PRECIO_ASC ->
                     Comparator.comparing(
                             JugadorConPrecio::precio,
@@ -229,7 +229,8 @@ public class JugadorServiceImpl implements JugadorService {
                             Comparator.nullsLast(Comparator.reverseOrder()));
             case DISPONIBLES_DESC ->
                     Comparator.comparingInt(
-                                    (JugadorConPrecio item) -> item.jugador().tokensDisponibles())
+                                    (JugadorConPrecio elemento) ->
+                                            elemento.jugador().tokensDisponibles())
                             .reversed();
         };
     }

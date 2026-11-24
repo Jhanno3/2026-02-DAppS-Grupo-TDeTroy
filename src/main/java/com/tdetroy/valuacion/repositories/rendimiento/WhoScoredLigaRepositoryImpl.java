@@ -66,7 +66,7 @@ public class WhoScoredLigaRepositoryImpl implements RendimientoLigaExternoReposi
             Pattern.compile("/players/(\\d+)/", Pattern.CASE_INSENSITIVE);
 
     private final Map<String, String> urlsPorLiga;
-    private final PaginasFetcher paginasFetcher;
+    private final PaginasFetcher paginasScraper;
     private final String imagenesUrl;
 
     @Autowired
@@ -77,14 +77,14 @@ public class WhoScoredLigaRepositoryImpl implements RendimientoLigaExternoReposi
             @Value("${app.whoscored.imagenes-url}") String imagenesUrl) {
         this(
                 ligaProperties.getLigaUrls(),
-                construirFetcherSidecar(restClientBuilder.build(), fetcherLigaUrl),
+                construirClienteScraper(restClientBuilder.build(), fetcherLigaUrl),
                 imagenesUrl);
     }
 
     WhoScoredLigaRepositoryImpl(
-            Map<String, String> urlsPorLiga, PaginasFetcher paginasFetcher, String imagenesUrl) {
+            Map<String, String> urlsPorLiga, PaginasFetcher paginasScraper, String imagenesUrl) {
         this.urlsPorLiga = urlsPorLiga;
-        this.paginasFetcher = paginasFetcher;
+        this.paginasScraper = paginasScraper;
         this.imagenesUrl = imagenesUrl.endsWith("/") ? imagenesUrl : imagenesUrl + "/";
     }
 
@@ -101,7 +101,7 @@ public class WhoScoredLigaRepositoryImpl implements RendimientoLigaExternoReposi
             return List.of();
         }
         try {
-            List<Document> paginas = paginasFetcher.obtenerPaginas(url);
+            List<Document> paginas = paginasScraper.obtenerPaginas(url);
             List<JugadorRendimientoLigaCrudo> resultado = new ArrayList<>();
             for (Document pagina : paginas) {
                 resultado.addAll(traducir(pagina));
@@ -189,7 +189,7 @@ public class WhoScoredLigaRepositoryImpl implements RendimientoLigaExternoReposi
         }
     }
 
-    private static PaginasFetcher construirFetcherSidecar(
+    private static PaginasFetcher construirClienteScraper(
             RestClient restClient, String fetcherLigaUrl) {
         return url -> {
             if (fetcherLigaUrl == null || fetcherLigaUrl.isBlank()) {

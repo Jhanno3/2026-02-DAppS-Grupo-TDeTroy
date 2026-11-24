@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  * <p>Usado exclusivamente por {@code RendimientoServiceImpl} — package-private, no es un contrato
  * público de {@code services/}.
  */
-final class NombreClubMatcher {
+final class ComparadorNombreClub {
 
     /**
      * Máxima distancia de edición entre nombres normalizados para considerarlos la misma persona.
@@ -44,7 +44,7 @@ final class NombreClubMatcher {
     private static final Set<String> STOPWORDS_CLUB =
             Set.of("cf", "fc", "rc", "rcd", "ud", "cd", "sd", "ca", "club", "de", "la");
 
-    private NombreClubMatcher() {}
+    private ComparadorNombreClub() {}
 
     static boolean coincide(String nombreA, String clubA, String nombreB, String clubB) {
         if (!clubesCoinciden(clubA, clubB)) {

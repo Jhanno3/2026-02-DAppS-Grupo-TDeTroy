@@ -6,17 +6,8 @@ import java.util.UUID;
 import lombok.Getter;
 
 /**
- * Último acumulado de temporada conocido de un jugador según la página pública de liga de WhoScored
- * (plan.md §8.1) — snapshot 1:1 por jugador, a diferencia de {@link RendimientoPartido}
- * (append-only): cada ingesta semanal reemplaza por completo el valor anterior vía {@link
- * #actualizarSnapshot}, nunca conserva historial propio. Calcular el delta entre el snapshot
- * anterior y el nuevo acumulado (actual - anterior, nunca negativo) es responsabilidad de quien
- * orquesta la ingesta ({@code RendimientoServiceImpl}), no de esta clase.
- *
- * <p>{@code metricas} guarda JSON ya serializado como texto plano, igual criterio que {@link
- * RendimientoPartido#getMetricas()}: la entidad nunca serializa, y este modelo tampoco — eso es
- * trabajo del Service que lo construye, para no acoplar {@code model/} a ninguna librería JSON
- * concreta.
+ * Último acumulado de temporada de un jugador: cada ingesta lo reemplaza, sin historial. {@code
+ * metricas} es JSON ya serializado, para no acoplar {@code model/} a una librería JSON.
  */
 @Getter
 public class RendimientoAcumuladoWhoScored {
@@ -33,36 +24,23 @@ public class RendimientoAcumuladoWhoScored {
         this.fechaActualizacion = fechaActualizacion;
     }
 
-    /**
-     * Primer snapshot conocido de {@code jugadorId} — todavía sin un snapshot anterior contra el
-     * que calcular un delta (quien orquesta la ingesta no persiste ningún {@link
-     * RendimientoPartido} en este caso, sólo este snapshot base).
-     */
+    /** Primer snapshot: no hay anterior contra el que calcular un delta. */
     public static RendimientoAcumuladoWhoScored primeraVez(UUID jugadorId, String metricas) {
         return new RendimientoAcumuladoWhoScored(jugadorId, metricas, Instant.now());
     }
 
-    /** Igual que {@link #primeraVez(UUID, String)}, con {@code fecha} explícita (tests). */
     public static RendimientoAcumuladoWhoScored primeraVez(
             UUID jugadorId, String metricas, Instant fecha) {
         return new RendimientoAcumuladoWhoScored(jugadorId, metricas, fecha);
     }
 
-    /**
-     * Reconstruye un snapshot ya persistido (usado por {@code
-     * entity/RendimientoAcumuladoWhoScoredEntity#aModelo()} en el límite con {@code
-     * repositories/}).
-     */
+    /** Reconstruye desde persistencia. */
     public static RendimientoAcumuladoWhoScored reconstruir(
             UUID jugadorId, String metricas, Instant fechaActualizacion) {
         return new RendimientoAcumuladoWhoScored(jugadorId, metricas, fechaActualizacion);
     }
 
-    /**
-     * Reemplaza el acumulado conocido por {@code nuevasMetricas} (snapshot 1:1 por jugador, nunca
-     * histórico — ver javadoc de la clase).
-     */
-    public void actualizarSnapshot(String nuevasMetricas, Instant fecha) {
+    public void actualizarAcumulado(String nuevasMetricas, Instant fecha) {
         validarMetricas(nuevasMetricas);
         Objects.requireNonNull(fecha, "fecha no puede ser null");
         this.metricas = nuevasMetricas;

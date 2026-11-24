@@ -2,11 +2,7 @@ package com.tdetroy.valuacion.model.rendimiento;
 
 import java.time.Instant;
 
-/**
- * Acumulado de temporada de un jugador tal como lo expone la página de liga de WhoScored (plan.md
- * §8.1) — vista de sólo lectura sobre el último {@link RendimientoAcumuladoWhoScored} conocido, ya
- * parseado a campos tipados para la pantalla de detalle (UC-07). Nunca se persiste por su cuenta.
- */
+/** Vista tipada del último {@link RendimientoAcumuladoWhoScored}; no se persiste. */
 public record EstadisticasTemporada(
         int partidosJugados,
         int minutosJugados,

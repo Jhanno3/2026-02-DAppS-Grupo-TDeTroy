@@ -13,8 +13,8 @@ import {
 import { useAuth } from '../auth/AuthContext'
 import { Avatar } from '../../shared/components/Avatar'
 import { Toast } from '../../shared/components/Toast'
-import { formatMoney } from '../../shared/format'
-import { formatRestante, useMsRestantes } from './cuentaRegresiva'
+import { formatearMoneda } from '../../shared/format'
+import { formatearRestante, useMsRestantes } from './cuentaRegresiva'
 import styles from './Subastas.module.css'
 
 const formatoHora = new Intl.DateTimeFormat('es-AR', { timeStyle: 'medium' })
@@ -24,10 +24,10 @@ const formatoHora = new Intl.DateTimeFormat('es-AR', { timeStyle: 'medium' })
  * pujas de los demás; los botones de puja muestran los precios exactos que calcula el backend
  * (`opcionesPuja`), nunca un monto calculado acá.
  */
-export function SubastaDetailPage() {
+export function SubastaDetallePage() {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
-  const { token, user, isAuthenticated } = useAuth()
+  const { token, usuario, isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const [aviso, setAviso] = useState<string | null>(
     (location.state as { creada?: boolean } | null)?.creada
@@ -58,7 +58,7 @@ export function SubastaDetailPage() {
     ])
   }
 
-  const pujarMutation = useMutation({
+  const mutacionPujar = useMutation({
     mutationFn: (porcentaje: number) => pujar(id!, porcentaje, token!),
     onSuccess: async () => {
       setAviso('Puja registrada: vas ganando')
@@ -66,7 +66,7 @@ export function SubastaDetailPage() {
     },
   })
 
-  const cancelarMutation = useMutation({
+  const mutacionCancelar = useMutation({
     mutationFn: () => cancelarSubasta(id!, token!),
     onSuccess: async () => {
       setAviso('Subasta cancelada')
@@ -74,7 +74,7 @@ export function SubastaDetailPage() {
     },
   })
 
-  const errorAccion = pujarMutation.error ?? cancelarMutation.error
+  const errorAccion = mutacionPujar.error ?? mutacionCancelar.error
 
   return (
     <div className={styles.scope}>
@@ -124,26 +124,29 @@ export function SubastaDetailPage() {
             )}
 
             <div className={styles.layout}>
-              <PanelPrecio subasta={subasta.data} usuarioId={user?.usuarioId} />
+              <PanelPrecio
+                subasta={subasta.data}
+                usuarioId={usuario?.usuarioId}
+              />
 
               <PanelPujar
                 subasta={subasta.data}
-                usuarioId={user?.usuarioId}
+                usuarioId={usuario?.usuarioId}
                 isAuthenticated={isAuthenticated}
-                pujando={pujarMutation.isPending}
+                pujando={mutacionPujar.isPending}
                 onPujar={(porcentaje) => {
-                  cancelarMutation.reset()
-                  pujarMutation.mutate(porcentaje)
+                  mutacionCancelar.reset()
+                  mutacionPujar.mutate(porcentaje)
                 }}
-                cancelando={cancelarMutation.isPending}
+                cancelando={mutacionCancelar.isPending}
                 onCancelar={() => {
-                  pujarMutation.reset()
+                  mutacionPujar.reset()
                   if (
                     window.confirm(
                       '¿Cancelar la subasta? Los tokens vuelven a tu cartera y, si había un mejor postor, se le devuelve su saldo.',
                     )
                   ) {
-                    cancelarMutation.mutate()
+                    mutacionCancelar.mutate()
                   }
                 }}
               />
@@ -153,7 +156,7 @@ export function SubastaDetailPage() {
               <h2>Historial de pujas</h2>
               <Historial
                 pujas={subasta.data.pujas ?? []}
-                usuarioId={user?.usuarioId}
+                usuarioId={usuario?.usuarioId}
               />
             </section>
           </>
@@ -201,9 +204,9 @@ function PanelPrecio({
         <small>
           {subasta.precioActual ? 'Mejor puja' : 'Precio inicial'} · por token
         </small>
-        <strong>{formatMoney(precio)}</strong>
+        <strong>{formatearMoneda(precio)}</strong>
         <span>
-          {subasta.cantidad} token(s) · total {formatMoney(totalVigente)}
+          {subasta.cantidad} token(s) · total {formatearMoneda(totalVigente)}
         </span>
       </div>
 
@@ -212,7 +215,7 @@ function PanelPrecio({
           <small>{subasta.precioActual ? 'Se adjudica en' : 'Vence en'}</small>
           <div>
             <strong>
-              {restante > 0 ? formatRestante(restante) : 'Cerrando…'}
+              {restante > 0 ? formatearRestante(restante) : 'Cerrando…'}
             </strong>
           </div>
           <p>
@@ -225,7 +228,7 @@ function PanelPrecio({
 
       <dl className={styles.datos}>
         <dt>Precio inicial</dt>
-        <dd>{formatMoney(subasta.precioInicial)}</dd>
+        <dd>{formatearMoneda(subasta.precioInicial)}</dd>
         <dt>Pujas</dt>
         <dd>{subasta.cantidadPujas}</dd>
         <dt>Mejor postor</dt>
@@ -299,7 +302,7 @@ function PanelPujar({
       ) : esMejorPostor ? (
         <p className={styles.resultado}>
           Vas ganando. Si nadie te supera en{' '}
-          {restante > 0 ? formatRestante(restante) : 'unos segundos'}, la
+          {restante > 0 ? formatearRestante(restante) : 'unos segundos'}, la
           subasta es tuya.
         </p>
       ) : (
@@ -319,10 +322,10 @@ function PanelPujar({
                     : `+${opcion.porcentaje}%`}
                 </span>
                 <span className={styles.opcionPrecio}>
-                  {formatMoney(opcion.precioUnitario)}
+                  {formatearMoneda(opcion.precioUnitario)}
                 </span>
                 <span className={styles.opcionTotal}>
-                  Total {formatMoney(opcion.montoTotal)}
+                  Total {formatearMoneda(opcion.montoTotal)}
                 </span>
               </button>
             ))}
@@ -338,7 +341,7 @@ function PanelPujar({
 }
 
 function resultadoDe(subasta: SubastaResponse, usuarioId: string | undefined) {
-  const total = formatMoney(
+  const total = formatearMoneda(
     Number(subasta.precioActual ?? 0) * subasta.cantidad,
   )
   switch (subasta.estado) {
@@ -347,7 +350,7 @@ function resultadoDe(subasta: SubastaResponse, usuarioId: string | undefined) {
         return `¡Ganaste la subasta! Recibiste ${subasta.cantidad} token(s) por ${total}.`
       if (subasta.vendedorId === usuarioId)
         return `Vendiste ${subasta.cantidad} token(s) por ${total}.`
-      return `Adjudicada a ${formatMoney(subasta.precioActual ?? 0)} por token.`
+      return `Adjudicada a ${formatearMoneda(subasta.precioActual ?? 0)} por token.`
     case 'DESIERTA':
       return 'Venció sin pujas: los tokens volvieron al vendedor.'
     case 'CANCELADA':
@@ -390,7 +393,7 @@ function Historial({
               {esVos ? 'Vos' : alias.get(puja.postorId)}
             </span>
             <span className={styles.historialPrecio}>
-              {formatMoney(puja.precioUnitario)}
+              {formatearMoneda(puja.precioUnitario)}
             </span>
             <span className={styles.historialFecha}>
               {formatoHora.format(new Date(puja.fecha))}

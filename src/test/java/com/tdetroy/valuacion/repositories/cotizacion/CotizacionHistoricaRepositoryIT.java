@@ -126,7 +126,7 @@ class CotizacionHistoricaRepositoryIT extends PostgresIntegrationTest {
         assertThat(listaHistorica.get(0).getValor()).isEqualByComparingTo(new BigDecimal("100.00"));
     }
 
-    // ---- findValoresVigentes / findValoresIniciales (plan.md §3bis, listado de Mercado) ----
+    // ---- buscarValoresVigentes / buscarValoresIniciales (plan.md §3bis, listado de Mercado) ----
 
     @Test
     void findValoresVigentes_conVariosJugadoresYVariosCalculosCadaUno_devuelveSoloElMasReciente() {
@@ -138,7 +138,7 @@ class CotizacionHistoricaRepositoryIT extends PostgresIntegrationTest {
         entityManager.clear();
 
         List<ValorPorJugadorProjection> vigentes =
-                cotizacionHistoricaRepository.findValoresVigentes();
+                cotizacionHistoricaRepository.buscarValoresVigentes();
 
         assertThat(vigentes).hasSize(2);
         assertThat(valorDe(vigentes, jugadorA)).isEqualByComparingTo("105.50");
@@ -153,7 +153,7 @@ class CotizacionHistoricaRepositoryIT extends PostgresIntegrationTest {
         entityManager.clear();
 
         List<ValorPorJugadorProjection> iniciales =
-                cotizacionHistoricaRepository.findValoresIniciales();
+                cotizacionHistoricaRepository.buscarValoresIniciales();
 
         assertThat(valorDe(iniciales, jugadorA)).isEqualByComparingTo("100.00");
     }
@@ -167,7 +167,7 @@ class CotizacionHistoricaRepositoryIT extends PostgresIntegrationTest {
         entityManager.clear();
 
         List<ValorPorJugadorProjection> iniciales =
-                cotizacionHistoricaRepository.findValoresIniciales();
+                cotizacionHistoricaRepository.buscarValoresIniciales();
 
         assertThat(valorDe(iniciales, jugadorA)).isEqualByComparingTo("107.80");
     }
@@ -180,9 +180,9 @@ class CotizacionHistoricaRepositoryIT extends PostgresIntegrationTest {
         entityManager.clear();
 
         ValorPorJugadorProjection inicial =
-                filaDe(cotizacionHistoricaRepository.findValoresIniciales(), jugadorA);
+                filaDe(cotizacionHistoricaRepository.buscarValoresIniciales(), jugadorA);
         ValorPorJugadorProjection vigente =
-                filaDe(cotizacionHistoricaRepository.findValoresVigentes(), jugadorA);
+                filaDe(cotizacionHistoricaRepository.buscarValoresVigentes(), jugadorA);
 
         assertThat(inicial.getFechaCalculo()).isEqualTo(vigente.getFechaCalculo());
     }

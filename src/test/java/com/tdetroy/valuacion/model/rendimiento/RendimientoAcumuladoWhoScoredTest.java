@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 /**
  * Cubre la invariante propia de {@link RendimientoAcumuladoWhoScored} (plan.md §8.1): campos
  * obligatorios, {@code metricas} nunca vacío/blanco, y que {@link
- * RendimientoAcumuladoWhoScored#actualizarSnapshot} reemplaza por completo el valor anterior.
+ * RendimientoAcumuladoWhoScored#actualizarAcumulado} reemplaza por completo el valor anterior.
  */
 class RendimientoAcumuladoWhoScoredTest {
 
@@ -55,24 +55,24 @@ class RendimientoAcumuladoWhoScoredTest {
     }
 
     @Test
-    void actualizarSnapshot_reemplazaMetricasYFecha() {
+    void actualizarAcumulado_reemplazaMetricasYFecha() {
         RendimientoAcumuladoWhoScored snapshot =
                 RendimientoAcumuladoWhoScored.primeraVez(JUGADOR_ID, METRICAS, FECHA);
         Instant fechaNueva = FECHA.plusSeconds(3600);
 
-        snapshot.actualizarSnapshot("{\"goals\":8,\"assists\":3}", fechaNueva);
+        snapshot.actualizarAcumulado("{\"goals\":8,\"assists\":3}", fechaNueva);
 
         assertThat(snapshot.getMetricas()).isEqualTo("{\"goals\":8,\"assists\":3}");
         assertThat(snapshot.getFechaActualizacion()).isEqualTo(fechaNueva);
     }
 
     @Test
-    void actualizarSnapshotConMetricasInvalidas_lanzaExcepcionYNoModificaElSnapshot() {
+    void actualizarAcumuladoConMetricasInvalidas_lanzaExcepcionYNoModificaElSnapshot() {
         RendimientoAcumuladoWhoScored snapshot =
                 RendimientoAcumuladoWhoScored.primeraVez(JUGADOR_ID, METRICAS, FECHA);
 
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> snapshot.actualizarSnapshot(" ", FECHA.plusSeconds(1)));
+                .isThrownBy(() -> snapshot.actualizarAcumulado(" ", FECHA.plusSeconds(1)));
 
         assertThat(snapshot.getMetricas()).isEqualTo(METRICAS);
         assertThat(snapshot.getFechaActualizacion()).isEqualTo(FECHA);

@@ -76,15 +76,15 @@ public class DevDataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        seedPesosMetricaWhoScoredLiga();
+        sembrarPesosMetricaWhoScoredLiga();
 
         if (jugadorRepository.count() > 0) {
             log.info("Datos de prueba: el catálogo ya tiene jugadores, se omite la carga.");
             return;
         }
 
-        seedUsuarios();
-        seedJugadores();
+        sembrarUsuarios();
+        sembrarJugadores();
         log.info(
                 "Datos de prueba cargados: usuario admin@example.com / user@example.com"
                         + " (password '{}'), catálogo de jugadores de ejemplo.",
@@ -102,7 +102,7 @@ public class DevDataSeeder implements CommandLineRunner {
      * así que más tarjetas puntúa hacia abajo, nunca hacia arriba (plan.md §8.1) -- a diferencia
      * del resto de las métricas, que son {@link SentidoMetrica#POSITIVO}.
      */
-    private void seedPesosMetricaWhoScoredLiga() {
+    private void sembrarPesosMetricaWhoScoredLiga() {
         record PesoDefecto(BigDecimal peso, SentidoMetrica sentido) {}
 
         Map<String, PesoDefecto> pesosPorDefecto = new LinkedHashMap<>();
@@ -134,7 +134,7 @@ public class DevDataSeeder implements CommandLineRunner {
         }
     }
 
-    private void seedUsuarios() {
+    private void sembrarUsuarios() {
         usuarioService.registrar("user@example.com", passwordEncoder.encode(PASSWORD_DEV));
 
         Usuario admin =
@@ -148,7 +148,7 @@ public class DevDataSeeder implements CommandLineRunner {
         usuarioRepository.save(UsuarioEntity.desde(admin));
     }
 
-    private void seedJugadores() {
+    private void sembrarJugadores() {
         jugadorService.darAlta(
                 "Leonel Messi",
                 "Inter Miami CF",

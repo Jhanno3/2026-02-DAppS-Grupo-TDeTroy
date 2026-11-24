@@ -19,7 +19,7 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
  * Test de integración de {@link RendimientoAcumuladoWhoScoredRepository} contra Postgres real
  * (plan.md §8.1, constitution.md §1/§4): persistir un snapshot vía {@link
  * RendimientoAcumuladoWhoScored#primeraVez} y leerlo de vuelta, y que reemplazar el snapshot de un
- * jugador ya persistido (vía {@link RendimientoAcumuladoWhoScored#actualizarSnapshot}) actualiza
+ * jugador ya persistido (vía {@link RendimientoAcumuladoWhoScored#actualizarAcumulado}) actualiza
  * esa misma fila en vez de insertar una nueva — {@code jugadorId} es la clave primaria natural,
  * mismo criterio que {@link PesoMetricaRepositoryIT} con {@code clave}. Las comparaciones sobre
  * {@code metricas} usan {@link org.skyscreamer.jsonassert.JSONAssert} (mismo criterio que {@code
@@ -52,14 +52,14 @@ class RendimientoAcumuladoWhoScoredRepositoryIT extends PostgresIntegrationTest 
     }
 
     @Test
-    void actualizarSnapshot_persisteSobreLaMismaFila() throws JSONException {
+    void actualizarAcumulado_persisteSobreLaMismaFila() throws JSONException {
         UUID jugadorId = UUID.randomUUID();
         RendimientoAcumuladoWhoScored snapshot =
                 RendimientoAcumuladoWhoScored.primeraVez(jugadorId, "{\"goals\":5}");
         repository.saveAndFlush(RendimientoAcumuladoWhoScoredEntity.desde(snapshot));
         entityManager.clear();
 
-        snapshot.actualizarSnapshot("{\"goals\":8}", Instant.now().truncatedTo(ChronoUnit.MICROS));
+        snapshot.actualizarAcumulado("{\"goals\":8}", Instant.now().truncatedTo(ChronoUnit.MICROS));
         repository.saveAndFlush(RendimientoAcumuladoWhoScoredEntity.desde(snapshot));
         entityManager.clear();
 

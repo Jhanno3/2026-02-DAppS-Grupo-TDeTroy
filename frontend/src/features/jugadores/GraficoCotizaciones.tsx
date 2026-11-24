@@ -1,9 +1,9 @@
 import { useState, type KeyboardEvent, type PointerEvent } from 'react'
 import type { CotizacionResponse } from '../../api/jugadores'
-import { formatMoney } from '../../shared/format'
-import styles from './CotizacionHistorialChart.module.css'
+import { formatearMoneda } from '../../shared/format'
+import styles from './GraficoCotizaciones.module.css'
 
-interface CotizacionHistorialChartProps {
+interface GraficoCotizacionesProps {
   cotizaciones: CotizacionResponse[]
 }
 
@@ -24,9 +24,9 @@ const MAX_MARCADORES = 24
  * o flechas del teclado) y una vista de tabla equivalente. `cotizaciones` ya viene ordenado
  * cronológicamente (ver `CotizacionService#obtenerHistorial`).
  */
-export function CotizacionHistorialChart({
+export function GraficoCotizaciones({
   cotizaciones,
-}: CotizacionHistorialChartProps) {
+}: GraficoCotizacionesProps) {
   const [activo, setActivo] = useState<number | null>(null)
 
   if (cotizaciones.length === 0) {
@@ -95,7 +95,7 @@ export function CotizacionHistorialChart({
           role="img"
           aria-label={`Historial de cotización de ${cotizaciones.length} ${
             cotizaciones.length === 1 ? 'semana' : 'semanas'
-          }, de ${formatMoney(valores[0])} a ${formatMoney(valores[ultimo])}`}
+          }, de ${formatearMoneda(valores[0])} a ${formatearMoneda(valores[ultimo])}`}
           tabIndex={0}
           onPointerMove={(e) => setActivo(indiceMasCercano(e))}
           onPointerLeave={() => setActivo(null)}
@@ -133,7 +133,7 @@ export function CotizacionHistorialChart({
                   textAnchor="end"
                   dominantBaseline="middle"
                 >
-                  {formatMoney(v)}
+                  {formatearMoneda(v)}
                 </text>
               )}
             </g>
@@ -212,7 +212,7 @@ export function CotizacionHistorialChart({
             }}
           >
             {semanaCorta(cotizaciones[ultimo].semana)} ·{' '}
-            {formatMoney(valores[ultimo])}
+            {formatearMoneda(valores[ultimo])}
           </div>
         )}
 
@@ -234,7 +234,7 @@ export function CotizacionHistorialChart({
           >
             <span className={styles.tooltipSemana}>{seleccionado.semana}</span>
             <span className={styles.tooltipValor}>
-              {formatMoney(seleccionado.valor)}
+              {formatearMoneda(seleccionado.valor)}
             </span>
             {seleccionado.origen === 'MANUAL' && (
               <span className={styles.tooltipOrigen}>Ajuste manual</span>
@@ -257,7 +257,7 @@ export function CotizacionHistorialChart({
             {cotizaciones.map((c) => (
               <tr key={c.id}>
                 <td>{c.semana}</td>
-                <td>{formatMoney(c.valor)}</td>
+                <td>{formatearMoneda(c.valor)}</td>
                 <td>{c.origen === 'MANUAL' ? 'Manual' : 'Automático'}</td>
               </tr>
             ))}

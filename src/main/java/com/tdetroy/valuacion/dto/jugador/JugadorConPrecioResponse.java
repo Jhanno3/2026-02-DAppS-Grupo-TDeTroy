@@ -12,8 +12,10 @@ import java.math.BigDecimal;
 public record JugadorConPrecioResponse(
         JugadorResponse jugador, BigDecimal precio, BigDecimal variacionPorcentual) {
 
-    public static JugadorConPrecioResponse desde(JugadorConPrecio item) {
+    public static JugadorConPrecioResponse desde(JugadorConPrecio elemento) {
         return new JugadorConPrecioResponse(
-                JugadorResponse.desde(item.jugador()), item.precio(), item.variacionPorcentual());
+                JugadorResponse.desde(elemento.jugador()),
+                elemento.precio(),
+                elemento.variacionPorcentual());
     }
 }

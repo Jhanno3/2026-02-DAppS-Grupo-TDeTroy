@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { TradePanel } from './TradePanel'
+import { PanelOperar } from './PanelOperar'
 import { ApiError } from '../../api/client'
 import * as tokensApi from '../../api/tokens'
 import * as portfolioApi from '../../api/portfolio'
@@ -18,8 +18,8 @@ vi.mock('../auth/AuthContext', async (importOriginal) => {
 
 const JUGADOR_ID = 'jugador-1'
 
-function renderTradePanel(
-  props: Partial<React.ComponentProps<typeof TradePanel>> = {},
+function renderPanelOperar(
+  props: Partial<React.ComponentProps<typeof PanelOperar>> = {},
 ) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -27,7 +27,7 @@ function renderTradePanel(
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <TradePanel
+        <PanelOperar
           jugadorId={JUGADOR_ID}
           cotizacionVigente={100}
           tokensDisponibles={50}
@@ -39,11 +39,11 @@ function renderTradePanel(
   )
 }
 
-describe('TradePanel', () => {
+describe('PanelOperar', () => {
   beforeEach(() => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: 'fake-token',
-      user: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
+      usuario: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
       isAuthenticated: true,
       login: vi.fn(),
       logout: vi.fn(),
@@ -65,13 +65,13 @@ describe('TradePanel', () => {
   it('sin sesión, invita a iniciar sesión o crear cuenta en vez de mostrar el form', () => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: null,
-      user: null,
+      usuario: null,
       isAuthenticated: false,
       login: vi.fn(),
       logout: vi.fn(),
     })
 
-    renderTradePanel()
+    renderPanelOperar()
 
     expect(screen.getByText(/Iniciá sesión/)).toBeInTheDocument()
     expect(
@@ -80,7 +80,7 @@ describe('TradePanel', () => {
   })
 
   it('jugador dado de baja, muestra el aviso y no el form', () => {
-    renderTradePanel({ estaActivo: false })
+    renderPanelOperar({ estaActivo: false })
 
     expect(
       screen.getByText(
@@ -90,7 +90,7 @@ describe('TradePanel', () => {
   })
 
   it('sin tokens disponibles para comprar, muestra el mensaje en vez del form', () => {
-    renderTradePanel({ tokensDisponibles: 0 })
+    renderPanelOperar({ tokensDisponibles: 0 })
 
     expect(
       screen.getByText('No quedan tokens disponibles para comprar.'),
@@ -99,7 +99,7 @@ describe('TradePanel', () => {
 
   it('calcula el total como precio x cantidad, y lo actualiza con el stepper', async () => {
     const user = userEvent.setup()
-    renderTradePanel({ cotizacionVigente: 91.36 })
+    renderPanelOperar({ cotizacionVigente: 91.36 })
 
     // A cantidad 1, precio unitario y total coinciden — confirma que ambos arrancan en $91,36.
     expect(screen.getAllByText('$ 91,36')).toHaveLength(2)
@@ -112,7 +112,7 @@ describe('TradePanel', () => {
 
   it('el botón "Restar" nunca baja de 1', async () => {
     const user = userEvent.setup()
-    renderTradePanel({ cotizacionVigente: 91.36 })
+    renderPanelOperar({ cotizacionVigente: 91.36 })
 
     await user.click(screen.getByRole('button', { name: 'Restar' }))
 
@@ -121,7 +121,7 @@ describe('TradePanel', () => {
   })
 
   it('escribir una cantidad en el input recalcula el total, acotado al máximo', () => {
-    renderTradePanel({ cotizacionVigente: 91.36, tokensDisponibles: 5 })
+    renderPanelOperar({ cotizacionVigente: 91.36, tokensDisponibles: 5 })
 
     const input = screen.getByRole('spinbutton')
     fireEvent.change(input, { target: { value: '3' } })
@@ -135,7 +135,7 @@ describe('TradePanel', () => {
 
   it('hacer click en la pestaña ya activa ("Comprar") no rompe nada', async () => {
     const user = userEvent.setup()
-    renderTradePanel({ cotizacionVigente: 91.36 })
+    renderPanelOperar({ cotizacionVigente: 91.36 })
 
     await user.click(screen.getByRole('tab', { name: 'Comprar' }))
 
@@ -146,7 +146,7 @@ describe('TradePanel', () => {
   })
 
   it('sin cotización todavía, usa el valor inicial de 100 para el cálculo (igual que el backend)', () => {
-    renderTradePanel({ cotizacionVigente: null })
+    renderPanelOperar({ cotizacionVigente: null })
 
     const precios = screen.getAllByText('$ 100,00')
     expect(precios.length).toBeGreaterThan(0)
@@ -164,7 +164,7 @@ describe('TradePanel', () => {
       fecha: '2026-02-16T00:00:00Z',
     })
     const user = userEvent.setup()
-    renderTradePanel({ cotizacionVigente: 91.36 })
+    renderPanelOperar({ cotizacionVigente: 91.36 })
 
     await user.click(screen.getByRole('button', { name: 'Comprar 1 token' }))
 
@@ -210,7 +210,7 @@ describe('TradePanel', () => {
       fecha: '2026-02-16T00:00:00Z',
     })
     const user = userEvent.setup()
-    renderTradePanel({ cotizacionVigente: 91.36 })
+    renderPanelOperar({ cotizacionVigente: 91.36 })
 
     await user.click(screen.getByRole('tab', { name: 'Vender' }))
     await screen.findByText('Tenés 3 token(s) disponibles para vender')
@@ -245,7 +245,7 @@ describe('TradePanel', () => {
       valorTotal: '300.00',
     })
     const user = userEvent.setup()
-    renderTradePanel({ cotizacionVigente: 100 })
+    renderPanelOperar({ cotizacionVigente: 100 })
 
     await user.click(screen.getByRole('tab', { name: 'Vender' }))
 
@@ -259,7 +259,7 @@ describe('TradePanel', () => {
       new ApiError(409, 'Saldo insuficiente', 'Conflicto'),
     )
     const user = userEvent.setup()
-    renderTradePanel()
+    renderPanelOperar()
 
     await user.click(screen.getByRole('button', { name: 'Comprar 1 token' }))
 

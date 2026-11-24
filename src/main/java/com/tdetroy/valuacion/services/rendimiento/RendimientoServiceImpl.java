@@ -49,7 +49,7 @@ import tools.jackson.databind.ObjectMapper;
  * <p><b>Ingesta de rendimiento por liga (plan.md §8.1):</b> {@code ingestarRendimiento} agrupa a
  * los jugadores {@code ACTIVO} por {@code liga}, pide a {@link RendimientoLigaExternoRepository} el
  * acumulado de temporada de toda esa liga en una sola llamada (no una por jugador), y resuelve cada
- * fila cruda a un jugador del catálogo por nombre+club (ver {@link NombreClubMatcher}) antes de
+ * fila cruda a un jugador del catálogo por nombre+club (ver {@link ComparadorNombreClub}) antes de
  * procesarla — una fila sin un match inequívoco se ignora (se loguea, no bloquea al resto de la
  * liga). Por cada jugador resuelto:
  *
@@ -267,22 +267,22 @@ public class RendimientoServiceImpl implements RendimientoService {
         }
         String actualJson = serializar(actual);
 
-        Optional<RendimientoAcumuladoWhoScoredEntity> snapshotExistente =
+        Optional<RendimientoAcumuladoWhoScoredEntity> acumuladoExistente =
                 rendimientoAcumuladoWhoScoredRepository.findById(jugador.getId());
-        if (snapshotExistente.isEmpty()) {
+        if (acumuladoExistente.isEmpty()) {
             rendimientoAcumuladoWhoScoredRepository.save(
                     RendimientoAcumuladoWhoScoredEntity.desde(
                             RendimientoAcumuladoWhoScored.primeraVez(jugador.getId(), actualJson)));
             return false;
         }
 
-        RendimientoAcumuladoWhoScored snapshot = snapshotExistente.get().aModelo();
-        Map<String, BigDecimal> anterior = parsearComoBigDecimal(snapshot.getMetricas());
+        RendimientoAcumuladoWhoScored acumulado = acumuladoExistente.get().aModelo();
+        Map<String, BigDecimal> anterior = parsearComoBigDecimal(acumulado.getMetricas());
         Map<String, BigDecimal> delta = calcularDelta(anterior, actual);
 
-        snapshot.actualizarSnapshot(actualJson, Instant.now());
+        acumulado.actualizarAcumulado(actualJson, Instant.now());
         rendimientoAcumuladoWhoScoredRepository.save(
-                RendimientoAcumuladoWhoScoredEntity.desde(snapshot));
+                RendimientoAcumuladoWhoScoredEntity.desde(acumulado));
 
         if (delta.values().stream().allMatch(valor -> valor.signum() == 0)) {
             return false;
@@ -306,7 +306,7 @@ public class RendimientoServiceImpl implements RendimientoService {
                 candidatos.stream()
                         .filter(
                                 jugador ->
-                                        NombreClubMatcher.coincide(
+                                        ComparadorNombreClub.coincide(
                                                 crudo.nombre(),
                                                 crudo.club(),
                                                 jugador.getNombre(),
@@ -349,8 +349,8 @@ public class RendimientoServiceImpl implements RendimientoService {
                 .map(this::aEstadisticas);
     }
 
-    private EstadisticasTemporada aEstadisticas(RendimientoAcumuladoWhoScored snapshot) {
-        Map<String, BigDecimal> metricas = parsearComoBigDecimal(snapshot.getMetricas());
+    private EstadisticasTemporada aEstadisticas(RendimientoAcumuladoWhoScored acumulado) {
+        Map<String, BigDecimal> metricas = parsearComoBigDecimal(acumulado.getMetricas());
         return new EstadisticasTemporada(
                 entero(metricas, "apps"),
                 entero(metricas, "minsPlayed"),
@@ -359,7 +359,7 @@ public class RendimientoServiceImpl implements RendimientoService {
                 entero(metricas, "manOfTheMatch"),
                 entero(metricas, "yellowCard"),
                 entero(metricas, "redCard"),
-                snapshot.getFechaActualizacion());
+                acumulado.getFechaActualizacion());
     }
 
     private static int entero(Map<String, BigDecimal> metricas, String clave) {

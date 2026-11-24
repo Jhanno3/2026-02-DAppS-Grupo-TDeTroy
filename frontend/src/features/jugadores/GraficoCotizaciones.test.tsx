@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { CotizacionHistorialChart } from './CotizacionHistorialChart'
+import { GraficoCotizaciones } from './GraficoCotizaciones'
 import type { CotizacionResponse } from '../../api/jugadores'
 
 function cotizacion(
@@ -18,9 +18,9 @@ function cotizacion(
   }
 }
 
-describe('CotizacionHistorialChart', () => {
+describe('GraficoCotizaciones', () => {
   it('sin cotizaciones, muestra el mensaje de "sin historial"', () => {
-    render(<CotizacionHistorialChart cotizaciones={[]} />)
+    render(<GraficoCotizaciones cotizaciones={[]} />)
 
     expect(
       screen.getByText(
@@ -32,9 +32,7 @@ describe('CotizacionHistorialChart', () => {
 
   it('con una sola semana, dibuja el punto y avisa que la evolución llega con la segunda', () => {
     render(
-      <CotizacionHistorialChart
-        cotizaciones={[cotizacion('2026-W44', '104.39')]}
-      />,
+      <GraficoCotizaciones cotizaciones={[cotizacion('2026-W44', '104.39')]} />,
     )
 
     expect(screen.getByRole('img')).toHaveAccessibleName(
@@ -47,7 +45,7 @@ describe('CotizacionHistorialChart', () => {
 
   it('con varias semanas, la vista de tabla lista cada semana en orden', () => {
     render(
-      <CotizacionHistorialChart
+      <GraficoCotizaciones
         cotizaciones={[
           cotizacion('2026-W42', '100.00'),
           cotizacion('2026-W43', '110.00', { origen: 'MANUAL' }),
@@ -69,7 +67,7 @@ describe('CotizacionHistorialChart', () => {
 
   it('con foco y flechas, el tooltip recorre las semanas', () => {
     render(
-      <CotizacionHistorialChart
+      <GraficoCotizaciones
         cotizaciones={[
           cotizacion('2026-W42', '100.00'),
           cotizacion('2026-W43', '110.00', { origen: 'MANUAL' }),

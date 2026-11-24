@@ -24,7 +24,7 @@ interface JugadorFormProps {
 /**
  * El formulario en sí, con su propio estado local inicializado una sola vez desde
  * {@code valoresIniciales} — nunca se re-sincroniza vía efecto (evita el antipatrón "setState
- * síncrono dentro de un efecto"; {@link JugadorFormPage} lo monta con {@code key} recién cuando
+ * síncrono dentro de un efecto"; {@link JugadorFormularioPage} lo monta con {@code key} recién cuando
  * los datos ya están listos, así el estado inicial nace correcto sin necesidad de un efecto).
  */
 function JugadorForm({
@@ -45,13 +45,13 @@ function JugadorForm({
   )
   const [liga, setLiga] = useState(valoresIniciales.liga)
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function manejarEnvio(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     onGuardar({ nombre, club, posicion, fechaNacimiento, nacionalidad, liga })
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit}>
+    <form className={styles.form} onSubmit={manejarEnvio}>
       <h1>{titulo}</h1>
 
       <label className={styles.field}>
@@ -150,7 +150,7 @@ const VALORES_VACIOS: DatosIdentificatoriosJugador = {
  * {@code CrearJugadorRequest}/{@code EditarJugadorRequest} en el backend. El modo lo decide la
  * presencia de {@code :id} en la ruta (`/admin/jugadores/nuevo` vs. `/admin/jugadores/:id/editar`).
  */
-export function JugadorFormPage() {
+export function JugadorFormularioPage() {
   const { id } = useParams<{ id?: string }>()
   const esEdicion = Boolean(id)
   const { token } = useAuth()
@@ -163,7 +163,7 @@ export function JugadorFormPage() {
     enabled: esEdicion,
   })
 
-  const mutation = useMutation({
+  const mutacion = useMutation({
     mutationFn: (datos: DatosIdentificatoriosJugador) =>
       esEdicion
         ? editarJugador(id!, datos, token!)
@@ -190,9 +190,9 @@ export function JugadorFormPage() {
       key={id ?? 'nuevo'}
       titulo={esEdicion ? 'Editar jugador' : 'Nuevo jugador'}
       valoresIniciales={jugadorActual.data ?? VALORES_VACIOS}
-      onGuardar={(datos) => mutation.mutate(datos)}
-      guardando={mutation.isPending}
-      error={mutation.error}
+      onGuardar={(datos) => mutacion.mutate(datos)}
+      guardando={mutacion.isPending}
+      error={mutacion.error}
     />
   )
 }

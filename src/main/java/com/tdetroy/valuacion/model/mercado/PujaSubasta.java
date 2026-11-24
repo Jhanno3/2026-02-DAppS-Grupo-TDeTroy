@@ -6,8 +6,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Registro append-only de una puja aceptada en una {@link Subasta} (UC-18), para mostrar cómo
- * evolucionó el precio. No interviene en ningún cálculo: el precio vigente vive en {@link
+ * Puja aceptada, append-only, para mostrar la evolución del precio. El vigente vive en {@link
  * Subasta#getPrecioActual()}.
  */
 public record PujaSubasta(

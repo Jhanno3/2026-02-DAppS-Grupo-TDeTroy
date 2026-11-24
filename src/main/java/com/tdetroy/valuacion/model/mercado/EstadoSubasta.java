@@ -1,10 +1,8 @@
 package com.tdetroy.valuacion.model.mercado;
 
 /**
- * Estado de una {@link Subasta} (UC-18). Toda subasta nace {@link #ACTIVA}; pasa a {@link
- * #ADJUDICADA} cuando pasan 2 minutos sin pujas desde la última, a {@link #DESIERTA} cuando vence
- * la duración sin ninguna puja, o a {@link #CANCELADA} cuando el vendedor la retira o el jugador es
- * dado de baja.
+ * {@link #ADJUDICADA}: cerró con pujas. {@link #DESIERTA}: venció sin pujas. {@link #CANCELADA}: la
+ * retiró el vendedor o se dio de baja al jugador.
  */
 public enum EstadoSubasta {
     ACTIVA,

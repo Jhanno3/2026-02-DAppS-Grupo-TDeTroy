@@ -11,13 +11,13 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class RendimientoTemporadaCalculatorTest {
+class CalculadorRendimientoTemporadaTest {
 
-    private RendimientoTemporadaCalculator calculator;
+    private CalculadorRendimientoTemporada calculator;
 
     @BeforeEach
     void setUp() {
-        calculator = new RendimientoTemporadaCalculator();
+        calculator = new CalculadorRendimientoTemporada();
     }
 
     @Test

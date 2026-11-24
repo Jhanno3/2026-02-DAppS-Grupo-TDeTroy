@@ -9,17 +9,14 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Portfolio de un usuario valorizado a la cotización vigente (UC-11) — vista de sólo lectura
- * calculada a partir de sus {@link TenenciaToken}, no se persiste (plan.md §2.5: "no existe tabla
- * Portfolio separada").
+ * Portfolio de un usuario a la cotización vigente. Se calcula de sus {@link TenenciaToken}, no se
+ * persiste.
  *
  * @param tenencias posiciones con tokens disponibles (los reservados van en {@code valorEnVenta})
- * @param valorEnVenta tokens reservados en ofertas P2P abiertas y subastas activas, a cotización
- *     vigente: no están disponibles para operar, pero siguen siendo del usuario
- * @param saldoEnPujas saldo reservado como mejor postor de subastas activas (UC-18)
- * @param gananciaPerdida resultado total del usuario: lo realizado en ventas (sistema, P2P, subasta
- *     y compensación por baja) más lo no realizado de sus tokens, reservados incluidos (ver {@link
- *     TenenciaToken#resultadoTotal}). No es la suma de {@code tenencias}, que sólo mira disponibles
+ * @param valorEnVenta tokens reservados en ofertas P2P y subastas, a cotización vigente
+ * @param saldoEnPujas saldo reservado como mejor postor de subastas activas
+ * @param gananciaPerdida resultado realizado más no realizado, reservados incluidos; no es la suma
+ *     de {@code tenencias}, que sólo mira disponibles
  * @param valorTotal saldo + tenencias + valor en venta + saldo en pujas
  */
 public record Portfolio(
@@ -31,8 +28,7 @@ public record Portfolio(
         BigDecimal valorTotal) {
 
     /**
-     * Posición en un jugador: tokens disponibles, lo que valen hoy y cuánto se gana o pierde
-     * respecto de lo que costaron (ver {@link TenenciaToken}).
+     * Posición en un jugador, sólo tokens disponibles.
      *
      * @param rentabilidad porcentaje sobre el costo ({@code 20.00} = +20%)
      */

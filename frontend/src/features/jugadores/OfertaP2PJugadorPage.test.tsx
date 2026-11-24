@@ -53,7 +53,7 @@ describe('OfertaP2PJugadorPage', () => {
   beforeEach(() => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: 'fake-token',
-      user: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
+      usuario: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
       isAuthenticated: true,
       login: vi.fn(),
       logout: vi.fn(),
@@ -89,7 +89,7 @@ describe('OfertaP2PJugadorPage', () => {
   it('sin sesión, invita a iniciar sesión o crear cuenta en vez del form de publicar', async () => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: null,
-      user: null,
+      usuario: null,
       isAuthenticated: false,
       login: vi.fn(),
       logout: vi.fn(),

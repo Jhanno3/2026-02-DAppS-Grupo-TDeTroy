@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RankingPage } from './RankingPage'
 import * as jugadoresApi from '../../api/jugadores'
-import { formatMoney } from '../../shared/format'
+import { formatearMoneda } from '../../shared/format'
 
 vi.mock('../../api/jugadores')
 
@@ -138,8 +138,8 @@ describe('RankingPage', () => {
     expect(screen.getByText('#4')).toBeInTheDocument()
 
     // Precios formateados y precio nulo '-'
-    expect(screen.getByText(formatMoney('150.00'))).toBeInTheDocument()
-    expect(screen.getByText(formatMoney('120.00'))).toBeInTheDocument()
+    expect(screen.getByText(formatearMoneda('150.00'))).toBeInTheDocument()
+    expect(screen.getByText(formatearMoneda('120.00'))).toBeInTheDocument()
     expect(screen.getAllByText('-').length).toBeGreaterThanOrEqual(1)
 
     // Variaciones: positiva, negativa, cero y nula

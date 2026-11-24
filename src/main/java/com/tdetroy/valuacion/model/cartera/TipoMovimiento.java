@@ -1,12 +1,6 @@
 package com.tdetroy.valuacion.model.cartera;
 
-/**
- * Tipo de un {@link Movimiento} (plan.md §2.6).
- *
- * <p>{@link #RECARGA_SALDO} es el único tipo sin jugador/cantidad/precio asociado. Sólo {@link
- * #COMPRA_P2P}, {@link #VENTA_P2P}, {@link #COMPRA_SUBASTA} y {@link #VENTA_SUBASTA} llevan {@code
- * contraparteUsuarioId} (el otro usuario de la operación).
- */
+/** Sólo {@link #RECARGA_SALDO} no lleva jugador; sólo P2P y subasta llevan contraparte. */
 public enum TipoMovimiento {
     COMPRA_SISTEMA,
     VENTA_SISTEMA,

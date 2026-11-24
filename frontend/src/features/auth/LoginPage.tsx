@@ -8,7 +8,7 @@ import { useAuth } from './AuthContext'
 import { Button } from '../../shared/components/Button'
 import styles from '../../shared/styles/Form.module.css'
 
-interface LocationState {
+interface EstadoNavegacion {
   mensaje?: string
 }
 
@@ -19,9 +19,9 @@ export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const mensajeInicial = (location.state as LocationState | null)?.mensaje
+  const mensajeInicial = (location.state as EstadoNavegacion | null)?.mensaje
 
-  const mutation = useMutation({
+  const mutacion = useMutation({
     mutationFn: loginRequest,
     onSuccess: (data) => {
       login(data.token)
@@ -29,16 +29,16 @@ export function LoginPage() {
     },
   })
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function manejarEnvio(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    mutation.mutate({ email, password })
+    mutacion.mutate({ email, password })
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit}>
+    <form className={styles.form} onSubmit={manejarEnvio}>
       <h1>Iniciar sesión</h1>
 
-      {mensajeInicial && !mutation.isError && (
+      {mensajeInicial && !mutacion.isError && (
         <p className={styles.info}>{mensajeInicial}</p>
       )}
 
@@ -66,10 +66,10 @@ export function LoginPage() {
         />
       </label>
 
-      {mutation.isError && (
+      {mutacion.isError && (
         <p className={styles.error} role="alert">
-          {mutation.error instanceof ApiError
-            ? mutation.error.message
+          {mutacion.error instanceof ApiError
+            ? mutacion.error.message
             : 'No se pudo iniciar sesión.'}
         </p>
       )}
@@ -77,9 +77,9 @@ export function LoginPage() {
       <Button
         type="submit"
         className={styles.submit}
-        disabled={mutation.isPending}
+        disabled={mutacion.isPending}
       >
-        {mutation.isPending ? 'Ingresando…' : 'Ingresar'}
+        {mutacion.isPending ? 'Ingresando…' : 'Ingresar'}
       </Button>
 
       <p>

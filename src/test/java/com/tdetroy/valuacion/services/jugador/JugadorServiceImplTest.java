@@ -499,8 +499,8 @@ class JugadorServiceImplTest {
     }
 
     private void stubSinCotizaciones() {
-        when(cotizacionHistoricaRepository.findValoresVigentes()).thenReturn(List.of());
-        when(cotizacionHistoricaRepository.findValoresIniciales()).thenReturn(List.of());
+        when(cotizacionHistoricaRepository.buscarValoresVigentes()).thenReturn(List.of());
+        when(cotizacionHistoricaRepository.buscarValoresIniciales()).thenReturn(List.of());
     }
 
     private JugadorEntity jugadorConPosicion(UUID id, String nombre, String club, String posicion) {
@@ -534,12 +534,12 @@ class JugadorServiceImplTest {
                                 jugadorConPosicion(idBarato, "Barato", CLUB, POSICION),
                                 jugadorConPosicion(idCaro, "Caro", CLUB, POSICION)));
         Instant fecha = Instant.parse("2026-02-16T03:00:00Z");
-        when(cotizacionHistoricaRepository.findValoresVigentes())
+        when(cotizacionHistoricaRepository.buscarValoresVigentes())
                 .thenReturn(
                         List.of(
                                 new FilaValor(idBarato, new BigDecimal("50.00"), fecha),
                                 new FilaValor(idCaro, new BigDecimal("150.00"), fecha)));
-        when(cotizacionHistoricaRepository.findValoresIniciales())
+        when(cotizacionHistoricaRepository.buscarValoresIniciales())
                 .thenReturn(
                         List.of(
                                 new FilaValor(idBarato, new BigDecimal("50.00"), fecha),
@@ -562,9 +562,9 @@ class JugadorServiceImplTest {
                                 jugadorConPosicion(idSinPrecio, "SinPrecio", CLUB, POSICION),
                                 jugadorConPosicion(idConPrecio, "ConPrecio", CLUB, POSICION)));
         Instant fecha = Instant.parse("2026-02-16T03:00:00Z");
-        when(cotizacionHistoricaRepository.findValoresVigentes())
+        when(cotizacionHistoricaRepository.buscarValoresVigentes())
                 .thenReturn(List.of(new FilaValor(idConPrecio, new BigDecimal("80.00"), fecha)));
-        when(cotizacionHistoricaRepository.findValoresIniciales())
+        when(cotizacionHistoricaRepository.buscarValoresIniciales())
                 .thenReturn(List.of(new FilaValor(idConPrecio, new BigDecimal("80.00"), fecha)));
 
         PaginaMercado pagina = service.listarMercado(0, 50, "precio-desc", null, null);
@@ -581,10 +581,10 @@ class JugadorServiceImplTest {
         when(jugadorRepository.findAll())
                 .thenReturn(List.of(jugadorConPosicion(jugadorId, NOMBRE, CLUB, POSICION)));
         Instant unicaFecha = Instant.parse("2026-02-16T03:00:00Z");
-        when(cotizacionHistoricaRepository.findValoresVigentes())
+        when(cotizacionHistoricaRepository.buscarValoresVigentes())
                 .thenReturn(
                         List.of(new FilaValor(jugadorId, new BigDecimal("100.00"), unicaFecha)));
-        when(cotizacionHistoricaRepository.findValoresIniciales())
+        when(cotizacionHistoricaRepository.buscarValoresIniciales())
                 .thenReturn(
                         List.of(new FilaValor(jugadorId, new BigDecimal("100.00"), unicaFecha)));
 
@@ -598,14 +598,14 @@ class JugadorServiceImplTest {
         UUID jugadorId = UUID.randomUUID();
         when(jugadorRepository.findAll())
                 .thenReturn(List.of(jugadorConPosicion(jugadorId, NOMBRE, CLUB, POSICION)));
-        when(cotizacionHistoricaRepository.findValoresVigentes())
+        when(cotizacionHistoricaRepository.buscarValoresVigentes())
                 .thenReturn(
                         List.of(
                                 new FilaValor(
                                         jugadorId,
                                         new BigDecimal("120.00"),
                                         Instant.parse("2026-02-16T03:00:00Z"))));
-        when(cotizacionHistoricaRepository.findValoresIniciales())
+        when(cotizacionHistoricaRepository.buscarValoresIniciales())
                 .thenReturn(
                         List.of(
                                 new FilaValor(

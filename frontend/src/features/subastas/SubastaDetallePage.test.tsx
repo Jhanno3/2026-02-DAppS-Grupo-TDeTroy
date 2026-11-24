@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SubastaDetailPage } from './SubastaDetailPage'
+import { SubastaDetallePage } from './SubastaDetallePage'
 import { ApiError } from '../../api/client'
 import * as jugadoresApi from '../../api/jugadores'
 import * as subastasApi from '../../api/subastas'
@@ -47,7 +47,7 @@ function subasta(overrides: Partial<SubastaResponse> = {}): SubastaResponse {
 function comoUsuario(usuarioId: string | null) {
   vi.mocked(authContext.useAuth).mockReturnValue({
     token: usuarioId ? 'fake-token' : null,
-    user: usuarioId
+    usuario: usuarioId
       ? { usuarioId, email: 'user@example.com', rol: 'USER' }
       : null,
     isAuthenticated: usuarioId !== null,
@@ -64,14 +64,14 @@ function renderPagina() {
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/subastas/s1']}>
         <Routes>
-          <Route path="/subastas/:id" element={<SubastaDetailPage />} />
+          <Route path="/subastas/:id" element={<SubastaDetallePage />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   )
 }
 
-describe('SubastaDetailPage', () => {
+describe('SubastaDetallePage', () => {
   beforeEach(() => {
     vi.mocked(jugadoresApi.obtenerJugador).mockResolvedValue({
       id: 'j1',

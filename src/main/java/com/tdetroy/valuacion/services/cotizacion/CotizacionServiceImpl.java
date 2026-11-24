@@ -70,7 +70,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     private final BigDecimal sensibilidad;
     private final BigDecimal decayInactividad;
     private final long ventanaHistoricoSemanas;
-    private final EstrategiaCotizacion estrategiaDefaultDeConfiguracion;
+    private final EstrategiaCotizacion estrategiaPorDefectoDeConfiguracion;
 
     @Autowired
     public CotizacionServiceImpl(
@@ -87,7 +87,7 @@ public class CotizacionServiceImpl implements CotizacionService {
             @Value("${app.cotizacion.decay-inactividad}") BigDecimal decayInactividad,
             @Value("${app.cotizacion.ventana-historico-semanas}") long ventanaHistoricoSemanas,
             @Value("${app.cotizacion.estrategia-default:RENDIMIENTO_ACTUAL}")
-                    String estrategiaDefaultStr) {
+                    String textoEstrategiaPorDefecto) {
         this.rendimientoPartidoRepository = rendimientoPartidoRepository;
         this.cotizacionHistoricaRepository = cotizacionHistoricaRepository;
         this.pesoMetricaRepository = pesoMetricaRepository;
@@ -101,18 +101,18 @@ public class CotizacionServiceImpl implements CotizacionService {
         this.decayInactividad = decayInactividad;
         this.ventanaHistoricoSemanas = ventanaHistoricoSemanas;
 
-        EstrategiaCotizacion parsedDefault = EstrategiaCotizacion.RENDIMIENTO_ACTUAL;
-        if (estrategiaDefaultStr != null && !estrategiaDefaultStr.isBlank()) {
+        EstrategiaCotizacion estrategiaInicial = EstrategiaCotizacion.RENDIMIENTO_ACTUAL;
+        if (textoEstrategiaPorDefecto != null && !textoEstrategiaPorDefecto.isBlank()) {
             try {
-                parsedDefault = EstrategiaCotizacion.valueOf(estrategiaDefaultStr.trim());
+                estrategiaInicial = EstrategiaCotizacion.valueOf(textoEstrategiaPorDefecto.trim());
             } catch (IllegalArgumentException ex) {
                 log.warn(
                         "Estrategia default '{}' no reconocida, usando {}",
-                        estrategiaDefaultStr,
-                        parsedDefault);
+                        textoEstrategiaPorDefecto,
+                        estrategiaInicial);
             }
         }
-        this.estrategiaDefaultDeConfiguracion = parsedDefault;
+        this.estrategiaPorDefectoDeConfiguracion = estrategiaInicial;
     }
 
     @Override
@@ -344,8 +344,8 @@ public class CotizacionServiceImpl implements CotizacionService {
     public EstrategiaCotizacion obtenerEstrategiaPorDefecto() {
         return configuracionCotizacionRepository
                 .findById(ConfiguracionCotizacion.ID)
-                .map(ConfiguracionCotizacionEntity::getEstrategiaDefault)
-                .orElse(estrategiaDefaultDeConfiguracion);
+                .map(ConfiguracionCotizacionEntity::getEstrategiaPorDefecto)
+                .orElse(estrategiaPorDefectoDeConfiguracion);
     }
 
     @Override
@@ -358,7 +358,7 @@ public class CotizacionServiceImpl implements CotizacionService {
                         .findById(ConfiguracionCotizacion.ID)
                         .map(ConfiguracionCotizacionEntity::aModelo)
                         .orElseGet(() -> ConfiguracionCotizacion.configurar(estrategia));
-        configuracion.cambiarEstrategiaDefault(estrategia);
+        configuracion.cambiarEstrategiaPorDefecto(estrategia);
         configuracionCotizacionRepository.save(ConfiguracionCotizacionEntity.desde(configuracion));
 
         auditoriaService.registrar(

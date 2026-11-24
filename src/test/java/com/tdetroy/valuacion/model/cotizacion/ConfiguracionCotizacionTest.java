@@ -13,7 +13,7 @@ class ConfiguracionCotizacionTest {
         ConfiguracionCotizacion configuracion =
                 ConfiguracionCotizacion.configurar(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
 
-        assertThat(configuracion.getEstrategiaDefault())
+        assertThat(configuracion.getEstrategiaPorDefecto())
                 .isEqualTo(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
         assertThat(configuracion.getFechaActualizacion()).isNotNull();
     }
@@ -29,9 +29,9 @@ class ConfiguracionCotizacionTest {
         ConfiguracionCotizacion configuracion =
                 ConfiguracionCotizacion.reconstruir(EstrategiaCotizacion.RENDIMIENTO_ACTUAL, antes);
 
-        configuracion.cambiarEstrategiaDefault(EstrategiaCotizacion.RENDIMIENTO_TEMPORADA);
+        configuracion.cambiarEstrategiaPorDefecto(EstrategiaCotizacion.RENDIMIENTO_TEMPORADA);
 
-        assertThat(configuracion.getEstrategiaDefault())
+        assertThat(configuracion.getEstrategiaPorDefecto())
                 .isEqualTo(EstrategiaCotizacion.RENDIMIENTO_TEMPORADA);
         assertThat(configuracion.getFechaActualizacion()).isAfter(antes);
     }
@@ -42,8 +42,8 @@ class ConfiguracionCotizacionTest {
                 ConfiguracionCotizacion.configurar(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
 
         assertThatNullPointerException()
-                .isThrownBy(() -> configuracion.cambiarEstrategiaDefault(null));
-        assertThat(configuracion.getEstrategiaDefault())
+                .isThrownBy(() -> configuracion.cambiarEstrategiaPorDefecto(null));
+        assertThat(configuracion.getEstrategiaPorDefecto())
                 .isEqualTo(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
     }
 }

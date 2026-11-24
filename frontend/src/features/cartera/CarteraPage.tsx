@@ -11,7 +11,7 @@ import { listarSubastas, type SubastaResponse } from '../../api/subastas'
 import { listarJugadores, type JugadorResponse } from '../../api/jugadores'
 import { useAuth } from '../auth/AuthContext'
 import { Avatar } from '../../shared/components/Avatar'
-import { formatMoney } from '../../shared/format'
+import { formatearMoneda } from '../../shared/format'
 import styles from './CarteraPage.module.css'
 
 const formatoFechaHora = new Intl.DateTimeFormat('es-AR', {
@@ -21,20 +21,20 @@ const formatoFechaHora = new Intl.DateTimeFormat('es-AR', {
 
 /**
  * `-12.5` / `"-12.50"` → true. Jackson serializa los `BigDecimal` como número JSON, aunque los
- * tipos de `api/` los declaren `string`: igual que `formatMoney`, siempre pasar por `Number()`.
+ * tipos de `api/` los declaren `string`: igual que `formatearMoneda`, siempre pasar por `Number()`.
  */
 function esNegativo(valor: string | number): boolean {
   return Number(valor) < 0
 }
 
 /** Ganancia con signo explícito (`+ $ 200,00` / `- $ 100,00`). */
-function formatGananciaPerdida(valor: string | number): string {
+function formatearGananciaPerdida(valor: string | number): string {
   const numero = Number(valor)
-  return `${numero < 0 ? '-' : '+'} ${formatMoney(Math.abs(numero))}`
+  return `${numero < 0 ? '-' : '+'} ${formatearMoneda(Math.abs(numero))}`
 }
 
 /** Rentabilidad con signo explícito (`+20,00 %`). */
-function formatRentabilidad(valor: string | number): string {
+function formatearRentabilidad(valor: string | number): string {
   const numero = Number(valor)
   const texto = Math.abs(numero).toLocaleString('es-AR', {
     minimumFractionDigits: 2,
@@ -57,7 +57,7 @@ function formatRentabilidad(valor: string | number): string {
  * acá), y su valor sigue sumando al valor total.
  */
 export function CarteraPage() {
-  const { token, user } = useAuth()
+  const { token, usuario } = useAuth()
   const queryClient = useQueryClient()
 
   const portfolio = useQuery({
@@ -97,16 +97,17 @@ export function CarteraPage() {
 
   const jugadoresPorId = new Map((jugadores.data ?? []).map((j) => [j.id, j]))
   const misOfertas = (ofertas.data ?? []).filter(
-    (o) => o.vendedorId === user?.usuarioId && o.estado === 'ABIERTA',
+    (o) => o.vendedorId === usuario?.usuarioId && o.estado === 'ABIERTA',
   )
   // El listado público ya trae sólo subastas ACTIVA: acá se queda con las que me involucran.
   const misSubastas = (subastas.data ?? []).filter(
     (s) =>
-      s.vendedorId === user?.usuarioId || s.mejorPostorId === user?.usuarioId,
+      s.vendedorId === usuario?.usuarioId ||
+      s.mejorPostorId === usuario?.usuarioId,
   )
   const tieneTokensReservados =
     misOfertas.length > 0 ||
-    misSubastas.some((s) => s.vendedorId === user?.usuarioId)
+    misSubastas.some((s) => s.vendedorId === usuario?.usuarioId)
 
   return (
     <div className={styles.scope}>
@@ -128,7 +129,7 @@ export function CarteraPage() {
             <dl className={styles.kpis}>
               <div>
                 <dt>Valor total</dt>
-                <dd>{formatMoney(portfolio.data.valorTotal)}</dd>
+                <dd>{formatearMoneda(portfolio.data.valorTotal)}</dd>
               </div>
               <div>
                 <dt>Ganancia / pérdida</dt>
@@ -139,20 +140,20 @@ export function CarteraPage() {
                       : styles.up
                   }
                 >
-                  {formatGananciaPerdida(portfolio.data.gananciaPerdida)}
+                  {formatearGananciaPerdida(portfolio.data.gananciaPerdida)}
                 </dd>
               </div>
               <div>
                 <dt>Saldo disponible</dt>
-                <dd>{formatMoney(portfolio.data.saldoVirtual)}</dd>
+                <dd>{formatearMoneda(portfolio.data.saldoVirtual)}</dd>
               </div>
               <div>
                 <dt>En venta (P2P y subastas)</dt>
-                <dd>{formatMoney(portfolio.data.valorEnVenta)}</dd>
+                <dd>{formatearMoneda(portfolio.data.valorEnVenta)}</dd>
               </div>
               <div>
                 <dt>Reservado en pujas</dt>
-                <dd>{formatMoney(portfolio.data.saldoEnPujas)}</dd>
+                <dd>{formatearMoneda(portfolio.data.saldoEnPujas)}</dd>
               </div>
               <div>
                 <dt>Jugadores distintos</dt>
@@ -234,7 +235,7 @@ export function CarteraPage() {
                       key={subasta.id}
                       subasta={subasta}
                       jugador={jugadoresPorId.get(subasta.jugadorId)}
-                      esVendedor={subasta.vendedorId === user?.usuarioId}
+                      esVendedor={subasta.vendedorId === usuario?.usuarioId}
                     />
                   ))}
                 </ul>
@@ -285,7 +286,9 @@ function FilaSubasta({
         {esVendedor ? 'Vendés' : 'Vas ganando'} ·{' '}
         <strong>{subasta.cantidad}</strong> token(s)
       </span>
-      <span className={styles.ofertaPrecio}>{formatMoney(precio)} / token</span>
+      <span className={styles.ofertaPrecio}>
+        {formatearMoneda(precio)} / token
+      </span>
       <span className={styles.ofertaVence}>
         {subasta.cantidadPujas} {subasta.cantidadPujas === 1 ? 'puja' : 'pujas'}
       </span>
@@ -318,7 +321,7 @@ function FilaOfertaPropia({
         {oferta.cantidadPublicada} token(s)
       </span>
       <span className={styles.ofertaPrecio}>
-        {formatMoney(oferta.precioUnitario)} / token
+        {formatearMoneda(oferta.precioUnitario)} / token
       </span>
       <span className={styles.ofertaVence}>
         Vence {formatoFechaHora.format(new Date(oferta.fechaVencimiento))}
@@ -366,7 +369,7 @@ function CartaTenencia({
         <div className={styles.cardPrice}>
           <strong>
             {tenencia.cotizacionVigente
-              ? formatMoney(tenencia.cotizacionVigente)
+              ? formatearMoneda(tenencia.cotizacionVigente)
               : 'Sin cotización'}
           </strong>
         </div>
@@ -374,17 +377,17 @@ function CartaTenencia({
           <span>
             Tenés <strong>{tenencia.cantidad}</strong> token(s)
           </span>
-          <strong>{formatMoney(tenencia.valor)}</strong>
+          <strong>{formatearMoneda(tenencia.valor)}</strong>
         </div>
         <div className={styles.costoPromedio}>
           <span>Precio promedio de compra</span>
-          <span>{formatMoney(tenencia.precioPromedioCompra)}</span>
+          <span>{formatearMoneda(tenencia.precioPromedioCompra)}</span>
         </div>
         <div className={styles.resultado}>
           <span>Ganancia / pérdida</span>
           <span className={claseResultado}>
-            {formatGananciaPerdida(tenencia.gananciaPerdida)} (
-            {formatRentabilidad(tenencia.rentabilidad)})
+            {formatearGananciaPerdida(tenencia.gananciaPerdida)} (
+            {formatearRentabilidad(tenencia.rentabilidad)})
           </span>
         </div>
         <span className={styles.cta}>Comprar / vender</span>

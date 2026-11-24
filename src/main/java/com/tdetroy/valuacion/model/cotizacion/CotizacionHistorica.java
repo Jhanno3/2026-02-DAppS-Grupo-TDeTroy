@@ -1,9 +1,7 @@
 package com.tdetroy.valuacion.model.cotizacion;
 
 import com.tdetroy.valuacion.common.Monetario;
-import com.tdetroy.valuacion.model.cartera.Movimiento;
 import com.tdetroy.valuacion.model.jugador.Jugador;
-import com.tdetroy.valuacion.model.rendimiento.RendimientoPartido;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -14,15 +12,8 @@ import java.util.regex.Pattern;
 import lombok.Getter;
 
 /**
- * Cotización de un {@link Jugador} calculada para una semana puntual (plan.md §2.4, UC-06/UC-08/
- * UC-13).
- *
- * <p><b>Append-only:</b> no expone ningún método de mutación ni setter público — se construye
- * completo con {@link #calcular} y queda inmutable desde ese momento (constitution.md §2), mismo
- * criterio que {@link Movimiento}/{@link RendimientoPartido}. Nunca hay un {@code UPDATE} sobre un
- * registro existente: la "cotización vigente" de un jugador es, por definición, el {@code
- * CotizacionHistorica} con {@code fechaCalculo} más reciente para ese {@code jugadorId} (plan.md
- * §2.4) — una consulta sobre el historial ya persistido, nunca una fila mutable en paralelo.
+ * Cotización semanal de un {@link Jugador}, append-only. La vigente es la de {@code fechaCalculo}
+ * más reciente.
  */
 @Getter
 public class CotizacionHistorica {
@@ -73,10 +64,7 @@ public class CotizacionHistorica {
         this.fechaCalculo = fechaCalculo;
     }
 
-    /**
-     * Calcula una cotización con {@code fechaCalculo = Instant.now()} y estrategia por defecto
-     * {@link EstrategiaCotizacion#RENDIMIENTO_TEMPORADA}.
-     */
+    /** Usa la estrategia {@link EstrategiaCotizacion#RENDIMIENTO_TEMPORADA}. */
     public static CotizacionHistorica calcular(
             UUID jugadorId, String semana, BigDecimal valor, OrigenCotizacion origen) {
         return calcular(
@@ -88,7 +76,6 @@ public class CotizacionHistorica {
                 Instant.now());
     }
 
-    /** Igual que {@link #calcular}, con {@code fechaCalculo} explícita y estrategia por defecto. */
     public static CotizacionHistorica calcular(
             UUID jugadorId,
             String semana,
@@ -104,7 +91,6 @@ public class CotizacionHistorica {
                 fechaCalculo);
     }
 
-    /** Calcula una cotización con {@code fechaCalculo = Instant.now()} y estrategia explícita. */
     public static CotizacionHistorica calcular(
             UUID jugadorId,
             String semana,
@@ -114,7 +100,6 @@ public class CotizacionHistorica {
         return calcular(jugadorId, semana, valor, origen, estrategia, Instant.now());
     }
 
-    /** Calcula una cotización con estrategia y {@code fechaCalculo} explícitas. */
     public static CotizacionHistorica calcular(
             UUID jugadorId,
             String semana,
@@ -125,11 +110,7 @@ public class CotizacionHistorica {
         return new CotizacionHistorica(jugadorId, semana, valor, origen, estrategia, fechaCalculo);
     }
 
-    /**
-     * Reconstruye una {@code CotizacionHistorica} ya persistida a partir de sus datos crudos (usado
-     * por {@code entity/CotizacionHistoricaEntity#aModelo()} en el límite con {@code
-     * repositories/}).
-     */
+    /** Reconstruye desde persistencia. */
     public static CotizacionHistorica reconstruir(
             UUID id,
             UUID jugadorId,
@@ -142,7 +123,7 @@ public class CotizacionHistorica {
                 id, jugadorId, semana, valor, origen, estrategia, fechaCalculo);
     }
 
-    /** Sobrecarga de reconstrucción con estrategia por defecto para compatibilidad. */
+    /** Reconstruye con la estrategia por defecto, por compatibilidad. */
     public static CotizacionHistorica reconstruir(
             UUID id,
             UUID jugadorId,
@@ -161,11 +142,9 @@ public class CotizacionHistorica {
     }
 
     /**
-     * Deja sólo la última cotización de cada semana: recalcular una semana agrega una fila nueva
-     * (append-only), pero para quien consulta el historial cuenta el último valor calculado.
+     * Deja la última cotización de cada semana: recalcular una semana agrega otra fila.
      *
      * @param cronologicas cotizaciones ordenadas de la más vieja a la más nueva
-     * @return una cotización por semana, en el mismo orden
      */
     public static List<CotizacionHistorica> ultimaDeCadaSemana(
             List<CotizacionHistorica> cronologicas) {

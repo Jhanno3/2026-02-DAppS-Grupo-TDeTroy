@@ -8,7 +8,7 @@ package com.tdetroy.valuacion.common.exceptions;
  */
 public final class OperacionSubastaInvalidaException extends NegocioException {
 
-    public OperacionSubastaInvalidaException(String message) {
-        super(message);
+    public OperacionSubastaInvalidaException(String mensaje) {
+        super(mensaje);
     }
 }

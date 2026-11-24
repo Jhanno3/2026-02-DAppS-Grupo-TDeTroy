@@ -8,19 +8,13 @@ import java.util.Objects;
 import lombok.Getter;
 
 /**
- * Variación semanal de la cotización de un jugador (plan.md §6.1-§6.3): concentra las reglas de
- * negocio del recálculo, sin acceso a datos — {@code CotizacionServiceImpl} sólo junta las
- * métricas, la cotización anterior y los parámetros configurados, y aplica el resultado.
- *
- * <p>{@link #getFactor()} es la variación porcentual a aplicar sobre la cotización anterior ({@code
- * 0.05} = +5%), siempre dentro de {@code [-VARIACION_MAXIMA, +VARIACION_MAXIMA]}.
+ * Variación semanal de la cotización. {@code factor} es la variación sobre la anterior ({@code
+ * 0.05} = +5%).
  */
 @Getter
 public final class AjusteCotizacion {
 
-    /**
-     * Tope de variación por recálculo, en ambos sentidos (plan.md §6.1: "evita saltos irreales").
-     */
+    /** Tope por recálculo, en ambos sentidos, para evitar saltos irreales. */
     public static final BigDecimal VARIACION_MAXIMA = new BigDecimal("0.20");
 
     private final BigDecimal factor;
@@ -30,18 +24,12 @@ public final class AjusteCotizacion {
     }
 
     /**
-     * Calcula el ajuste de la semana con la estrategia indicada:
+     * Sin métricas en la semana aplica la baja por inactividad; con métricas, ajusta por
+     * rendimiento.
      *
-     * <ul>
-     *   <li>sin métricas en la semana (no jugó o no hubo ingesta): baja fija por inactividad;
-     *   <li>con métricas: {@code puntaje × sensibilidad}, acotado a {@link #VARIACION_MAXIMA}.
-     * </ul>
-     *
-     * @param metricasPorSemana métricas del histórico reciente del jugador, sumadas por semana
+     * @param metricasPorSemana histórico reciente del jugador, sumado por semana
      * @param metricasSemanaActual métricas sumadas de la semana que se cotiza
-     * @param pesosActivos pesos configurados y activos del motor de cotización
-     * @param sensibilidad multiplicador del puntaje ({@code app.cotizacion.sensibilidad})
-     * @param decayInactividad baja por semana sin datos ({@code app.cotizacion.decay-inactividad})
+     * @param sensibilidad multiplicador del puntaje
      */
     public static AjusteCotizacion calcular(
             EstrategiaCotizacion estrategia,
@@ -60,16 +48,12 @@ public final class AjusteCotizacion {
         return porRendimiento(puntaje, sensibilidad);
     }
 
-    /**
-     * Ajuste por rendimiento: {@code puntaje × sensibilidad}, acotado a ±{@link #VARIACION_MAXIMA}.
-     */
     public static AjusteCotizacion porRendimiento(BigDecimal puntaje, BigDecimal sensibilidad) {
         Objects.requireNonNull(puntaje, "puntaje no puede ser null");
         Objects.requireNonNull(sensibilidad, "sensibilidad no puede ser null");
         return new AjusteCotizacion(acotar(puntaje.multiply(sensibilidad)));
     }
 
-    /** Ajuste por inactividad: baja fija de {@code decayInactividad} (ej. {@code 0.01} = -1%). */
     public static AjusteCotizacion porInactividad(BigDecimal decayInactividad) {
         Objects.requireNonNull(decayInactividad, "decayInactividad no puede ser null");
         if (decayInactividad.signum() < 0) {
@@ -79,10 +63,6 @@ public final class AjusteCotizacion {
         return new AjusteCotizacion(acotar(decayInactividad.negate()));
     }
 
-    /**
-     * Cotización resultante de aplicar este ajuste: {@code anterior × (1 + factor)}, redondeada a
-     * la escala monetaria del sistema.
-     */
     public BigDecimal aplicarA(BigDecimal cotizacionAnterior) {
         Objects.requireNonNull(cotizacionAnterior, "cotizacionAnterior no puede ser null");
         return Monetario.escalar(cotizacionAnterior.multiply(BigDecimal.ONE.add(factor)));

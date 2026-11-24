@@ -11,17 +11,17 @@ import org.springframework.stereotype.Service;
 public class RankingServiceImpl implements RankingService {
 
     private static final int TOP_ELEMENTOS = 20;
-    private static final String DEFAULT_ESTRATEGIA = "cotizacion";
+    private static final String ESTRATEGIA_POR_DEFECTO = "cotizacion";
 
     private final JugadorService jugadorService;
     private final Map<String, EstrategiaRanking> estrategias;
 
     public RankingServiceImpl(
-            JugadorService jugadorService, List<EstrategiaRanking> estrategiasList) {
+            JugadorService jugadorService, List<EstrategiaRanking> estrategiasDisponibles) {
         this.jugadorService = jugadorService;
         this.estrategias = new HashMap<>();
-        if (estrategiasList != null) {
-            for (EstrategiaRanking estr : estrategiasList) {
+        if (estrategiasDisponibles != null) {
+            for (EstrategiaRanking estr : estrategiasDisponibles) {
                 this.estrategias.put(estr.clave().toLowerCase(), estr);
             }
         }
@@ -32,10 +32,10 @@ public class RankingServiceImpl implements RankingService {
         String clave =
                 (claveEstrategia != null && !claveEstrategia.isBlank())
                         ? claveEstrategia.trim().toLowerCase()
-                        : DEFAULT_ESTRATEGIA;
+                        : ESTRATEGIA_POR_DEFECTO;
 
         EstrategiaRanking estrategia =
-                estrategias.getOrDefault(clave, estrategias.get(DEFAULT_ESTRATEGIA));
+                estrategias.getOrDefault(clave, estrategias.get(ESTRATEGIA_POR_DEFECTO));
         String orden = estrategia != null ? estrategia.ordenMercado() : "precio-desc";
 
         return jugadorService.listarMercado(0, TOP_ELEMENTOS, orden, null, null).contenido();

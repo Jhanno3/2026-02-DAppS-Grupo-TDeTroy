@@ -49,7 +49,7 @@ import tools.jackson.databind.ObjectMapper;
  * Cubre {@link CotizacionServiceImpl} (tasks.md T4.3/T4.4/T4.5, plan.md §6.1-§6.4): primer cálculo
  * sin cotización previa (usa {@code valorInicial}), jugador activo sin rendimiento en la semana en
  * curso (decaimiento leve, §6.3), cálculo ponderado normal con métricas/pesos normalizados min-max
- * sobre el histórico reciente del jugador, el clamp de ±20% sobre {@code factorAjuste} (§6.1 paso
+ * sobre el histórico reciente del jugador, el acotar de ±20% sobre {@code factorAjuste} (§6.1 paso
  * 3) en ambas direcciones, la auditoría de cada recálculo, y la orquestación de {@code recalcular}
  * sobre todos los jugadores {@code ACTIVO} (§6.4) aislando la falla de uno puntual.
  *
@@ -211,7 +211,7 @@ class CotizacionServiceImplTest {
                 service.calcularCotizacion(jugadorId, OrigenCotizacion.AUTOMATICO, actorId);
 
         // puntaje = 1.0 (ambas métricas en su máximo histórico) * sensibilidad 0.20 = +0.20,
-        // justo en el borde del clamp sin necesitar que lo recorte: 200.00 * 1.20 = 240.00
+        // justo en el borde del acotar sin necesitar que lo recorte: 200.00 * 1.20 = 240.00
         assertThat(cotizacion.getValor()).isEqualByComparingTo(new BigDecimal("240.00"));
     }
 
@@ -233,8 +233,8 @@ class CotizacionServiceImplTest {
                 servicioSensible.calcularCotizacion(
                         jugadorId, OrigenCotizacion.AUTOMATICO, actorId);
 
-        // puntaje = 1.0 * sensibilidad 1.00 = 1.00 sin clamp -> hubiese sido 200.00 * 2.00 =
-        // 400.00; con el clamp a +0.20, queda en 200.00 * 1.20 = 240.00
+        // puntaje = 1.0 * sensibilidad 1.00 = 1.00 sin acotar -> hubiese sido 200.00 * 2.00 =
+        // 400.00; con el acotar a +0.20, queda en 200.00 * 1.20 = 240.00
         assertThat(cotizacion.getValor()).isEqualByComparingTo(new BigDecimal("240.00"));
     }
 
@@ -257,7 +257,7 @@ class CotizacionServiceImplTest {
                         jugadorId, OrigenCotizacion.AUTOMATICO, actorId);
 
         // puntaje = -1.0 (ambas métricas en su mínimo histórico) * sensibilidad 1.00 = -1.00 sin
-        // clamp -> hubiese sido 200.00 * 0.00 = 0.00; con el clamp a -0.20, queda en
+        // acotar -> hubiese sido 200.00 * 0.00 = 0.00; con el acotar a -0.20, queda en
         // 200.00 * 0.80 = 160.00
         assertThat(cotizacion.getValor()).isEqualByComparingTo(new BigDecimal("160.00"));
     }
@@ -587,7 +587,7 @@ class CotizacionServiceImplTest {
                 ArgumentCaptor.forClass(ConfiguracionCotizacionEntity.class);
         verify(configuracionCotizacionRepository).save(captor.capture());
         assertThat(captor.getValue().getId()).isEqualTo(ConfiguracionCotizacion.ID);
-        assertThat(captor.getValue().getEstrategiaDefault())
+        assertThat(captor.getValue().getEstrategiaPorDefecto())
                 .isEqualTo(EstrategiaCotizacion.RENDIMIENTO_ACTUAL);
         verify(auditoriaService)
                 .registrar(

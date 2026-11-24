@@ -3,7 +3,7 @@ import { RootLayout } from './RootLayout'
 import { LoginPage } from '../features/auth/LoginPage'
 import { RegistroPage } from '../features/auth/RegistroPage'
 import { RequireAuth } from '../features/auth/RequireAuth'
-import { JugadorDetailPage } from '../features/jugadores/JugadorDetailPage'
+import { JugadorDetallePage } from '../features/jugadores/JugadorDetallePage'
 import { OfertaP2PJugadorPage } from '../features/jugadores/OfertaP2PJugadorPage'
 import { CarteraPage } from '../features/cartera/CarteraPage'
 import { MovimientosPage } from '../features/cartera/MovimientosPage'
@@ -11,11 +11,11 @@ import { MercadoPage } from '../features/mercado/MercadoPage'
 import { P2PPage } from '../features/p2p/P2PPage'
 import { RankingPage } from '../features/ranking/RankingPage'
 import { SubastasPage } from '../features/subastas/SubastasPage'
-import { SubastaDetailPage } from '../features/subastas/SubastaDetailPage'
+import { SubastaDetallePage } from '../features/subastas/SubastaDetallePage'
 import { CrearSubastaPage } from '../features/subastas/CrearSubastaPage'
 import { AdminRoute } from '../features/admin/AdminRoute'
 import { AdminJugadoresPage } from '../features/admin/AdminJugadoresPage'
-import { JugadorFormPage } from '../features/admin/JugadorFormPage'
+import { JugadorFormularioPage } from '../features/admin/JugadorFormularioPage'
 import { RecargarSaldoPage } from '../features/admin/RecargarSaldoPage'
 
 export const router = createBrowserRouter([
@@ -29,10 +29,10 @@ export const router = createBrowserRouter([
       { path: 'mercado', element: <MercadoPage /> },
       { path: 'ranking', element: <RankingPage /> },
       { path: 'p2p', element: <P2PPage /> },
-      { path: 'jugadores/:id', element: <JugadorDetailPage /> },
+      { path: 'jugadores/:id', element: <JugadorDetallePage /> },
       { path: 'jugadores/:id/p2p', element: <OfertaP2PJugadorPage /> },
       { path: 'subastas', element: <SubastasPage /> },
-      { path: 'subastas/:id', element: <SubastaDetailPage /> },
+      { path: 'subastas/:id', element: <SubastaDetallePage /> },
       {
         path: 'jugadores/:id/subasta',
         element: <RequireAuth />,
@@ -51,8 +51,8 @@ export const router = createBrowserRouter([
         element: <AdminRoute />,
         children: [
           { path: 'jugadores', element: <AdminJugadoresPage /> },
-          { path: 'jugadores/nuevo', element: <JugadorFormPage /> },
-          { path: 'jugadores/:id/editar', element: <JugadorFormPage /> },
+          { path: 'jugadores/nuevo', element: <JugadorFormularioPage /> },
+          { path: 'jugadores/:id/editar', element: <JugadorFormularioPage /> },
           { path: 'saldo', element: <RecargarSaldoPage /> },
         ],
       },

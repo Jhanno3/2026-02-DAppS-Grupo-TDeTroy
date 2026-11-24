@@ -20,14 +20,14 @@ function claseLink({ isActive }: { isActive: boolean }) {
 }
 
 export function RootLayout() {
-  const { isAuthenticated, user, logout } = useAuth()
+  const { isAuthenticated, usuario, logout } = useAuth()
   const { tema } = useTema()
   const navigate = useNavigate()
   const { pathname } = useLocation()
 
   const usaTema = RUTAS_CON_TEMA.some((ruta) => matchPath(ruta, pathname))
 
-  function handleLogout() {
+  function manejarCierreSesion() {
     logout()
     void navigate('/login')
   }
@@ -52,12 +52,12 @@ export function RootLayout() {
             <NavLink to="/subastas" className={claseLink}>
               Subastas
             </NavLink>
-            {isAuthenticated && user && (
+            {isAuthenticated && usuario && (
               <NavLink to="/cartera" className={claseLink}>
                 Mi cartera
               </NavLink>
             )}
-            {user?.rol === 'ADMIN' && (
+            {usuario?.rol === 'ADMIN' && (
               <NavLink to="/admin/jugadores" className={claseLink}>
                 Admin
               </NavLink>
@@ -66,16 +66,16 @@ export function RootLayout() {
         </div>
 
         <div className={styles.derecha}>
-          {isAuthenticated && user ? (
+          {isAuthenticated && usuario ? (
             <>
               <span className={styles.usuario}>
-                {user.email}
-                {user.rol === 'ADMIN' && ' (ADMIN)'}
+                {usuario.email}
+                {usuario.rol === 'ADMIN' && ' (ADMIN)'}
               </span>
               <button
                 type="button"
                 className={styles.botonSecundario}
-                onClick={handleLogout}
+                onClick={manejarCierreSesion}
               >
                 Salir
               </button>

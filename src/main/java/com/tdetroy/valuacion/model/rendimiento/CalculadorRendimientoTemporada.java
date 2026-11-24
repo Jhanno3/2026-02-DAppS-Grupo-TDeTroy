@@ -1,7 +1,7 @@
 package com.tdetroy.valuacion.model.rendimiento;
 
+import com.tdetroy.valuacion.model.cotizacion.CalculadorEstrategiaCotizacion;
 import com.tdetroy.valuacion.model.cotizacion.EstrategiaCotizacion;
-import com.tdetroy.valuacion.model.cotizacion.EstrategiaCotizacionCalculator;
 import com.tdetroy.valuacion.model.cotizacion.PesoMetrica;
 import com.tdetroy.valuacion.model.cotizacion.SentidoMetrica;
 import java.math.BigDecimal;
@@ -12,17 +12,11 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Estrategia {@link EstrategiaCotizacion#RENDIMIENTO_TEMPORADA}: calcula el puntaje de rendimiento
- * en base a la consistencia y evolución temporal del propio jugador (plan.md §6.2).
- *
- * <p>Por cada {@code PesoMetrica} activo presente en la semana en curso, el valor se normaliza
- * min-max sobre su propio histórico reciente a un rango centrado en 0, {@code [-1, 1]} (mínimo
- * histórico → -1, máximo histórico → +1). Si la métrica no tiene al menos dos semanas de histórico
- * o el rango es cero, aporta 0 (neutro). Si {@link PesoMetrica#getSentido()} es {@link
- * SentidoMetrica#NEGATIVO} (tarjetas: más nunca debería mejorar la cotización), ese normalizado se
- * invierte antes de ponderar. El puntaje final es el promedio ponderado de esas normalizaciones.
+ * Promedio ponderado de cada métrica normalizada min-max a {@code [-1, 1]} sobre el histórico del
+ * jugador; con menos de dos semanas o rango cero aporta 0. Las de sentido {@link
+ * SentidoMetrica#NEGATIVO} se invierten.
  */
-public class RendimientoTemporadaCalculator implements EstrategiaCotizacionCalculator {
+public class CalculadorRendimientoTemporada implements CalculadorEstrategiaCotizacion {
 
     private static final BigDecimal DOS = BigDecimal.valueOf(2);
 

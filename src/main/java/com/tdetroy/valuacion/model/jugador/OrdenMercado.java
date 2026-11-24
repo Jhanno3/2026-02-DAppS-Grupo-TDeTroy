@@ -1,10 +1,6 @@
 package com.tdetroy.valuacion.model.jugador;
 
-/**
- * Criterio de orden del catálogo paginado de Mercado (UC-07, plan.md §3bis). El valor por defecto
- * es {@link #PRECIO_DESC} — no {@code nombre} — porque lo relevante al navegar el mercado es la
- * cotización, no el orden alfabético (pedido explícito de producto).
- */
+/** Orden del catálogo de Mercado; por defecto {@link #PRECIO_DESC}, a pedido de producto. */
 public enum OrdenMercado {
     NOMBRE,
     PRECIO_DESC,
@@ -12,12 +8,7 @@ public enum OrdenMercado {
     SUBA_DESC,
     DISPONIBLES_DESC;
 
-    /**
-     * Traduce el parámetro de query (tal como lo manda el frontend, ej. {@code "precio-desc"}) al
-     * enum. Cualquier valor ausente o no reconocido cae en {@link #PRECIO_DESC} — nunca rechaza la
-     * request con un 400 por un query param de orden inválido, mismo criterio de tolerancia que el
-     * resto de los filtros opcionales de este endpoint (posición/búsqueda).
-     */
+    /** Un valor ausente o no reconocido cae en {@link #PRECIO_DESC}, sin rechazar la request. */
     public static OrdenMercado desde(String valor) {
         if (valor == null) {
             return PRECIO_DESC;

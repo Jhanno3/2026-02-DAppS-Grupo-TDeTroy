@@ -1,6 +1,5 @@
 package com.tdetroy.valuacion.model.rendimiento;
 
-import com.tdetroy.valuacion.model.cartera.Movimiento;
 import com.tdetroy.valuacion.model.jugador.Jugador;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -10,22 +9,11 @@ import java.util.regex.Pattern;
 import lombok.Getter;
 
 /**
- * Rendimiento crudo de un {@link Jugador} en un partido puntual (UC-05, plan.md §2.3) — insumo de
- * la ingesta semanal, no un resultado ya curado: {@code metricas} guarda TODAS las métricas que
- * WhoScored entrega para ese jugador/partido sin recorte previo (spec.md UC-05), para que el motor
- * de cotización (plan.md §6) decida qué claves pesan sin depender de una migración de esquema cada
- * vez que la fuente agregue o quite un campo.
+ * Rendimiento crudo de un {@link Jugador} en un partido, append-only. Guarda todas las métricas de
+ * la fuente: el motor de cotización decide cuáles pesan. {@code partidoExternoId} y {@code
+ * jugadorId} evitan duplicar una reingesta.
  *
- * <p><b>Append-only:</b> no expone ningún método de mutación ni setter público — se construye
- * completo con {@link #ingestar} y queda inmutable desde ese momento (constitution.md §2), mismo
- * criterio que {@link Movimiento}/{@code RegistroAuditoria}. {@code partidoExternoId} (id del
- * partido según Football-Data.org) combinado con {@code jugadorId} es la clave de deduplicación
- * frente a una reingesta del mismo ciclo semanal.
- *
- * <p>{@code metricas} guarda JSON ya serializado como texto plano, mapeado a una columna {@code
- * jsonb} por {@code entity/RendimientoPartidoEntity} — la entidad nunca serializa, eso es trabajo
- * del Service que la construya (mismo patrón que {@code RegistroAuditoria.valoresDespues}), para no
- * acoplar {@code model/} a ninguna librería JSON concreta.
+ * <p>{@code metricas} es JSON ya serializado, para no acoplar {@code model/} a una librería JSON.
  */
 @Getter
 public class RendimientoPartido {
@@ -69,7 +57,6 @@ public class RendimientoPartido {
         this.fechaIngesta = fechaIngesta;
     }
 
-    /** Ingesta un rendimiento con {@code fechaIngesta = Instant.now()}. */
     public static RendimientoPartido ingestar(
             UUID jugadorId,
             String partidoExternoId,
@@ -87,9 +74,6 @@ public class RendimientoPartido {
                 Instant.now());
     }
 
-    /**
-     * Igual que {@link #ingestar}, con {@code fechaIngesta} explícita (tests, reproducibilidad).
-     */
     public static RendimientoPartido ingestar(
             UUID jugadorId,
             String partidoExternoId,
@@ -127,11 +111,7 @@ public class RendimientoPartido {
         this.fechaIngesta = fechaIngesta;
     }
 
-    /**
-     * Reconstruye un {@code RendimientoPartido} ya persistido a partir de sus datos crudos (usado
-     * por {@code entity/RendimientoPartidoEntity#aModelo()} en el límite con {@code repositories/})
-     * — a diferencia de {@link #ingestar}, no valida las invariantes de alta.
-     */
+    /** Reconstruye desde persistencia; no valida las invariantes de alta. */
     public static RendimientoPartido reconstruir(
             UUID id,
             UUID jugadorId,
@@ -167,8 +147,8 @@ public class RendimientoPartido {
         Objects.requireNonNull(metricas, "metricas no puede ser null");
         Objects.requireNonNull(fuenteResultado, "fuenteResultado no puede ser null");
         Objects.requireNonNull(fechaIngesta, "fechaIngesta no puede ser null");
-        requireNoBlank(partidoExternoId, "partidoExternoId");
-        requireNoBlank(metricas, "metricas");
+        exigirNoVacio(partidoExternoId, "partidoExternoId");
+        exigirNoVacio(metricas, "metricas");
     }
 
     private static void validarSemanaCalculo(String semanaCalculo) {
@@ -179,7 +159,7 @@ public class RendimientoPartido {
         }
     }
 
-    private static void requireNoBlank(String valor, String nombreCampo) {
+    private static void exigirNoVacio(String valor, String nombreCampo) {
         if (valor.isBlank()) {
             throw new IllegalArgumentException(nombreCampo + " no puede estar vacío ni ser blanco");
         }

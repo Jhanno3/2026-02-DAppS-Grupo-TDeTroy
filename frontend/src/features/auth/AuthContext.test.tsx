@@ -35,7 +35,7 @@ describe('AuthContext', () => {
     const { result } = renderHook(() => useAuth(), { wrapper })
 
     expect(result.current.isAuthenticated).toBe(false)
-    expect(result.current.user).toBeNull()
+    expect(result.current.usuario).toBeNull()
   })
 
   it('login guarda el token en localStorage y decodifica el usuario', () => {
@@ -50,7 +50,7 @@ describe('AuthContext', () => {
     act(() => result.current.login(valido))
 
     expect(result.current.isAuthenticated).toBe(true)
-    expect(result.current.user).toEqual({
+    expect(result.current.usuario).toEqual({
       usuarioId: 'u1',
       email: 'user@example.com',
       rol: 'USER',
@@ -74,7 +74,7 @@ describe('AuthContext', () => {
     act(() => result.current.logout())
 
     expect(result.current.isAuthenticated).toBe(false)
-    expect(result.current.user).toBeNull()
+    expect(result.current.usuario).toBeNull()
     expect(localStorage.getItem('valuacion.token')).toBeNull()
   })
 
@@ -101,7 +101,7 @@ describe('AuthContext', () => {
     const { result } = renderHook(() => useAuth(), { wrapper })
 
     expect(result.current.isAuthenticated).toBe(false)
-    expect(result.current.user).toBeNull()
+    expect(result.current.usuario).toBeNull()
   })
 
   it('un 401 de cualquier request autenticada cierra la sesión local automáticamente', async () => {

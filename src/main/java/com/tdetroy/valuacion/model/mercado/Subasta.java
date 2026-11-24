@@ -13,24 +13,15 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * Subasta de una cantidad de tokens de un {@link Jugador} entre usuarios (UC-18). El vendedor fija
- * al crearla la {@code cantidad}, el {@code precioInicial} por token y la duración ({@code
- * fechaVencimiento}, plazo para la primera puja). Cada puja sube el precio vigente en un {@link
- * IncrementoPuja} fijo — nunca un monto libre — y reinicia {@code fechaCierre} a {@link
- * #ESPERA_ENTRE_PUJAS} desde ese momento: la subasta se adjudica al mejor postor cuando pasa {@code
- * fechaCierre} sin pujas nuevas, aunque todavía quede duración.
- *
- * <p>Esta clase sólo protege las reglas propias de la subasta (quién puede pujar, cuánto, hasta
- * cuándo, transiciones de estado). Reservar los tokens del vendedor, reservar/devolver el saldo de
- * los postores y mover tokens y saldo al adjudicar es responsabilidad de {@code SubastaService}
- * (mismo reparto que {@link OfertaP2P}).
+ * Subasta de tokens de un {@link Jugador}. {@code fechaVencimiento} es el plazo para la primera
+ * puja; cada puja reinicia {@code fechaCierre} a {@link #ESPERA_ENTRE_PUJAS}, aunque todavía quede
+ * duración. Mover tokens, saldo y reservas es tarea de {@code SubastaService}.
  */
 @Getter
 // Constructor con todos los campos en orden de declaración, sólo para crear() y reconstruir().
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Subasta {
 
-    /** Plazo sin pujas nuevas, desde la última puja, tras el cual la subasta se adjudica. */
     public static final Duration ESPERA_ENTRE_PUJAS = Duration.ofMinutes(2);
 
     private static final BigDecimal CIEN = BigDecimal.valueOf(100);
@@ -49,9 +40,6 @@ public class Subasta {
     private Instant fechaCierre;
 
     /**
-     * Crea una subasta {@link EstadoSubasta#ACTIVA} sin pujas, con {@code fechaVencimiento =
-     * fechaCreacion + duracion}.
-     *
      * @throws IllegalArgumentException si {@code cantidad}, {@code precioInicial} o {@code
      *     duracion} no son mayores a cero
      */
@@ -92,10 +80,7 @@ public class Subasta {
                 null);
     }
 
-    /**
-     * Reconstruye una subasta ya persistida (usado por {@code entity/SubastaEntity#aModelo()}); no
-     * valida ni aplica defaults de alta.
-     */
+    /** Reconstruye desde persistencia; no valida las invariantes de alta. */
     public static Subasta reconstruir(
             UUID id,
             UUID vendedorId,
@@ -129,8 +114,7 @@ public class Subasta {
     }
 
     /**
-     * Precio por token que resultaría de pujar con {@code incremento} sobre el precio vigente (el
-     * inicial si todavía no hubo pujas), ya escalado con {@link Monetario}.
+     * Precio por token al pujar, calculado sobre el vigente o, sin pujas, sobre el inicial.
      *
      * @throws OperacionSubastaInvalidaException si {@code incremento} es {@link
      *     IncrementoPuja#PRECIO_INICIAL} y ya hubo pujas
@@ -153,32 +137,25 @@ public class Subasta {
         return Monetario.escalar(base.multiply(factor));
     }
 
-    /** Monto total (precio × cantidad) que paga quien puje con {@code precioUnitario}. */
     public BigDecimal montoTotal(BigDecimal precioUnitario) {
         return Monetario.escalar(precioUnitario.multiply(BigDecimal.valueOf(cantidad)));
     }
 
-    /** Monto reservado por el mejor postor actual; cero si todavía no hubo pujas. */
+    /** Monto reservado por el mejor postor; cero si no hubo pujas. */
     public BigDecimal montoComprometido() {
         return tienePujas() ? montoTotal(precioActual) : Monetario.CERO;
     }
 
-    /**
-     * Momento en que la subasta deja de aceptar pujas: {@code fechaCierre} si ya hubo pujas, {@code
-     * fechaVencimiento} si no.
-     */
     public Instant cierraEn() {
         return tienePujas() ? fechaCierre : fechaVencimiento;
     }
 
     /**
-     * Registra una puja de {@code postorId} con {@code incremento} en {@code ahora}: actualiza el
-     * precio vigente y el mejor postor, y reinicia {@code fechaCierre} a {@code ahora + 2 minutos}.
+     * Actualiza precio y mejor postor, y reinicia {@code fechaCierre}.
      *
      * @return el nuevo precio por token
-     * @throws OperacionSubastaInvalidaException si la subasta no está activa o ya cerró en {@code
-     *     ahora}, si {@code postorId} es el vendedor o ya es el mejor postor, o si el incremento no
-     *     aplica
+     * @throws OperacionSubastaInvalidaException si la subasta no está activa o ya cerró, si {@code
+     *     postorId} es el vendedor o ya es el mejor postor, o si el incremento no aplica
      */
     public BigDecimal pujar(UUID postorId, IncrementoPuja incremento, Instant ahora) {
         Objects.requireNonNull(postorId, "postorId no puede ser null");
@@ -201,12 +178,10 @@ public class Subasta {
         return nuevoPrecio;
     }
 
-    /** {@code true} si está activa, tuvo pujas y ya pasaron 2 minutos desde la última. */
     public boolean debeAdjudicarse(Instant ahora) {
         return estado == EstadoSubasta.ACTIVA && tienePujas() && !ahora.isBefore(fechaCierre);
     }
 
-    /** {@code true} si está activa, nunca tuvo pujas y ya venció su duración. */
     public boolean quedoDesierta(Instant ahora) {
         return estado == EstadoSubasta.ACTIVA && !tienePujas() && !ahora.isBefore(fechaVencimiento);
     }
@@ -233,8 +208,7 @@ public class Subasta {
     }
 
     /**
-     * Cancela una subasta activa (por el vendedor o por baja del jugador). Liberar los tokens y
-     * devolver el saldo del mejor postor es responsabilidad de {@code SubastaService}.
+     * Liberar los tokens y devolver el saldo del mejor postor es tarea de {@code SubastaService}.
      *
      * @throws OperacionSubastaInvalidaException si la subasta ya no está activa
      */

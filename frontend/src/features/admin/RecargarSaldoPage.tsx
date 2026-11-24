@@ -6,7 +6,7 @@ import { recargarSaldo, type UsuarioResponse } from '../../api/usuarios'
 import { ApiError } from '../../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Button } from '../../shared/components/Button'
-import { formatMoney } from '../../shared/format'
+import { formatearMoneda } from '../../shared/format'
 import styles from '../../shared/styles/Form.module.css'
 
 /**
@@ -20,7 +20,7 @@ export function RecargarSaldoPage() {
   const [monto, setMonto] = useState('')
   const [resultado, setResultado] = useState<UsuarioResponse | null>(null)
 
-  const mutation = useMutation({
+  const mutacion = useMutation({
     mutationFn: () => recargarSaldo(usuarioId.trim(), Number(monto), token!),
     onSuccess: (usuario) => {
       setResultado(usuario)
@@ -28,14 +28,14 @@ export function RecargarSaldoPage() {
     },
   })
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function manejarEnvio(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setResultado(null)
-    mutation.mutate()
+    mutacion.mutate()
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit}>
+    <form className={styles.form} onSubmit={manejarEnvio}>
       <h1>Recargar saldo</h1>
 
       <label className={styles.field}>
@@ -63,17 +63,17 @@ export function RecargarSaldoPage() {
         />
       </label>
 
-      {mutation.isError && (
+      {mutacion.isError && (
         <p className={styles.error} role="alert">
-          {mutation.error instanceof ApiError
-            ? mutation.error.message
+          {mutacion.error instanceof ApiError
+            ? mutacion.error.message
             : 'No se pudo recargar el saldo.'}
         </p>
       )}
 
       {resultado && (
         <p className={styles.info} role="status">
-          Saldo actualizado: {formatMoney(resultado.saldoVirtual)} (
+          Saldo actualizado: {formatearMoneda(resultado.saldoVirtual)} (
           {resultado.email})
         </p>
       )}
@@ -81,9 +81,9 @@ export function RecargarSaldoPage() {
       <Button
         type="submit"
         className={styles.submit}
-        disabled={mutation.isPending}
+        disabled={mutacion.isPending}
       >
-        {mutation.isPending ? 'Recargando…' : 'Recargar'}
+        {mutacion.isPending ? 'Recargando…' : 'Recargar'}
       </Button>
 
       <p>

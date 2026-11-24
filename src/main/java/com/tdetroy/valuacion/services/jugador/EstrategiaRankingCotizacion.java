@@ -4,7 +4,7 @@ import org.springframework.stereotype.Component;
 
 /** Estrategia de ranking por defecto: ordena por cotización vigente descendente (plan.md §7). */
 @Component
-public class RankingCotizacionStrategy implements EstrategiaRanking {
+public class EstrategiaRankingCotizacion implements EstrategiaRanking {
 
     @Override
     public String clave() {

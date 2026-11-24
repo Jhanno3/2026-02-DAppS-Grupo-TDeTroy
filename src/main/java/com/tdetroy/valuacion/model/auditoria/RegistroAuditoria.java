@@ -7,17 +7,11 @@ import java.util.UUID;
 import lombok.Getter;
 
 /**
- * Log de auditoría interno, append-only e inmutable (plan.md §2.8, §10; constitution.md §4).
+ * Log de auditoría interno, append-only. A diferencia de {@link Movimiento} (de cara al usuario),
+ * cubre también operaciones administrativas. Se escribe solo a través de {@code AuditoriaService}.
  *
- * <p>Distinto de {@link Movimiento} (de cara al usuario, UC-12): cubre además operaciones
- * administrativas sin usuario final directo (alta/edición/baja de jugador, disparo manual de
- * recálculo). No tiene endpoint público en el MVP — se escribe siempre a través de {@code
- * AuditoriaService} y se consulta directamente en base.
- *
- * <p>{@code valoresAntes}/{@code valoresDespues} guardan JSON ya serializado como texto plano,
- * mapeado a una columna {@code jsonb} por {@code entity/RegistroAuditoriaEntity}. La entidad nunca
- * serializa: eso es trabajo de {@code AuditoriaService} (capa de negocio), para no acoplar {@code
- * model/} a ninguna librería JSON concreta.
+ * <p>Los valores llegan como JSON ya serializado, para no acoplar {@code model/} a una librería
+ * JSON.
  */
 @Getter
 public class RegistroAuditoria {
@@ -54,7 +48,6 @@ public class RegistroAuditoria {
         this.fecha = fecha;
     }
 
-    /** Registra una entrada con {@code fecha = Instant.now()}. */
     public static RegistroAuditoria registrar(
             UUID actorId,
             String accion,
@@ -72,7 +65,6 @@ public class RegistroAuditoria {
                 Instant.now());
     }
 
-    /** Igual que {@link #registrar}, con {@code fecha} explícita (tests, reproducibilidad). */
     public static RegistroAuditoria registrar(
             UUID actorId,
             String accion,
@@ -104,11 +96,7 @@ public class RegistroAuditoria {
         this.fecha = fecha;
     }
 
-    /**
-     * Reconstruye un {@code RegistroAuditoria} ya persistido a partir de sus datos crudos (usado
-     * por {@code entity/RegistroAuditoriaEntity#aModelo()} en el límite con {@code repositories/})
-     * — a diferencia de {@link #registrar}, no valida las invariantes de alta.
-     */
+    /** Reconstruye desde persistencia; no valida las invariantes de alta. */
     public static RegistroAuditoria reconstruir(
             UUID id,
             UUID actorId,
@@ -140,11 +128,11 @@ public class RegistroAuditoria {
         Objects.requireNonNull(entidadId, "entidadId no puede ser null");
         Objects.requireNonNull(valoresDespues, "valoresDespues no puede ser null");
         Objects.requireNonNull(fecha, "fecha no puede ser null");
-        requireNoBlank(accion, "accion");
-        requireNoBlank(entidadAfectada, "entidadAfectada");
+        exigirNoVacio(accion, "accion");
+        exigirNoVacio(entidadAfectada, "entidadAfectada");
     }
 
-    private static void requireNoBlank(String valor, String nombreCampo) {
+    private static void exigirNoVacio(String valor, String nombreCampo) {
         if (valor.isBlank()) {
             throw new IllegalArgumentException(nombreCampo + " no puede estar vacío ni ser blanco");
         }

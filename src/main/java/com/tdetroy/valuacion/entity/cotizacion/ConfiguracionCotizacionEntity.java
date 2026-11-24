@@ -28,8 +28,8 @@ public class ConfiguracionCotizacionEntity {
     @Id private UUID id;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private EstrategiaCotizacion estrategiaDefault;
+    @Column(name = "estrategia_default", nullable = false, length = 30)
+    private EstrategiaCotizacion estrategiaPorDefecto;
 
     @Column(nullable = false)
     private Instant fechaActualizacion;
@@ -38,13 +38,13 @@ public class ConfiguracionCotizacionEntity {
     public static ConfiguracionCotizacionEntity desde(ConfiguracionCotizacion configuracion) {
         ConfiguracionCotizacionEntity entity = new ConfiguracionCotizacionEntity();
         entity.id = ConfiguracionCotizacion.ID;
-        entity.estrategiaDefault = configuracion.getEstrategiaDefault();
+        entity.estrategiaPorDefecto = configuracion.getEstrategiaPorDefecto();
         entity.fechaActualizacion = configuracion.getFechaActualizacion();
         return entity;
     }
 
     /** Reconstruye el objeto de dominio a partir de esta fila ya persistida. */
     public ConfiguracionCotizacion aModelo() {
-        return ConfiguracionCotizacion.reconstruir(estrategiaDefault, fechaActualizacion);
+        return ConfiguracionCotizacion.reconstruir(estrategiaPorDefecto, fechaActualizacion);
     }
 }

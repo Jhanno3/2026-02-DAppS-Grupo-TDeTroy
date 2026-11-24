@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { JugadorDetailPage } from './JugadorDetailPage'
+import { JugadorDetallePage } from './JugadorDetallePage'
 import { TemaProvider } from '../../app/TemaProvider'
 import { CLAVE_TEMA, useTema } from '../../app/tema'
 import * as jugadoresApi from '../../api/jugadores'
@@ -59,7 +59,7 @@ function renderFicha() {
         <TemaActual />
         <MemoryRouter initialEntries={['/jugadores/j1']}>
           <Routes>
-            <Route path="/jugadores/:id" element={<JugadorDetailPage />} />
+            <Route path="/jugadores/:id" element={<JugadorDetallePage />} />
           </Routes>
         </MemoryRouter>
       </TemaProvider>
@@ -67,12 +67,12 @@ function renderFicha() {
   )
 }
 
-describe('JugadorDetailPage', () => {
+describe('JugadorDetallePage', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: null,
-      user: null,
+      usuario: null,
       isAuthenticated: false,
       login: vi.fn(),
       logout: vi.fn(),

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { listarMisMovimientos } from '../../api/movimientos'
 import { listarJugadores } from '../../api/jugadores'
 import { useAuth } from '../auth/AuthContext'
-import { formatMoney } from '../../shared/format'
+import { formatearMoneda } from '../../shared/format'
 import styles from './MovimientosPage.module.css'
 
 const ETIQUETAS_TIPO: Record<string, string> = {
@@ -93,7 +93,7 @@ export function MovimientosPage() {
                     </td>
                     <td className={styles.num}>{movimiento.cantidad ?? '—'}</td>
                     <td className={styles.num}>
-                      {formatMoney(movimiento.montoTotal)}
+                      {formatearMoneda(movimiento.montoTotal)}
                     </td>
                   </tr>
                 ))}

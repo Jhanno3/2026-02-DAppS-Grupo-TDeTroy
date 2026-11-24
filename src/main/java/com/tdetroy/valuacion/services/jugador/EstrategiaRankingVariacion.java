@@ -4,7 +4,7 @@ import org.springframework.stereotype.Component;
 
 /** Estrategia de ranking por variación porcentual ("mayor suba", plan.md §7). */
 @Component
-public class RankingVariacionStrategy implements EstrategiaRanking {
+public class EstrategiaRankingVariacion implements EstrategiaRanking {
 
     @Override
     public String clave() {

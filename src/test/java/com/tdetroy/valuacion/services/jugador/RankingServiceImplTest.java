@@ -28,7 +28,9 @@ class RankingServiceImplTest {
         rankingService =
                 new RankingServiceImpl(
                         jugadorService,
-                        List.of(new RankingCotizacionStrategy(), new RankingVariacionStrategy()));
+                        List.of(
+                                new EstrategiaRankingCotizacion(),
+                                new EstrategiaRankingVariacion()));
     }
 
     @Test
@@ -79,11 +81,11 @@ class RankingServiceImplTest {
 
     @Test
     void estrategiasRanking_clavesYOrdenesSonCorrectos() {
-        RankingCotizacionStrategy cotizacionStrategy = new RankingCotizacionStrategy();
+        EstrategiaRankingCotizacion cotizacionStrategy = new EstrategiaRankingCotizacion();
         assertThat(cotizacionStrategy.clave()).isEqualTo("cotizacion");
         assertThat(cotizacionStrategy.ordenMercado()).isEqualTo("precio-desc");
 
-        RankingVariacionStrategy variacionStrategy = new RankingVariacionStrategy();
+        EstrategiaRankingVariacion variacionStrategy = new EstrategiaRankingVariacion();
         assertThat(variacionStrategy.clave()).isEqualTo("variacion-semanal");
         assertThat(variacionStrategy.ordenMercado()).isEqualTo("suba");
     }
