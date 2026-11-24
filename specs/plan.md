@@ -358,7 +358,7 @@ Patrón Strategy, resolviendo el punto derivado por `spec.md`. Las estrategias s
 ```java
 interface EstrategiaRanking {
     String clave();
-    List<Jugador> ordenar(List<JugadorConCotizacion> catalogo);
+    List<FilaRankingProjection> buscarTop(int limite);
 }
 ```
 
@@ -368,6 +368,8 @@ Dos estrategias iniciales (registradas como beans, seleccionables por `clave`):
 2. **`variacion-semanal`** — ordena por variación porcentual entre la cotización vigente y la penúltima, descendente (mide "quién subió más esta semana", no sólo quién vale más en absoluto).
 
 `RankingService` recibe la `clave` (query param `estrategia` de `GET /jugadores/ranking`, leído por `JugadorController`) y selecciona el bean correspondiente; si se omite o no matchea ninguna clave registrada, usa `cotizacion`. La selección de estrategia es lógica de negocio — vive en `RankingService`, nunca en el Controller (constitution §2). Agregar una tercera estrategia a futuro es sólo un nuevo bean, sin tocar el Controller (Open/Closed).
+
+**Alta frecuencia de consultas:** cada estrategia ordena y limita a 20 en SQL, y `RankingService` cachea el resultado por estrategia (Caffeine, `app.ranking.cache-ttl`). Las operaciones anotadas con `@InvalidaRanking` (recálculo, alta/edición/baja, compra/venta al sistema, ingesta de rendimiento) vacían la caché al confirmarse su transacción.
 
 ---
 

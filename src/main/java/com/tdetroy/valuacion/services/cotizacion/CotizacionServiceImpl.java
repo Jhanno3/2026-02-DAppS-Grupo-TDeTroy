@@ -21,6 +21,7 @@ import com.tdetroy.valuacion.repositories.cotizacion.PesoMetricaRepository;
 import com.tdetroy.valuacion.repositories.jugador.JugadorRepository;
 import com.tdetroy.valuacion.repositories.rendimiento.RendimientoPartidoRepository;
 import com.tdetroy.valuacion.services.auditoria.AuditoriaService;
+import com.tdetroy.valuacion.services.jugador.InvalidaRanking;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -116,6 +117,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     }
 
     @Override
+    @InvalidaRanking
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CotizacionHistorica calcularCotizacion(
             UUID jugadorId, OrigenCotizacion origen, UUID actorId) {
@@ -123,6 +125,7 @@ public class CotizacionServiceImpl implements CotizacionService {
     }
 
     @Override
+    @InvalidaRanking
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CotizacionHistorica calcularCotizacion(
             UUID jugadorId,

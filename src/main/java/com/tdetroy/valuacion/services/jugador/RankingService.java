@@ -6,6 +6,9 @@ import java.util.List;
 /** Servicio para consulta de rankings de jugadores (UC-16, plan.md §7). */
 public interface RankingService {
 
+    /** Nombre de la caché del ranking. */
+    String CACHE = "ranking";
+
     /**
      * Obtiene el listado de jugadores ordenado según la estrategia solicitada.
      *

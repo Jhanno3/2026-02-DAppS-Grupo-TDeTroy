@@ -18,6 +18,7 @@ import com.tdetroy.valuacion.repositories.rendimiento.PartidoCrudo;
 import com.tdetroy.valuacion.repositories.rendimiento.RendimientoAcumuladoWhoScoredRepository;
 import com.tdetroy.valuacion.repositories.rendimiento.RendimientoLigaExternoRepository;
 import com.tdetroy.valuacion.repositories.rendimiento.RendimientoPartidoRepository;
+import com.tdetroy.valuacion.services.jugador.InvalidaRanking;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -148,6 +149,7 @@ public class RendimientoServiceImpl implements RendimientoService {
     }
 
     @Override
+    @InvalidaRanking
     @Transactional
     public void ingestarRendimiento() {
         List<Jugador> jugadoresActivos = jugadoresActivos();

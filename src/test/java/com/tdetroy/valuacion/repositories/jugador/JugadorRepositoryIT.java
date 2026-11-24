@@ -2,12 +2,20 @@ package com.tdetroy.valuacion.repositories.jugador;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tdetroy.valuacion.entity.cotizacion.CotizacionHistoricaEntity;
 import com.tdetroy.valuacion.entity.jugador.JugadorEntity;
+import com.tdetroy.valuacion.model.cotizacion.CotizacionHistorica;
+import com.tdetroy.valuacion.model.cotizacion.EstrategiaCotizacion;
+import com.tdetroy.valuacion.model.cotizacion.OrigenCotizacion;
 import com.tdetroy.valuacion.model.jugador.EstadoJugador;
 import com.tdetroy.valuacion.model.jugador.Jugador;
 import com.tdetroy.valuacion.repositories.support.PostgresIntegrationTest;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
@@ -111,5 +119,48 @@ class JugadorRepositoryIT extends PostgresIntegrationTest {
         List<JugadorEntity> activos = jugadorRepository.findByEstado(EstadoJugador.ACTIVO);
 
         assertThat(activos).extracting(JugadorEntity::getId).containsExactly(activo.getId());
+    }
+
+    @Test
+    void buscarTop_ordenaEnLaBaseDejaLosNulosAlFinalYRespetaElLimite() {
+        UUID caro = jugadorCon("Caro", "200.00", "210.00");
+        UUID subio = jugadorCon("Subio", "100.00", "150.00");
+        UUID unaSola = jugadorCon("Una sola", "180.00");
+        UUID sinCotizar = jugadorCon("Sin cotizar");
+        entityManager.clear();
+
+        assertThat(jugadorRepository.buscarTopPorCotizacion(20))
+                .extracting(FilaRankingProjection::getJugadorId)
+                .containsExactly(caro, unaSola, subio, sinCotizar);
+        assertThat(jugadorRepository.buscarTopPorVariacion(20))
+                .extracting(FilaRankingProjection::getJugadorId)
+                .containsExactly(subio, caro, sinCotizar, unaSola);
+        assertThat(jugadorRepository.buscarTopPorCotizacion(1)).hasSize(1);
+
+        FilaRankingProjection fila = jugadorRepository.buscarTopPorVariacion(1).getFirst();
+        assertThat(fila.getValorVigente()).isEqualByComparingTo("150.00");
+        assertThat(fila.getValorInicial()).isEqualByComparingTo("100.00");
+        assertThat(fila.getFechaVigente()).isAfter(fila.getFechaInicial());
+    }
+
+    private UUID jugadorCon(String nombre, String... valoresPorSemana) {
+        Jugador jugador =
+                Jugador.darAlta(
+                        nombre, "Club", "Delantero", LocalDate.of(2000, 1, 1), "Argentina", "Liga");
+        entityManager.persist(JugadorEntity.desde(jugador));
+        for (int i = 0; i < valoresPorSemana.length; i++) {
+            entityManager.persist(
+                    CotizacionHistoricaEntity.desde(
+                            CotizacionHistorica.calcular(
+                                    jugador.getId(),
+                                    "2026-W0" + (i + 1),
+                                    new BigDecimal(valoresPorSemana[i]),
+                                    OrigenCotizacion.AUTOMATICO,
+                                    EstrategiaCotizacion.RENDIMIENTO_ACTUAL,
+                                    Instant.parse("2026-01-01T00:00:00Z")
+                                            .plus(Duration.ofDays(7L * i)))));
+        }
+        entityManager.flush();
+        return jugador.getId();
     }
 }

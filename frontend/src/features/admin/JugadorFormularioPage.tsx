@@ -169,8 +169,8 @@ export function JugadorFormularioPage() {
         ? editarJugador(id!, datos, token!)
         : crearJugador(datos, token!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['jugadores'] })
-      navigate('/admin/jugadores')
+      void queryClient.invalidateQueries({ queryKey: ['jugadores'] })
+      void navigate('/admin/jugadores')
     },
   })
 

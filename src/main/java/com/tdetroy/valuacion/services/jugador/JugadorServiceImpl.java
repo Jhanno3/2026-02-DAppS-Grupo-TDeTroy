@@ -28,7 +28,6 @@ import com.tdetroy.valuacion.repositories.usuario.UsuarioRepository;
 import com.tdetroy.valuacion.services.auditoria.AuditoriaService;
 import com.tdetroy.valuacion.services.mercado.SubastaService;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -163,31 +162,12 @@ public class JugadorServiceImpl implements JugadorService {
             Map<UUID, ValorPorJugadorProjection> iniciales) {
         ValorPorJugadorProjection vigente = vigentes.get(jugador.getId());
         ValorPorJugadorProjection inicial = iniciales.get(jugador.getId());
-        BigDecimal precio = vigente == null ? null : vigente.getValor();
-        BigDecimal variacion = variacion(vigente, inicial);
-        return new JugadorConPrecio(jugador, precio, variacion);
-    }
-
-    /**
-     * {@code null} si el jugador nunca tuvo cotización, o si sólo tiene una semana cotizada
-     * (vigente == inicial, mismo {@code fechaCalculo}: no hay desde dónde medir variación) -- mismo
-     * criterio que el historial, que muestra una cotización por semana (plan.md §3bis).
-     */
-    private static BigDecimal variacion(
-            ValorPorJugadorProjection vigente, ValorPorJugadorProjection inicial) {
-        if (vigente == null || inicial == null) {
-            return null;
-        }
-        if (vigente.getFechaCalculo().equals(inicial.getFechaCalculo())) {
-            return null;
-        }
-        if (inicial.getValor().signum() == 0) {
-            return null;
-        }
-        return vigente.getValor()
-                .subtract(inicial.getValor())
-                .divide(inicial.getValor(), 4, RoundingMode.HALF_UP)
-                .multiply(BigDecimal.valueOf(100));
+        return JugadorConPrecio.desdeCotizaciones(
+                jugador,
+                vigente == null ? null : vigente.getValor(),
+                vigente == null ? null : vigente.getFechaCalculo(),
+                inicial == null ? null : inicial.getValor(),
+                inicial == null ? null : inicial.getFechaCalculo());
     }
 
     private static boolean coincidePosicion(Jugador jugador, String posicion) {
@@ -244,6 +224,7 @@ public class JugadorServiceImpl implements JugadorService {
     }
 
     @Override
+    @InvalidaRanking
     @Transactional
     public Jugador darAlta(
             String nombre,
@@ -278,6 +259,7 @@ public class JugadorServiceImpl implements JugadorService {
     }
 
     @Override
+    @InvalidaRanking
     @Transactional
     public Jugador editar(
             UUID jugadorId,
@@ -314,6 +296,7 @@ public class JugadorServiceImpl implements JugadorService {
     }
 
     @Override
+    @InvalidaRanking
     @Transactional
     public Jugador darDeBaja(UUID jugadorId, UUID actorId) {
         Jugador jugador =
