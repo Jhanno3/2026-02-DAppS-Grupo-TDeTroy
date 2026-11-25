@@ -51,5 +51,28 @@ services:
     ports:
       - "3001:3001"
 
+  # Guarda el historial de métricas del backend (UI: http://localhost:9090). Necesita METRICS_TOKEN
+  # en .env, con el mismo valor que usa el backend (ver .env.example).
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: valuacion-prometheus
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    configs:
+      - source: metrics_token
+        target: /run/metrics_token
+    volumes:
+      - ./monitoreo/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoreo/alertas.yml:/etc/prometheus/alertas.yml:ro
+      - prometheus_data:/prometheus
+
+configs:
+  metrics_token:
+    content: "${METRICS_TOKEN:-sin-configurar}"
+
 volumes:
   valuacion_dev_data:
+  prometheus_data:

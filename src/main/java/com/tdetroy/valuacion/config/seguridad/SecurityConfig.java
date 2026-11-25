@@ -114,6 +114,9 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins:http://localhost:5173}")
     private String allowedOriginsCsv;
 
+    @Value("${app.metricas.token:}")
+    private String metricasToken;
+
     public SecurityConfig(
             ProblemDetailResponseWriter problemDetailResponseWriter,
             JwtAuthenticationFilter jwtAuthenticationFilter) {
@@ -171,6 +174,9 @@ public class SecurityConfig {
                                         .requestMatchers(
                                                 HttpMethod.GET, RUTAS_PUBLICAS_ACTUATOR_GET)
                                         .permitAll()
+                                        .requestMatchers(HttpMethod.GET, MetricasTokenFilter.RUTA)
+                                        .hasAnyAuthority(
+                                                MetricasTokenFilter.AUTORIDAD, "ROLE_ADMIN")
                                         .requestMatchers(RUTAS_ACTUATOR)
                                         .hasRole("ADMIN")
                                         .requestMatchers(RUTAS_PUBLICAS_AUTH)
@@ -186,7 +192,10 @@ public class SecurityConfig {
                                         .anyRequest()
                                         .authenticated())
                 .addFilterBefore(
-                        jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                        jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(
+                        new MetricasTokenFilter(metricasToken),
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

@@ -272,7 +272,7 @@ La pantalla de Mercado del frontend mostraba el catálogo completo (del orden de
 - Spring Security + JWT stateless. `POST /auth/login` (`AuthController`) emite el token; el resto de los endpoints protegidos lo validan vía filtro.
 - Roles `USER`/`ADMIN` como `GrantedAuthority`. Anotación `@PreAuthorize("hasRole('ADMIN')")` en los endpoints administrativos (UC-03, UC-04, UC-13, UC-14, UC-15) — nunca chequeo de rol embebido a mano en el Controller.
 - Endpoints públicos (`GET /jugadores`, `GET /jugadores/{id}`, `GET /jugadores/{id}/cotizaciones`, `GET /jugadores/ranking`) explícitamente permitidos sin autenticación en la config de `SecurityFilterChain` (`config/`); todo lo demás requiere token válido por defecto (whitelist explícita, no blacklist).
-- Actuator: `GET /actuator/health` (detalle sólo para ADMIN) y `GET /actuator/info` públicos; el resto de `/actuator/**` requiere ADMIN. Sólo se exponen `health`, `info` y `metrics`.
+- Actuator: `GET /actuator/health` (detalle sólo para ADMIN) y `GET /actuator/info` públicos; el resto de `/actuator/**` requiere ADMIN. Sólo se exponen `health`, `info`, `metrics` y `prometheus`; a este último también accede Prometheus con un token fijo (`METRICS_TOKEN`, `MetricasTokenFilter`) que no sirve para ninguna otra ruta.
 - Passwords: BCrypt.
 - Validación de input: Bean Validation en cada DTO de `dto/request` (`@Positive` en montos y cantidades, `@Email`, etc.), aplicada en el borde del Controller.
 

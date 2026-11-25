@@ -14,7 +14,11 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 /** Exposición y permisos de los endpoints de Actuator. */
-@SpringBootTest
+@SpringBootTest(
+        properties = {
+            "app.metricas.token=token-de-prueba",
+            "management.prometheus.metrics.export.enabled=true"
+        })
 @AutoConfigureMockMvc
 class ActuatorIT {
 
@@ -32,6 +36,10 @@ class ActuatorIT {
 
     private MvcTestResult consultarComo(RolUsuario rol, String ruta) {
         String token = jwtService.generarToken(UUID.randomUUID(), "actuator@example.com", rol);
+        return consultarConToken(token, ruta);
+    }
+
+    private MvcTestResult consultarConToken(String token, String ruta) {
         return mvc.get()
                 .uri("/actuator" + ruta)
                 .header("Authorization", "Bearer " + token)
@@ -89,6 +97,36 @@ class ActuatorIT {
 
         assertThat(resultado).hasStatusOk();
         assertThat(resultado).bodyJson().extractingPath("$.name").isEqualTo("http.server.requests");
+    }
+
+    @Test
+    void prometheus_conElTokenFijoOComoAdmin_exponeElHistogramaDeLatencia() {
+        consultar("/health");
+
+        assertThat(consultarConToken("token-de-prueba", "/prometheus"))
+                .hasStatusOk()
+                .bodyText()
+                .contains("http_server_requests_seconds_bucket");
+        assertThat(consultarComo(RolUsuario.ADMIN, "/prometheus")).hasStatusOk();
+    }
+
+    @Test
+    void prometheus_sinElToken_rechaza() {
+        assertThat(consultar("/prometheus")).hasStatus(HttpStatus.UNAUTHORIZED);
+        assertThat(consultarConToken("otro", "/prometheus")).hasStatus(HttpStatus.UNAUTHORIZED);
+        assertThat(consultarComo(RolUsuario.USER, "/prometheus")).hasStatus(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void elTokenDePrometheus_noSirveParaOtrasRutas() {
+        assertThat(consultarConToken("token-de-prueba", "/metrics"))
+                .hasStatus(HttpStatus.UNAUTHORIZED);
+        assertThat(
+                        mvc.get()
+                                .uri("/api/v1/portfolios/me")
+                                .header("Authorization", "Bearer token-de-prueba")
+                                .exchange())
+                .hasStatus(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
