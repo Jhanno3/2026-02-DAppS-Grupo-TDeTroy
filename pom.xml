@@ -45,6 +45,18 @@
 		<jsoup.version>1.23.2</jsoup.version>
 	</properties>
 	<dependencies>
+		<!-- Health checks y metricas (entrega 3): endpoints expuestos en application.properties, permisos
+		     en SecurityConfig. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<!-- Expone las metricas en formato Prometheus (/actuator/prometheus). -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+			<scope>runtime</scope>
+		</dependency>
 		<!-- Cache en memoria del ranking (UC-16), ver CacheConfig. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

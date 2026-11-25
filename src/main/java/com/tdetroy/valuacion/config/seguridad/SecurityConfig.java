@@ -63,6 +63,13 @@ public class SecurityConfig {
         "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"
     };
 
+    /** Para monitores sin JWT: {@code health} sólo muestra su detalle a un ADMIN. */
+    private static final String[] RUTAS_PUBLICAS_ACTUATOR_GET = {
+        "/actuator/health", "/actuator/info"
+    };
+
+    private static final String RUTAS_ACTUATOR = "/actuator/**";
+
     /**
      * {@code AuthController} (T1.5, UC-01/UC-02): sin esto, un visitante sin cuenta no podría
      * registrarse ni loguearse — la whitelist es explícita (plan.md §4), así que cada Controller
@@ -106,6 +113,9 @@ public class SecurityConfig {
 
     @Value("${app.cors.allowed-origins:http://localhost:5173}")
     private String allowedOriginsCsv;
+
+    @Value("${app.metricas.token:}")
+    private String metricasToken;
 
     public SecurityConfig(
             ProblemDetailResponseWriter problemDetailResponseWriter,
@@ -161,6 +171,14 @@ public class SecurityConfig {
                         auth ->
                                 auth.requestMatchers(RUTAS_PUBLICAS_INFRAESTRUCTURA)
                                         .permitAll()
+                                        .requestMatchers(
+                                                HttpMethod.GET, RUTAS_PUBLICAS_ACTUATOR_GET)
+                                        .permitAll()
+                                        .requestMatchers(HttpMethod.GET, MetricasTokenFilter.RUTA)
+                                        .hasAnyAuthority(
+                                                MetricasTokenFilter.AUTORIDAD, "ROLE_ADMIN")
+                                        .requestMatchers(RUTAS_ACTUATOR)
+                                        .hasRole("ADMIN")
                                         .requestMatchers(RUTAS_PUBLICAS_AUTH)
                                         .permitAll()
                                         .requestMatchers(
@@ -174,7 +192,10 @@ public class SecurityConfig {
                                         .anyRequest()
                                         .authenticated())
                 .addFilterBefore(
-                        jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                        jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(
+                        new MetricasTokenFilter(metricasToken),
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
