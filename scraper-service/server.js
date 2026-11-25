@@ -1,9 +1,33 @@
+const { AsyncLocalStorage } = require('node:async_hooks');
+const { randomUUID } = require('node:crypto');
 const express = require('express');
 const { chromium } = require('playwright');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 let navegador = null;
+
+const contextoRequest = new AsyncLocalStorage();
+
+// Log en JSON con el id que manda el backend, para seguir una ingesta entre los dos servicios.
+function registrar(nivel, mensaje) {
+  console.log(
+    JSON.stringify({
+      '@timestamp': new Date().toISOString(),
+      log: { level: nivel },
+      service: { name: 'scraper-service' },
+      message: mensaje,
+      correlationId: contextoRequest.getStore()
+    })
+  );
+}
+
+app.use((req, res, next) => {
+  const recibido = req.get('X-Correlation-Id') || '';
+  const id = /^[A-Za-z0-9._-]{1,64}$/.test(recibido) ? recibido : randomUUID();
+  res.setHeader('X-Correlation-Id', id);
+  contextoRequest.run(id, next);
+});
 
 async function obtenerNavegador() {
   if (!navegador) {
@@ -43,7 +67,7 @@ app.get('/fetch', async (req, res) => {
       delete Object.getPrototypeOf(navigator).webdriver;
     });
 
-    console.log(`[SCRAPER] Navegando a: ${urlDestino}`);
+    registrar('INFO', `Navegando a: ${urlDestino}`);
     await pagina.goto(urlDestino, { waitUntil: 'domcontentloaded', timeout: 35000 });
 
     // Espera breve para asegurar que Cloudflare resuelva el desafío
@@ -56,7 +80,7 @@ app.get('/fetch', async (req, res) => {
     return res.status(200).send(html);
   } catch (err) {
     if (contexto) await contexto.close();
-    console.error(`[ERROR] Falló extracción de ${urlDestino}:`, err.message);
+    registrar('ERROR', `Falló extracción de ${urlDestino}: ${err.message}`);
     return res.status(502).send(`Error al consultar WhoScored: ${err.message}`);
   }
 });
@@ -100,7 +124,7 @@ app.get('/fetch-liga', async (req, res) => {
       delete Object.getPrototypeOf(navigator).webdriver;
     });
 
-    console.log(`[SCRAPER] Navegando a liga: ${urlDestino}`);
+    registrar('INFO', `Navegando a liga: ${urlDestino}`);
     await pagina.goto(urlDestino, { waitUntil: 'domcontentloaded', timeout: 35000 });
     await pagina.waitForTimeout(3000);
 
@@ -111,7 +135,7 @@ app.get('/fetch-liga', async (req, res) => {
     if (filtroAplicado) {
       await pagina.waitForTimeout(1500);
     } else {
-      console.warn('[SCRAPER] No se encontro el filtro "All players"; se continua sin aplicarlo.');
+      registrar('WARN', 'No se encontro el filtro "All players"; se continua sin aplicarlo.');
     }
 
     for (let i = 0; i < TOPE_PAGINAS; i++) {
@@ -139,7 +163,7 @@ app.get('/fetch-liga', async (req, res) => {
     return res.status(200).json({ pages: paginas });
   } catch (err) {
     if (contexto) await contexto.close();
-    console.error(`[ERROR] Falló la paginación de liga de ${urlDestino}:`, err.message);
+    registrar('ERROR', `Falló la paginación de liga de ${urlDestino}: ${err.message}`);
     if (paginas.length > 0) {
       // Degradacion graciosa: devolver lo que ya se junto en vez de perder todo por una falla
       // a mitad de la paginacion (ej. "next" cambio de estructura en la pagina 6 de 10).
@@ -150,5 +174,5 @@ app.get('/fetch-liga', async (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Scraper service escuchando en http://localhost:${PORT}`);
+  registrar('INFO', `Scraper service escuchando en http://localhost:${PORT}`);
 });

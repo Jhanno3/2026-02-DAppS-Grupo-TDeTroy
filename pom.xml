@@ -222,6 +222,7 @@
 					</excludes>
 					<systemPropertyVariables>
 						<spring.profiles.active>test</spring.profiles.active>
+						<APP_LOG_FILE>${project.build.directory}/logs/test.json</APP_LOG_FILE>
 					</systemPropertyVariables>
 				</configuration>
 			</plugin>
@@ -231,6 +232,7 @@
 				<configuration>
 					<systemPropertyVariables>
 						<spring.profiles.active>test</spring.profiles.active>
+						<APP_LOG_FILE>${project.build.directory}/logs/test.json</APP_LOG_FILE>
 					</systemPropertyVariables>
 				</configuration>
 				<executions>

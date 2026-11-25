@@ -1,5 +1,6 @@
 package com.tdetroy.valuacion.config.seguridad;
 
+import com.tdetroy.valuacion.common.CorrelationId;
 import com.tdetroy.valuacion.config.errores.ProblemDetailResponseWriter;
 import java.util.Arrays;
 import java.util.List;
@@ -210,7 +211,9 @@ public class SecurityConfig {
         CorsConfiguration configuracion = new CorsConfiguration();
         configuracion.setAllowedOrigins(origenesPermitidos);
         configuracion.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
-        configuracion.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuracion.setAllowedHeaders(
+                List.of("Authorization", "Content-Type", CorrelationId.HEADER));
+        configuracion.setExposedHeaders(List.of(CorrelationId.HEADER));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuracion);

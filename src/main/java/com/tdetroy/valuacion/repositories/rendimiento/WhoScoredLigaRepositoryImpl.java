@@ -1,6 +1,7 @@
 package com.tdetroy.valuacion.repositories.rendimiento;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.tdetroy.valuacion.common.CorrelationId;
 import com.tdetroy.valuacion.common.Textos;
 import com.tdetroy.valuacion.config.WhoScoredLigaProperties;
 import java.io.IOException;
@@ -18,6 +19,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpRequest;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -77,7 +81,11 @@ public class WhoScoredLigaRepositoryImpl implements RendimientoLigaExternoReposi
             @Value("${app.whoscored.imagenes-url}") String imagenesUrl) {
         this(
                 ligaProperties.getLigaUrls(),
-                construirClienteScraper(restClientBuilder.build(), fetcherLigaUrl),
+                construirClienteScraper(
+                        restClientBuilder
+                                .requestInterceptor(WhoScoredLigaRepositoryImpl::propagarId)
+                                .build(),
+                        fetcherLigaUrl),
                 imagenesUrl);
     }
 
@@ -86,6 +94,13 @@ public class WhoScoredLigaRepositoryImpl implements RendimientoLigaExternoReposi
         this.urlsPorLiga = urlsPorLiga;
         this.paginasScraper = paginasScraper;
         this.imagenesUrl = imagenesUrl.endsWith("/") ? imagenesUrl : imagenesUrl + "/";
+    }
+
+    private static ClientHttpResponse propagarId(
+            HttpRequest request, byte[] body, ClientHttpRequestExecution ejecucion)
+            throws IOException {
+        CorrelationId.actual().ifPresent(id -> request.getHeaders().set(CorrelationId.HEADER, id));
+        return ejecucion.execute(request, body);
     }
 
     @Override
