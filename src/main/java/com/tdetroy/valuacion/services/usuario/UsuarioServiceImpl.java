@@ -25,14 +25,17 @@ public class UsuarioServiceImpl implements UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final MovimientoRepository movimientoRepository;
     private final AuditoriaService auditoriaService;
+    private final PasarelaPagos pasarelaPagos;
 
     public UsuarioServiceImpl(
             UsuarioRepository usuarioRepository,
             MovimientoRepository movimientoRepository,
-            AuditoriaService auditoriaService) {
+            AuditoriaService auditoriaService,
+            PasarelaPagos pasarelaPagos) {
         this.usuarioRepository = usuarioRepository;
         this.movimientoRepository = movimientoRepository;
         this.auditoriaService = auditoriaService;
+        this.pasarelaPagos = pasarelaPagos;
     }
 
     @Override
@@ -49,6 +52,41 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     @Transactional
     public Usuario recargarSaldo(UUID usuarioId, BigDecimal monto, UUID actorId) {
+        Usuario usuario = acreditarYRegistrarMovimiento(usuarioId, monto);
+
+        auditoriaService.registrar(
+                actorId,
+                "RECARGA_SALDO",
+                ENTIDAD_AUDITADA,
+                usuarioId,
+                new SaldoAuditoria(usuario.getSaldoVirtual().subtract(Monetario.escalar(monto))),
+                new SaldoAuditoria(usuario.getSaldoVirtual()));
+
+        return usuario;
+    }
+
+    @Override
+    @Transactional
+    public Usuario cargarSaldoPropio(
+            UUID usuarioId, BigDecimal monto, PasarelaPagos.DatosTarjeta tarjeta) {
+        PasarelaPagos.ResultadoPago pago = pasarelaPagos.procesarPago(monto, tarjeta);
+        Usuario usuario = acreditarYRegistrarMovimiento(usuarioId, monto);
+
+        auditoriaService.registrar(
+                usuarioId,
+                "CARGA_SALDO_PASARELA",
+                ENTIDAD_AUDITADA,
+                usuarioId,
+                new SaldoAuditoria(usuario.getSaldoVirtual().subtract(Monetario.escalar(monto))),
+                new SaldoPasarelaAuditoria(
+                        usuario.getSaldoVirtual(),
+                        pago.codigoOperacion(),
+                        pago.ultimosCuatroDigitos()));
+
+        return usuario;
+    }
+
+    private Usuario acreditarYRegistrarMovimiento(UUID usuarioId, BigDecimal monto) {
         Usuario usuario =
                 usuarioRepository
                         .findById(usuarioId)
@@ -58,7 +96,6 @@ public class UsuarioServiceImpl implements UsuarioService {
                                         new RecursoNoEncontradoException(
                                                 ENTIDAD_AUDITADA, usuarioId));
 
-        BigDecimal saldoAntes = usuario.getSaldoVirtual();
         usuario.acreditarSaldo(monto);
         usuarioRepository.save(UsuarioEntity.desde(usuario));
         BigDecimal montoEscalado = Monetario.escalar(monto);
@@ -73,17 +110,11 @@ public class UsuarioServiceImpl implements UsuarioService {
                                 null,
                                 montoEscalado,
                                 null)));
-
-        auditoriaService.registrar(
-                actorId,
-                "RECARGA_SALDO",
-                ENTIDAD_AUDITADA,
-                usuarioId,
-                new SaldoAuditoria(saldoAntes),
-                new SaldoAuditoria(usuario.getSaldoVirtual()));
-
         return usuario;
     }
 
     private record SaldoAuditoria(BigDecimal saldoVirtual) {}
+
+    private record SaldoPasarelaAuditoria(
+            BigDecimal saldoVirtual, String codigoOperacion, String ultimosCuatroDigitos) {}
 }

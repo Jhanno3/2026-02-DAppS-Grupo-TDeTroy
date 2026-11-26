@@ -22,6 +22,7 @@ interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: unknown
   token?: string | null
+  headers?: Record<string, string>
 }
 
 let manejadorNoAutenticado: (() => void) | null = null
@@ -48,10 +49,11 @@ export async function apiFetch<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { method = 'GET', body, token } = options
+  const { method = 'GET', body, token, headers: extraHeaders } = options
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...extraHeaders,
   }
   if (token) {
     headers.Authorization = `Bearer ${token}`

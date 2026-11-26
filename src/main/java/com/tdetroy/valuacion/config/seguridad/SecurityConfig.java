@@ -118,6 +118,9 @@ public class SecurityConfig {
     @Value("${app.metricas.token:}")
     private String metricasToken;
 
+    @Value("${app.pagos.api-key:}")
+    private String pagosApiKey;
+
     public SecurityConfig(
             ProblemDetailResponseWriter problemDetailResponseWriter,
             JwtAuthenticationFilter jwtAuthenticationFilter) {
@@ -196,7 +199,10 @@ public class SecurityConfig {
                         jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(
                         new MetricasTokenFilter(metricasToken),
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(
+                        new ApiKeySaldoFilter(pagosApiKey, problemDetailResponseWriter),
+                        JwtAuthenticationFilter.class);
 
         return http.build();
     }
@@ -212,7 +218,11 @@ public class SecurityConfig {
         configuracion.setAllowedOrigins(origenesPermitidos);
         configuracion.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
         configuracion.setAllowedHeaders(
-                List.of("Authorization", "Content-Type", CorrelationId.HEADER));
+                List.of(
+                        "Authorization",
+                        "Content-Type",
+                        CorrelationId.HEADER,
+                        ApiKeySaldoFilter.HEADER));
         configuracion.setExposedHeaders(List.of(CorrelationId.HEADER));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
