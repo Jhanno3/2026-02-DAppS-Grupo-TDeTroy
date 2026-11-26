@@ -59,7 +59,11 @@ describe('AdminMetricasPage', () => {
   beforeEach(() => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: 'admin-jwt-token',
-      user: { usuarioId: 'u-admin', email: 'admin@example.com', rol: 'ADMIN' },
+      usuario: {
+        usuarioId: 'u-admin',
+        email: 'admin@example.com',
+        rol: 'ADMIN',
+      },
       isAuthenticated: true,
       login: vi.fn(),
       logout: vi.fn(),
@@ -138,9 +142,7 @@ describe('AdminMetricasPage', () => {
     await user.click(guardarBtns[0])
 
     await waitFor(() => {
-      expect(
-        metricasApi.actualizarConfiguracionMetricas,
-      ).toHaveBeenCalledWith(
+      expect(metricasApi.actualizarConfiguracionMetricas).toHaveBeenCalledWith(
         expect.objectContaining({
           metricas: expect.arrayContaining([
             expect.objectContaining({
@@ -252,8 +254,9 @@ describe('AdminMetricasPage', () => {
     await user.click(recalcularBtn)
 
     await waitFor(() => {
-      expect(screen.getByText('Error interno al recalcular')).toBeInTheDocument()
+      expect(
+        screen.getByText('Error interno al recalcular'),
+      ).toBeInTheDocument()
     })
   })
 })
-

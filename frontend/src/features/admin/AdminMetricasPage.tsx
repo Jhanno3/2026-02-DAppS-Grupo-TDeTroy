@@ -13,7 +13,12 @@ import { Button } from '../../shared/components/Button'
 import { LinkButton } from '../../shared/components/LinkButton'
 import styles from './AdminMetricasPage.module.css'
 
-export const POSICIONES = ['Delantero', 'Centrocampista', 'Defensor', 'Arquero'] as const
+export const POSICIONES = [
+  'Delantero',
+  'Centrocampista',
+  'Defensor',
+  'Arquero',
+] as const
 
 export interface MetricaFormRow {
   clave: string
@@ -24,7 +29,9 @@ export interface MetricaFormRow {
   pesosPorPosicion: Record<string, string>
 }
 
-function inicializarFilas(data: ConfiguracionMetricaResponse[]): MetricaFormRow[] {
+function inicializarFilas(
+  data: ConfiguracionMetricaResponse[],
+): MetricaFormRow[] {
   return data.map((item) => {
     const pesosPos: Record<string, string> = {}
     for (const pos of POSICIONES) {
@@ -78,7 +85,11 @@ function AdminMetricasForm({
     })
   }
 
-  function handlePosicionChange(index: number, posicion: string, valor: string) {
+  function handlePosicionChange(
+    index: number,
+    posicion: string,
+    valor: string,
+  ) {
     setFilas((prev) => {
       const copy = [...prev]
       copy[index] = {
@@ -135,7 +146,8 @@ function AdminMetricasForm({
         <div>
           <h1 className={styles.title}>Ponderación de Métricas</h1>
           <p className={styles.subtitle}>
-            Configura los pesos dinámicos y la ponderación por posición (Delantero, Centrocampista, Defensor, Arquero).
+            Configura los pesos dinámicos y la ponderación por posición
+            (Delantero, Centrocampista, Defensor, Arquero).
           </p>
         </div>
         <div className={styles.headerAcciones}>
@@ -161,7 +173,10 @@ function AdminMetricasForm({
       </div>
 
       {errorValidacion && (
-        <div className={`${styles.mensaje} ${styles.mensajeError}`} role="alert">
+        <div
+          className={`${styles.mensaje} ${styles.mensajeError}`}
+          role="alert"
+        >
           {errorValidacion}
         </div>
       )}
@@ -204,7 +219,9 @@ function AdminMetricasForm({
                       type="checkbox"
                       aria-label={`Activo ${fila.etiqueta}`}
                       checked={fila.activo}
-                      onChange={(e) => handleActivoChange(idx, e.target.checked)}
+                      onChange={(e) =>
+                        handleActivoChange(idx, e.target.checked)
+                      }
                     />
                   </td>
                   <td>
@@ -256,7 +273,10 @@ function AdminMetricasForm({
 export function AdminMetricasPage() {
   const { token } = useAuth()
   const queryClient = useQueryClient()
-  const [mensaje, setMensaje] = useState<{ texto: string; tipo: 'exito' | 'error' } | null>(null)
+  const [mensaje, setMensaje] = useState<{
+    texto: string
+    tipo: 'exito' | 'error'
+  } | null>(null)
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['configuracion-metricas'],
@@ -269,10 +289,13 @@ export function AdminMetricasPage() {
       actualizarConfiguracionMetricas({ metricas }, token!),
     onSuccess: async () => {
       setMensaje({
-        texto: 'Configuración de métricas y ponderaciones por posición guardada con éxito.',
+        texto:
+          'Configuración de métricas y ponderaciones por posición guardada con éxito.',
         tipo: 'exito',
       })
-      await queryClient.invalidateQueries({ queryKey: ['configuracion-metricas'] })
+      await queryClient.invalidateQueries({
+        queryKey: ['configuracion-metricas'],
+      })
     },
     onError: (err) => {
       setMensaje({
@@ -289,7 +312,8 @@ export function AdminMetricasPage() {
     mutationFn: () => dispararRecalculoManual(token!),
     onSuccess: async () => {
       setMensaje({
-        texto: 'Recálculo manual de cotizaciones ejecutado correctamente con las nuevas ponderaciones.',
+        texto:
+          'Recálculo manual de cotizaciones ejecutado correctamente con las nuevas ponderaciones.',
         tipo: 'exito',
       })
       await queryClient.invalidateQueries({ queryKey: ['jugadores'] })
@@ -320,7 +344,9 @@ export function AdminMetricasPage() {
       )}
 
       {isLoading && <p>Cargando configuración de métricas…</p>}
-      {isError && <p role="alert">No se pudo cargar la configuración de métricas.</p>}
+      {isError && (
+        <p role="alert">No se pudo cargar la configuración de métricas.</p>
+      )}
 
       {data && (
         <AdminMetricasForm

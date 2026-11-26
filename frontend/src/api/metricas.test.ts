@@ -58,4 +58,3 @@ describe('api/metricas', () => {
     expect(res).toEqual(mockConfig)
   })
 })
-
