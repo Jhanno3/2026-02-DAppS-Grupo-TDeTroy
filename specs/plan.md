@@ -272,6 +272,8 @@ La pantalla de Mercado del frontend mostraba el catálogo completo (del orden de
 - Spring Security + JWT stateless. `POST /auth/login` (`AuthController`) emite el token; el resto de los endpoints protegidos lo validan vía filtro.
 - Roles `USER`/`ADMIN` como `GrantedAuthority`. Anotación `@PreAuthorize("hasRole('ADMIN')")` en los endpoints administrativos (UC-03, UC-04, UC-13, UC-14, UC-15) — nunca chequeo de rol embebido a mano en el Controller.
 - Endpoints públicos (`GET /jugadores`, `GET /jugadores/{id}`, `GET /jugadores/{id}/cotizaciones`, `GET /jugadores/ranking`) explícitamente permitidos sin autenticación en la config de `SecurityFilterChain` (`config/`); todo lo demás requiere token válido por defecto (whitelist explícita, no blacklist).
+- Actuator: `GET /actuator/health` (detalle sólo para ADMIN) y `GET /actuator/info` públicos; el resto de `/actuator/**` requiere ADMIN. Sólo se exponen `health`, `info`, `metrics` y `prometheus`; a este último también accede Prometheus con un token fijo (`METRICS_TOKEN`, `MetricasTokenFilter`) que no sirve para ninguna otra ruta.
+- Trazabilidad: `CorrelationIdFilter` asigna a cada request un `X-Correlation-Id` (respeta uno válido recibido), lo devuelve en la respuesta y lo incluye en todos sus logs; las tareas programadas generan uno por ejecución y se reenvía a `scraper-service`. Consola en texto, `logs/valuacion.json` en JSON (ECS).
 - Passwords: BCrypt.
 - Validación de input: Bean Validation en cada DTO de `dto/request` (`@Positive` en montos y cantidades, `@Email`, etc.), aplicada en el borde del Controller.
 
@@ -358,7 +360,7 @@ Patrón Strategy, resolviendo el punto derivado por `spec.md`. Las estrategias s
 ```java
 interface EstrategiaRanking {
     String clave();
-    List<Jugador> ordenar(List<JugadorConCotizacion> catalogo);
+    List<FilaRankingProjection> buscarTop(int limite);
 }
 ```
 
@@ -368,6 +370,8 @@ Dos estrategias iniciales (registradas como beans, seleccionables por `clave`):
 2. **`variacion-semanal`** — ordena por variación porcentual entre la cotización vigente y la penúltima, descendente (mide "quién subió más esta semana", no sólo quién vale más en absoluto).
 
 `RankingService` recibe la `clave` (query param `estrategia` de `GET /jugadores/ranking`, leído por `JugadorController`) y selecciona el bean correspondiente; si se omite o no matchea ninguna clave registrada, usa `cotizacion`. La selección de estrategia es lógica de negocio — vive en `RankingService`, nunca en el Controller (constitution §2). Agregar una tercera estrategia a futuro es sólo un nuevo bean, sin tocar el Controller (Open/Closed).
+
+**Alta frecuencia de consultas:** cada estrategia ordena y limita a 20 en SQL, y `RankingService` cachea el resultado por estrategia (Caffeine, `app.ranking.cache-ttl`). Las operaciones anotadas con `@InvalidaRanking` (recálculo, alta/edición/baja, compra/venta al sistema, ingesta de rendimiento) vacían la caché al confirmarse su transacción.
 
 ---
 

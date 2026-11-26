@@ -45,6 +45,27 @@
 		<jsoup.version>1.23.2</jsoup.version>
 	</properties>
 	<dependencies>
+		<!-- Health checks y metricas (entrega 3): endpoints expuestos en application.properties, permisos
+		     en SecurityConfig. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<!-- Expone las metricas en formato Prometheus (/actuator/prometheus). -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<!-- Cache en memoria del ranking (UC-16), ver CacheConfig. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -201,6 +222,7 @@
 					</excludes>
 					<systemPropertyVariables>
 						<spring.profiles.active>test</spring.profiles.active>
+						<APP_LOG_FILE>${project.build.directory}/logs/test.json</APP_LOG_FILE>
 					</systemPropertyVariables>
 				</configuration>
 			</plugin>
@@ -210,6 +232,7 @@
 				<configuration>
 					<systemPropertyVariables>
 						<spring.profiles.active>test</spring.profiles.active>
+						<APP_LOG_FILE>${project.build.directory}/logs/test.json</APP_LOG_FILE>
 					</systemPropertyVariables>
 				</configuration>
 				<executions>

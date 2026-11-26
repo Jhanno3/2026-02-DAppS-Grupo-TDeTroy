@@ -14,7 +14,7 @@ package com.tdetroy.valuacion.common.exceptions;
  */
 public abstract class NegocioException extends RuntimeException {
 
-    protected NegocioException(String message) {
-        super(message);
+    protected NegocioException(String mensaje) {
+        super(mensaje);
     }
 }

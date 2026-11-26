@@ -37,7 +37,7 @@ describe('CrearSubastaPage', () => {
   beforeEach(() => {
     vi.mocked(authContext.useAuth).mockReturnValue({
       token: 'fake-token',
-      user: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
+      usuario: { usuarioId: 'u1', email: 'user@example.com', rol: 'USER' },
       isAuthenticated: true,
       login: vi.fn(),
       logout: vi.fn(),

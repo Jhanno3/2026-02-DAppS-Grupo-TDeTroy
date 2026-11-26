@@ -15,7 +15,7 @@ vi.mock('../features/auth/AuthContext', async (importOriginal) => {
 function comoUsuario(rol: 'USER' | 'ADMIN' | null, logout = vi.fn()) {
   vi.mocked(authContext.useAuth).mockReturnValue({
     token: rol ? 'fake-token' : null,
-    user: rol ? { usuarioId: 'u1', email: 'user@example.com', rol } : null,
+    usuario: rol ? { usuarioId: 'u1', email: 'user@example.com', rol } : null,
     isAuthenticated: rol !== null,
     login: vi.fn(),
     logout,

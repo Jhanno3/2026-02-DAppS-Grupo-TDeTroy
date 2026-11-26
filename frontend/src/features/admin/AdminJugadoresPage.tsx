@@ -27,7 +27,7 @@ export function AdminJugadoresPage() {
     queryFn: listarJugadores,
   })
 
-  const ingestaRendimientoMutation = useMutation({
+  const mutacionIngestaRendimiento = useMutation({
     mutationFn: () => dispararIngestaRendimiento(token!),
     onSuccess: async () => {
       setMensaje('Sincronización con WhoScored completada con éxito.')
@@ -42,7 +42,7 @@ export function AdminJugadoresPage() {
       ),
   })
 
-  const recalculoMutation = useMutation({
+  const mutacionRecalculo = useMutation({
     mutationFn: () => dispararRecalculoManual(token!),
     onSuccess: async () => {
       setMensaje('Recálculo de cotización disparado correctamente.')
@@ -57,7 +57,7 @@ export function AdminJugadoresPage() {
       ),
   })
 
-  const bajaMutation = useMutation({
+  const mutacionBaja = useMutation({
     mutationFn: (jugadorId: string) => darDeBajaJugador(jugadorId, token!),
     onMutate: (jugadorId) => setJugadorEnBaja(jugadorId),
     onSuccess: async () => {
@@ -72,12 +72,12 @@ export function AdminJugadoresPage() {
     onSettled: () => setJugadorEnBaja(null),
   })
 
-  function handleBaja(jugadorId: string, nombre: string) {
+  function manejarBaja(jugadorId: string, nombre: string) {
     const confirmado = window.confirm(
       `¿Dar de baja a "${nombre}"? Sus tokens se retiran de circulación de forma permanente y cada usuario afectado recibe una compensación. Esta acción no se puede deshacer.`,
     )
     if (confirmado) {
-      bajaMutation.mutate(jugadorId)
+      mutacionBaja.mutate(jugadorId)
     }
   }
 
@@ -95,20 +95,20 @@ export function AdminJugadoresPage() {
           <Button
             variant="secondary"
             small
-            onClick={() => ingestaRendimientoMutation.mutate()}
-            disabled={ingestaRendimientoMutation.isPending}
+            onClick={() => mutacionIngestaRendimiento.mutate()}
+            disabled={mutacionIngestaRendimiento.isPending}
           >
-            {ingestaRendimientoMutation.isPending
+            {mutacionIngestaRendimiento.isPending
               ? 'Sincronizando WhoScored…'
               : '⚡ Sincronizar WhoScored'}
           </Button>
           <Button
             variant="secondary"
             small
-            onClick={() => recalculoMutation.mutate()}
-            disabled={recalculoMutation.isPending}
+            onClick={() => mutacionRecalculo.mutate()}
+            disabled={mutacionRecalculo.isPending}
           >
-            {recalculoMutation.isPending ? 'Disparando…' : 'Disparar recálculo'}
+            {mutacionRecalculo.isPending ? 'Disparando…' : 'Disparar recálculo'}
           </Button>
           <LinkButton to="/admin/jugadores/nuevo">+ Nuevo jugador</LinkButton>
         </div>
@@ -167,7 +167,7 @@ export function AdminJugadoresPage() {
                     <Button
                       variant="ghost"
                       small
-                      onClick={() => handleBaja(jugador.id, jugador.nombre)}
+                      onClick={() => manejarBaja(jugador.id, jugador.nombre)}
                       disabled={jugadorEnBaja === jugador.id}
                     >
                       {jugadorEnBaja === jugador.id

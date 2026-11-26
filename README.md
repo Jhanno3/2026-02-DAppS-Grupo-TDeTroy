@@ -32,3 +32,13 @@ npm run dev
 ```
 
 No se requieren variables de entorno: `application.properties` y la configuración de Vite usan valores por defecto para desarrollo local.
+
+### 4. Métricas con Prometheus (opcional, puerto 9090)
+
+Copiar `.env.example` a `.env`, definir `METRICS_TOKEN` y reiniciar el backend. Después:
+
+```bash
+docker compose up -d prometheus
+```
+
+El estado se ve en http://localhost:9090/targets y las alertas en http://localhost:9090/alerts.

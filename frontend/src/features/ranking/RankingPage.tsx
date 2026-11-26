@@ -3,13 +3,13 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { obtenerRanking } from '../../api/jugadores'
 import { Avatar } from '../../shared/components/Avatar'
-import { formatMoney } from '../../shared/format'
+import { formatearMoneda } from '../../shared/format'
 import styles from './RankingPage.module.css'
 
-type EstrategiaKey = 'cotizacion' | 'variacion-semanal'
+type ClaveEstrategia = 'cotizacion' | 'variacion-semanal'
 
 export function RankingPage() {
-  const [estrategia, setEstrategia] = useState<EstrategiaKey>('cotizacion')
+  const [estrategia, setEstrategia] = useState<ClaveEstrategia>('cotizacion')
 
   const {
     data: ranking,
@@ -147,7 +147,7 @@ export function RankingPage() {
                   <div className={styles.rightGroup}>
                     <div className={styles.valores}>
                       <span className={styles.precio}>
-                        {item.precio ? formatMoney(item.precio) : '-'}
+                        {item.precio ? formatearMoneda(item.precio) : '-'}
                       </span>
                       {renderVariacion(item.variacionPorcentual)}
                     </div>

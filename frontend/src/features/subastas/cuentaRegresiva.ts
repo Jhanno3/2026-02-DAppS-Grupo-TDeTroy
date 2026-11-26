@@ -14,7 +14,7 @@ export function useMsRestantes(hasta: string | null | undefined): number {
 }
 
 /** "1:45" por debajo de una hora, "5 h 12 min" por debajo de un día, "2 d 3 h" arriba. */
-export function formatRestante(ms: number): string {
+export function formatearRestante(ms: number): string {
   const totalSegundos = Math.ceil(ms / 1000)
   const dias = Math.floor(totalSegundos / 86_400)
   const horas = Math.floor((totalSegundos % 86_400) / 3600)

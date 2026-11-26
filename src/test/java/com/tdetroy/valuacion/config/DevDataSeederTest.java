@@ -6,11 +6,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.tdetroy.valuacion.repositories.JugadorRepository;
-import com.tdetroy.valuacion.repositories.PesoMetricaRepository;
-import com.tdetroy.valuacion.repositories.UsuarioRepository;
-import com.tdetroy.valuacion.services.JugadorService;
-import com.tdetroy.valuacion.services.UsuarioService;
+import com.tdetroy.valuacion.repositories.cotizacion.PesoMetricaRepository;
+import com.tdetroy.valuacion.repositories.jugador.JugadorRepository;
+import com.tdetroy.valuacion.repositories.usuario.UsuarioRepository;
+import com.tdetroy.valuacion.services.jugador.JugadorService;
+import com.tdetroy.valuacion.services.usuario.UsuarioService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;

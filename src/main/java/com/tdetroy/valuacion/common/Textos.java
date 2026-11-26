@@ -6,7 +6,7 @@ import java.util.Locale;
 /**
  * Normalización de texto compartida entre capas (constitution.md §2): minúsculas, sin acentos,
  * espacios colapsados. Usada tanto para matching de identidad (ver {@code
- * services.NombreClubMatcher}) como para resolver claves de configuración por nombre libre (ej.
+ * services.ComparadorNombreClub}) como para resolver claves de configuración por nombre libre (ej.
  * liga → URL de WhoScored, ver {@code repositories.WhoScoredLigaRepositoryImpl}).
  */
 public final class Textos {

@@ -8,7 +8,7 @@ import {
   type OrdenMercado,
 } from '../../api/jugadores'
 import { Avatar } from '../../shared/components/Avatar'
-import { formatMoney } from '../../shared/format'
+import { formatearMoneda } from '../../shared/format'
 import styles from './MercadoPage.module.css'
 
 const TAMANIO_PAGINA = 50
@@ -21,7 +21,7 @@ const TAMANIO_PAGINA = 50
  */
 export function MercadoPage() {
   const [pos, setPos] = useState('Todos')
-  const [busquedaInput, setBusquedaInput] = useState('')
+  const [textoBusqueda, setTextoBusqueda] = useState('')
   const [busqueda, setBusqueda] = useState('')
   const [orden, setOrden] = useState<OrdenMercado>('precio-desc')
   const [pagina, setPagina] = useState(0)
@@ -30,13 +30,13 @@ export function MercadoPage() {
   // acá mismo (no en un efecto separado reaccionando a `busqueda`) para no encadenar renders.
   useEffect(() => {
     const id = setTimeout(() => {
-      setBusqueda(busquedaInput.trim())
+      setBusqueda(textoBusqueda.trim())
       setPagina(0)
     }, 300)
     return () => clearTimeout(id)
-  }, [busquedaInput])
+  }, [textoBusqueda])
 
-  const mercadoQuery = useQuery({
+  const mercado = useQuery({
     queryKey: ['mercado', pagina, orden, pos, busqueda],
     queryFn: () =>
       listarMercado({
@@ -48,9 +48,9 @@ export function MercadoPage() {
       }),
   })
 
-  const data = mercadoQuery.data
-  const isLoading = mercadoQuery.isLoading
-  const isError = mercadoQuery.isError
+  const data = mercado.data
+  const isLoading = mercado.isLoading
+  const isError = mercado.isError
   const posiciones = ['Todos', ...(data?.posicionesDisponibles ?? [])]
 
   return (
@@ -69,8 +69,8 @@ export function MercadoPage() {
               <input
                 type="search"
                 placeholder="Jugador o club"
-                value={busquedaInput}
-                onChange={(e) => setBusquedaInput(e.target.value)}
+                value={textoBusqueda}
+                onChange={(e) => setTextoBusqueda(e.target.value)}
               />
             </label>
             <label className={styles.field}>
@@ -194,7 +194,7 @@ function Carta({ item }: { item: JugadorConPrecioResponse }) {
         </div>
         <div className={styles.cardPrice}>
           <strong>
-            {precio !== null ? formatMoney(precio) : 'Sin cotización'}
+            {precio !== null ? formatearMoneda(precio) : 'Sin cotización'}
           </strong>
           {variacion !== null && (
             <span className={sube ? styles.up : styles.down}>

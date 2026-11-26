@@ -7,12 +7,12 @@ import {
   useState,
 } from 'react'
 import type { ReactNode } from 'react'
-import { decodeJwt } from './jwt'
+import { decodificarJwt } from './jwt'
 import { registrarManejadorNoAutenticado } from '../../api/client'
 
 const TOKEN_STORAGE_KEY = 'valuacion.token'
 
-export interface AuthUser {
+export interface UsuarioAutenticado {
   usuarioId: string
   email: string
   rol: 'USER' | 'ADMIN'
@@ -20,7 +20,7 @@ export interface AuthUser {
 
 interface AuthContextValue {
   token: string | null
-  user: AuthUser | null
+  usuario: UsuarioAutenticado | null
   isAuthenticated: boolean
   login: (token: string) => void
   logout: () => void
@@ -28,9 +28,9 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-function usuarioDesdeToken(token: string): AuthUser | null {
+function usuarioDesdeToken(token: string): UsuarioAutenticado | null {
   try {
-    const claims = decodeJwt(token)
+    const claims = decodificarJwt(token)
     if (claims.exp * 1000 < Date.now()) {
       return null
     }
@@ -63,11 +63,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => registrarManejadorNoAutenticado(null)
   }, [logout])
 
-  const user = useMemo(() => (token ? usuarioDesdeToken(token) : null), [token])
+  const usuario = useMemo(
+    () => (token ? usuarioDesdeToken(token) : null),
+    [token],
+  )
 
   const value = useMemo<AuthContextValue>(
-    () => ({ token, user, isAuthenticated: user !== null, login, logout }),
-    [token, user, login, logout],
+    () => ({
+      token,
+      usuario,
+      isAuthenticated: usuario !== null,
+      login,
+      logout,
+    }),
+    [token, usuario, login, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
