@@ -7,6 +7,7 @@ import {
   listarCotizaciones,
   listarJugadores,
   listarMercado,
+  obtenerCotizacionPorSemana,
   obtenerEstadisticas,
   obtenerJugador,
   obtenerRanking,
@@ -185,6 +186,28 @@ describe('api/jugadores', () => {
 
       expect(client.apiFetch).toHaveBeenCalledWith(
         '/jugadores/ranking?estrategia=variacion-semanal',
+      )
+    })
+  })
+
+  describe('obtenerCotizacionPorSemana', () => {
+    it('pide GET /jugadores/{id}/cotizaciones/{semana}', async () => {
+      await obtenerCotizacionPorSemana('jugador-1', '2026-W44')
+
+      expect(client.apiFetch).toHaveBeenCalledWith(
+        '/jugadores/jugador-1/cotizaciones/2026-W44',
+      )
+    })
+
+    it('incluye estrategia cuando se especifica', async () => {
+      await obtenerCotizacionPorSemana(
+        'jugador-1',
+        '2026-W44',
+        'RENDIMIENTO_TEMPORADA',
+      )
+
+      expect(client.apiFetch).toHaveBeenCalledWith(
+        '/jugadores/jugador-1/cotizaciones/2026-W44?estrategia=RENDIMIENTO_TEMPORADA',
       )
     })
   })

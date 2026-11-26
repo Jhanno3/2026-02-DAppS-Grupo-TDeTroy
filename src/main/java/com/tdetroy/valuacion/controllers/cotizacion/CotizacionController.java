@@ -6,6 +6,7 @@ import com.tdetroy.valuacion.model.cotizacion.EstrategiaCotizacion;
 import com.tdetroy.valuacion.model.cotizacion.OrigenCotizacion;
 import com.tdetroy.valuacion.services.cotizacion.CotizacionService;
 import com.tdetroy.valuacion.services.rendimiento.RendimientoService;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -44,11 +45,12 @@ public class CotizacionController {
     }
 
     @PostMapping("/recalculo")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'RECALCULO_API_KEY')")
     public ResponseEntity<Void> recalcular(
             @RequestParam(required = false) EstrategiaCotizacion estrategia,
             @AuthenticationPrincipal UsuarioPrincipal principal) {
-        cotizacionService.recalcular(OrigenCotizacion.MANUAL, estrategia, principal.getUsuarioId());
+        UUID actorId = principal != null ? principal.getUsuarioId() : null;
+        cotizacionService.recalcular(OrigenCotizacion.MANUAL, estrategia, actorId);
         return ResponseEntity.accepted().build();
     }
 

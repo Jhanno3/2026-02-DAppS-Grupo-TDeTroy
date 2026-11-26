@@ -118,6 +118,8 @@ public class SecurityConfig {
     @Value("${app.metricas.token:}")
     private String metricasToken;
 
+    @Value("${app.cotizacion.recalculo-api-key:}")
+    private String recalculoApiKey;
     @Value("${app.pagos.api-key:}")
     private String pagosApiKey;
 
@@ -181,6 +183,10 @@ public class SecurityConfig {
                                         .requestMatchers(HttpMethod.GET, MetricasTokenFilter.RUTA)
                                         .hasAnyAuthority(
                                                 MetricasTokenFilter.AUTORIDAD, "ROLE_ADMIN")
+                                        .requestMatchers(
+                                                HttpMethod.POST, ApiKeyRecalculoFilter.RUTA)
+                                        .hasAnyAuthority(
+                                                ApiKeyRecalculoFilter.AUTORIDAD, "ROLE_ADMIN")
                                         .requestMatchers(RUTAS_ACTUATOR)
                                         .hasRole("ADMIN")
                                         .requestMatchers(RUTAS_PUBLICAS_AUTH)
@@ -201,6 +207,8 @@ public class SecurityConfig {
                         new MetricasTokenFilter(metricasToken),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(
+                        new ApiKeyRecalculoFilter(recalculoApiKey),
+                        UsernamePasswordAuthenticationFilter.class);
                         new ApiKeySaldoFilter(pagosApiKey, problemDetailResponseWriter),
                         JwtAuthenticationFilter.class);
 

@@ -255,4 +255,62 @@ describe('JugadorDetallePage', () => {
       screen.queryByRole('link', { name: 'Subastar →' }),
     ).not.toBeInTheDocument()
   })
+
+  it('permite consultar la cotización de una semana puntual', async () => {
+    vi.mocked(jugadoresApi.obtenerCotizacionPorSemana).mockResolvedValue(
+      cotizacion('2026-W43', '100.00'),
+    )
+    const user = userEvent.setup()
+    renderFicha()
+
+    await user.type(
+      await screen.findByLabelText(/Consultar semana puntual/i),
+      '2026-W43',
+    )
+    await user.click(screen.getByRole('button', { name: 'Buscar' }))
+
+    expect(jugadoresApi.obtenerCotizacionPorSemana).toHaveBeenCalledWith(
+      'j1',
+      '2026-W43',
+      undefined,
+    )
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      /Semana 2026-W43:.*100,00/i,
+    )
+  })
+
+  it('muestra error si el formato de la semana es inválido', async () => {
+    const user = userEvent.setup()
+    renderFicha()
+
+    await user.type(
+      await screen.findByLabelText(/Consultar semana puntual/i),
+      'invalido',
+    )
+    await user.click(screen.getByRole('button', { name: 'Buscar' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Formato inválido. Usá AAAA-Wss (ej. 2026-W44).',
+    )
+    expect(jugadoresApi.obtenerCotizacionPorSemana).not.toHaveBeenCalled()
+  })
+
+  it('muestra aviso cuando no hay cotización en la semana consultada', async () => {
+    const { ApiError } = await import('../../api/client')
+    vi.mocked(jugadoresApi.obtenerCotizacionPorSemana).mockRejectedValueOnce(
+      new ApiError(404, 'No encontrado', undefined),
+    )
+    const user = userEvent.setup()
+    renderFicha()
+
+    await user.type(
+      await screen.findByLabelText(/Consultar semana puntual/i),
+      '2026-W10',
+    )
+    await user.click(screen.getByRole('button', { name: 'Buscar' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No hay cotización registrada para esa semana.',
+    )
+  })
 })
