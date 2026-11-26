@@ -144,8 +144,22 @@ export interface CotizacionResponse {
  * UC-08: historial cronológico de cotización de un jugador, público (sin cuenta). Un jugador sin
  * cálculos todavía devuelve `[]` — no es un error (spec.md UC-08).
  */
+export type EstrategiaCotizacion =
+  'RENDIMIENTO_TEMPORADA' | 'RENDIMIENTO_ACTUAL'
+
 export function listarCotizaciones(id: string): Promise<CotizacionResponse[]> {
   return apiFetch<CotizacionResponse[]>(`/jugadores/${id}/cotizaciones`)
+}
+
+export function obtenerCotizacionPorSemana(
+  id: string,
+  semana: string,
+  estrategia?: EstrategiaCotizacion,
+): Promise<CotizacionResponse> {
+  const query = estrategia ? `?estrategia=${estrategia}` : ''
+  return apiFetch<CotizacionResponse>(
+    `/jugadores/${id}/cotizaciones/${encodeURIComponent(semana)}${query}`,
+  )
 }
 
 export interface EstadisticasTemporadaResponse {

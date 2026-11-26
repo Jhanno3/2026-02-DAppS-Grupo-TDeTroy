@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import {
   listarCotizaciones,
+  obtenerCotizacionPorSemana,
   obtenerEstadisticas,
   obtenerJugador,
   type CotizacionResponse,
   type EstadisticasTemporadaResponse,
+  type EstrategiaCotizacion,
   type JugadorResponse,
 } from '../../api/jugadores'
 import { listarOfertas } from '../../api/ofertas'
@@ -55,6 +57,15 @@ export function JugadorDetallePage() {
   const { id } = useParams<{ id: string }>()
   const { tema, alternar } = useTema()
   const [rango, setRango] = useState<Rango>('Todo')
+  const [semanaInput, setSemanaInput] = useState('')
+  const [estrategiaInput, setEstrategiaInput] = useState<
+    EstrategiaCotizacion | ''
+  >('')
+  const [consultaSemana, setConsultaSemana] = useState<{
+    semana: string
+    estrategia?: EstrategiaCotizacion
+  } | null>(null)
+  const [errorSemana, setErrorSemana] = useState<string | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['jugadores', id],
@@ -68,11 +79,43 @@ export function JugadorDetallePage() {
     enabled: Boolean(id),
   })
 
+  const cotizacionSemana = useQuery({
+    queryKey: [
+      'cotizacion-semana',
+      id,
+      consultaSemana?.semana,
+      consultaSemana?.estrategia,
+    ],
+    queryFn: () =>
+      obtenerCotizacionPorSemana(
+        id!,
+        consultaSemana!.semana,
+        consultaSemana!.estrategia,
+      ),
+    enabled: Boolean(id && consultaSemana),
+    retry: false,
+  })
+
   const estadisticas = useQuery({
     queryKey: ['estadisticas', id],
     queryFn: () => obtenerEstadisticas(id!),
     enabled: Boolean(id),
   })
+
+  function manejarBuscarSemana(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const limpia = semanaInput.trim().toUpperCase()
+    if (!/^\d{4}-W\d{2}$/.test(limpia)) {
+      setErrorSemana('Formato inválido. Usá AAAA-Wss (ej. 2026-W44).')
+      setConsultaSemana(null)
+      return
+    }
+    setErrorSemana(null)
+    setConsultaSemana({
+      semana: limpia,
+      estrategia: estrategiaInput || undefined,
+    })
+  }
 
   const historial = cotizaciones.data ?? []
   const semanasDelRango = RANGOS.find((r) => r.id === rango)!.semanas
@@ -160,6 +203,82 @@ export function JugadorDetallePage() {
                   {cotizaciones.data && (
                     <GraficoCotizaciones cotizaciones={historialVisible} />
                   )}
+
+                  <div className={styles.consultaSemana}>
+                    <form
+                      className={styles.consultaSemanaForm}
+                      onSubmit={manejarBuscarSemana}
+                    >
+                      <label htmlFor="buscar-semana">
+                        Consultar semana puntual
+                      </label>
+                      <input
+                        id="buscar-semana"
+                        type="text"
+                        className={styles.consultaSemanaInput}
+                        value={semanaInput}
+                        onChange={(e) => setSemanaInput(e.target.value)}
+                        placeholder="Ej. 2026-W44"
+                        maxLength={8}
+                      />
+                      <select
+                        aria-label="Estrategia para semana"
+                        className={styles.consultaSemanaSelect}
+                        value={estrategiaInput}
+                        onChange={(e) =>
+                          setEstrategiaInput(
+                            e.target.value as EstrategiaCotizacion | '',
+                          )
+                        }
+                      >
+                        <option value="">Estrategia por defecto</option>
+                        <option value="RENDIMIENTO_ACTUAL">
+                          Rendimiento actual
+                        </option>
+                        <option value="RENDIMIENTO_TEMPORADA">
+                          Rendimiento temporada
+                        </option>
+                      </select>
+                      <button
+                        type="submit"
+                        className={styles.consultaSemanaBoton}
+                      >
+                        Buscar
+                      </button>
+                    </form>
+
+                    {errorSemana && (
+                      <p role="alert" className={styles.consultaSemanaError}>
+                        {errorSemana}
+                      </p>
+                    )}
+
+                    {cotizacionSemana.isLoading && (
+                      <p className={styles.muted}>Buscando semana…</p>
+                    )}
+
+                    {cotizacionSemana.isError && (
+                      <p role="alert" className={styles.consultaSemanaError}>
+                        {cotizacionSemana.error instanceof ApiError &&
+                        cotizacionSemana.error.status === 404
+                          ? 'No hay cotización registrada para esa semana.'
+                          : 'No se pudo consultar la cotización de esa semana.'}
+                      </p>
+                    )}
+
+                    {cotizacionSemana.data && (
+                      <p
+                        role="status"
+                        className={styles.consultaSemanaResultado}
+                      >
+                        Semana {cotizacionSemana.data.semana}:{' '}
+                        <strong>
+                          {formatearMoneda(cotizacionSemana.data.valor)}
+                        </strong>{' '}
+                        ({cotizacionSemana.data.origen})
+                      </p>
+                    )}
+                  </div>
                 </section>
 
                 <Rendimiento

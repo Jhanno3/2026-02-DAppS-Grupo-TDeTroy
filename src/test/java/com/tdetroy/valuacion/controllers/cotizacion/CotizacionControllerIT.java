@@ -7,6 +7,7 @@ import com.tdetroy.valuacion.model.usuario.RolUsuario;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,6 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 class CotizacionControllerIT {
 
     @Autowired private JwtService jwtService;
+
+    @Value("${app.cotizacion.recalculo-api-key}")
+    private String recalculoApiKey;
 
     private MockMvcTester mvc;
 
@@ -73,6 +77,24 @@ class CotizacionControllerIT {
                 .header("Authorization", "Bearer " + tokenAdmin())
                 .assertThat()
                 .hasStatus(202);
+    }
+
+    @Test
+    void recalcular_soloConApiKeyValida_responde202SinJwt() {
+        mvc.post()
+                .uri("/api/v1/cotizaciones/recalculo")
+                .header("X-API-Key", recalculoApiKey)
+                .assertThat()
+                .hasStatus(202);
+    }
+
+    @Test
+    void recalcular_conApiKeyInvalidaYSinJwt_responde401() {
+        mvc.post()
+                .uri("/api/v1/cotizaciones/recalculo")
+                .header("X-API-Key", "clave-incorrecta")
+                .assertThat()
+                .hasStatus(401);
     }
 
     // ---- POST /cotizaciones/ingesta-rendimiento (ADMIN) ----

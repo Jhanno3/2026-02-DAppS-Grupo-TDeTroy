@@ -118,6 +118,9 @@ public class SecurityConfig {
     @Value("${app.metricas.token:}")
     private String metricasToken;
 
+    @Value("${app.cotizacion.recalculo-api-key:}")
+    private String recalculoApiKey;
+
     public SecurityConfig(
             ProblemDetailResponseWriter problemDetailResponseWriter,
             JwtAuthenticationFilter jwtAuthenticationFilter) {
@@ -178,6 +181,10 @@ public class SecurityConfig {
                                         .requestMatchers(HttpMethod.GET, MetricasTokenFilter.RUTA)
                                         .hasAnyAuthority(
                                                 MetricasTokenFilter.AUTORIDAD, "ROLE_ADMIN")
+                                        .requestMatchers(
+                                                HttpMethod.POST, ApiKeyRecalculoFilter.RUTA)
+                                        .hasAnyAuthority(
+                                                ApiKeyRecalculoFilter.AUTORIDAD, "ROLE_ADMIN")
                                         .requestMatchers(RUTAS_ACTUATOR)
                                         .hasRole("ADMIN")
                                         .requestMatchers(RUTAS_PUBLICAS_AUTH)
@@ -196,6 +203,9 @@ public class SecurityConfig {
                         jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(
                         new MetricasTokenFilter(metricasToken),
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(
+                        new ApiKeyRecalculoFilter(recalculoApiKey),
                         UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -212,7 +222,11 @@ public class SecurityConfig {
         configuracion.setAllowedOrigins(origenesPermitidos);
         configuracion.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
         configuracion.setAllowedHeaders(
-                List.of("Authorization", "Content-Type", CorrelationId.HEADER));
+                List.of(
+                        "Authorization",
+                        "Content-Type",
+                        CorrelationId.HEADER,
+                        ApiKeyRecalculoFilter.HEADER));
         configuracion.setExposedHeaders(List.of(CorrelationId.HEADER));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

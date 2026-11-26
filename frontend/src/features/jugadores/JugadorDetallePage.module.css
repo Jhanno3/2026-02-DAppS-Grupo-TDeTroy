@@ -390,3 +390,54 @@
 .listaSubastas a:hover {
   border-color: var(--t-line-strong);
 }
+
+.consultaSemana {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--t-line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.consultaSemanaForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.consultaSemanaInput,
+.consultaSemanaSelect {
+  padding: 6px 10px;
+  border: 1px solid var(--t-line-strong);
+  border-radius: 8px;
+  background: var(--t-inset);
+  color: var(--t-text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.consultaSemanaBoton {
+  padding: 6px 14px;
+  border: 1px solid var(--t-accent);
+  border-radius: 8px;
+  background: var(--t-accent);
+  color: #0b0e11;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.consultaSemanaResultado {
+  margin: 0;
+  font-size: 13px;
+  color: var(--t-text);
+}
+
+.consultaSemanaError {
+  margin: 0;
+  font-size: 13px;
+  color: #f87171;
+}
