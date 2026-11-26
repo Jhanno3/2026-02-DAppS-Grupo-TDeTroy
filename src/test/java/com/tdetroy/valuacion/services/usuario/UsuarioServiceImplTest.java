@@ -45,12 +45,15 @@ class UsuarioServiceImplTest {
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private MovimientoRepository movimientoRepository;
     @Mock private AuditoriaService auditoriaService;
+    @Mock private PasarelaPagos pasarelaPagos;
 
     private UsuarioServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new UsuarioServiceImpl(usuarioRepository, movimientoRepository, auditoriaService);
+        service =
+                new UsuarioServiceImpl(
+                        usuarioRepository, movimientoRepository, auditoriaService, pasarelaPagos);
     }
 
     // ---- registrar (UC-01) ----
@@ -160,5 +163,31 @@ class UsuarioServiceImplTest {
 
         assertThat(usuario.getSaldoVirtual()).isEqualByComparingTo(BigDecimal.ZERO);
         verifyNoInteractions(movimientoRepository, auditoriaService);
+    }
+
+    @Test
+    void cargarSaldoPropio_conPagoAprobado_acreditaRegistraMovimientoYAudita() {
+        UUID usuarioId = UUID.randomUUID();
+        Usuario usuario = Usuario.registrar(EMAIL, PASSWORD_HASH);
+        var tarjeta =
+                new PasarelaPagos.DatosTarjeta("4532123456789010", "Juan Perez", "12/30", "123");
+        when(pasarelaPagos.procesarPago(new BigDecimal("200.00"), tarjeta))
+                .thenReturn(new PasarelaPagos.ResultadoPago("PAY-12345678", "9010"));
+        when(usuarioRepository.findById(usuarioId))
+                .thenReturn(Optional.of(UsuarioEntity.desde(usuario)));
+
+        Usuario resultado = service.cargarSaldoPropio(usuarioId, new BigDecimal("200.00"), tarjeta);
+
+        assertThat(resultado.getSaldoVirtual()).isEqualByComparingTo("200.00");
+        verify(usuarioRepository).save(any(UsuarioEntity.class));
+        verify(movimientoRepository).save(any(MovimientoEntity.class));
+        verify(auditoriaService)
+                .registrar(
+                        eq(usuarioId),
+                        eq("CARGA_SALDO_PASARELA"),
+                        eq("Usuario"),
+                        eq(usuarioId),
+                        any(),
+                        any());
     }
 }

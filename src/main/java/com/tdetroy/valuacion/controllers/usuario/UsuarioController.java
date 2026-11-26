@@ -1,9 +1,11 @@
 package com.tdetroy.valuacion.controllers.usuario;
 
 import com.tdetroy.valuacion.config.seguridad.UsuarioPrincipal;
+import com.tdetroy.valuacion.dto.usuario.CargarSaldoRequest;
 import com.tdetroy.valuacion.dto.usuario.RecargarSaldoRequest;
 import com.tdetroy.valuacion.dto.usuario.UsuarioResponse;
 import com.tdetroy.valuacion.model.usuario.Usuario;
+import com.tdetroy.valuacion.services.usuario.PasarelaPagos;
 import com.tdetroy.valuacion.services.usuario.UsuarioService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -29,6 +31,22 @@ public class UsuarioController {
 
     public UsuarioController(UsuarioService usuarioService) {
         this.usuarioService = usuarioService;
+    }
+
+    @PostMapping("/me/saldo")
+    public UsuarioResponse cargarSaldoPropio(
+            @Valid @RequestBody CargarSaldoRequest request,
+            @AuthenticationPrincipal UsuarioPrincipal principal) {
+        PasarelaPagos.DatosTarjeta tarjeta =
+                new PasarelaPagos.DatosTarjeta(
+                        request.numeroTarjeta(),
+                        request.titular(),
+                        request.vencimiento(),
+                        request.codigoSeguridad());
+        Usuario usuario =
+                usuarioService.cargarSaldoPropio(
+                        principal.getUsuarioId(), request.monto(), tarjeta);
+        return UsuarioResponse.desde(usuario);
     }
 
     /** UC-14. {@code actorId} sale del JWT ya validado, nunca del body de la request. */

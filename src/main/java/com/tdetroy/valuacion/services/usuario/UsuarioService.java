@@ -35,4 +35,9 @@ public interface UsuarioService {
      * @throws IllegalArgumentException si {@code monto} no es mayor a cero
      */
     Usuario recargarSaldo(UUID usuarioId, BigDecimal monto, UUID actorId);
+
+    Usuario cargarSaldoPropio(UUID usuarioId, BigDecimal monto, PasarelaPagos.DatosTarjeta tarjeta);
+
+    Usuario cargarSaldoPropio(
+            UUID usuarioId, BigDecimal monto, PasarelaPagos.DatosTarjeta tarjeta);
 }

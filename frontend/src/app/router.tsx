@@ -6,6 +6,7 @@ import { RequireAuth } from '../features/auth/RequireAuth'
 import { JugadorDetallePage } from '../features/jugadores/JugadorDetallePage'
 import { OfertaP2PJugadorPage } from '../features/jugadores/OfertaP2PJugadorPage'
 import { CarteraPage } from '../features/cartera/CarteraPage'
+import { CargarSaldoPage } from '../features/cartera/CargarSaldoPage'
 import { MovimientosPage } from '../features/cartera/MovimientosPage'
 import { MercadoPage } from '../features/mercado/MercadoPage'
 import { P2PPage } from '../features/p2p/P2PPage'
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
         element: <RequireAuth />,
         children: [
           { index: true, element: <CarteraPage /> },
+          { path: 'cargar-saldo', element: <CargarSaldoPage /> },
           { path: 'movimientos', element: <MovimientosPage /> },
         ],
       },

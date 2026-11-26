@@ -2,6 +2,7 @@ package com.tdetroy.valuacion.controllers.usuario;
 
 import static org.springframework.test.web.servlet.assertj.MockMvcTester.create;
 
+import com.tdetroy.valuacion.config.seguridad.ApiKeySaldoFilter;
 import com.tdetroy.valuacion.config.seguridad.JwtService;
 import com.tdetroy.valuacion.model.usuario.RolUsuario;
 import com.tdetroy.valuacion.model.usuario.Usuario;
@@ -9,6 +10,7 @@ import com.tdetroy.valuacion.services.usuario.UsuarioService;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -33,6 +35,9 @@ class UsuarioControllerIT {
 
     @Autowired private JwtService jwtService;
     @Autowired private UsuarioService usuarioService;
+
+    @Value("${app.pagos.api-key}")
+    private String pagosApiKey;
 
     private MockMvcTester mvc;
 
@@ -60,6 +65,20 @@ class UsuarioControllerIT {
 
         mvc.post()
                 .uri("/api/v1/usuarios/{id}/saldo", usuario.getId())
+                .header(ApiKeySaldoFilter.HEADER, pagosApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"monto\":100.00}")
+                .assertThat()
+                .hasStatus(401);
+    }
+
+    @Test
+    void recargarSaldo_sinApiKey_responde401() {
+        Usuario usuario = crearUsuario();
+
+        mvc.post()
+                .uri("/api/v1/usuarios/{id}/saldo", usuario.getId())
+                .header("Authorization", "Bearer " + tokenAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"monto\":100.00}")
                 .assertThat()
@@ -72,6 +91,7 @@ class UsuarioControllerIT {
 
         mvc.post()
                 .uri("/api/v1/usuarios/{id}/saldo", usuario.getId())
+                .header(ApiKeySaldoFilter.HEADER, pagosApiKey)
                 .header("Authorization", "Bearer " + tokenUser())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"monto\":100.00}")
@@ -85,6 +105,7 @@ class UsuarioControllerIT {
 
         mvc.post()
                 .uri("/api/v1/usuarios/{id}/saldo", usuario.getId())
+                .header(ApiKeySaldoFilter.HEADER, pagosApiKey)
                 .header("Authorization", "Bearer " + tokenAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"monto\":150.50}")
@@ -99,6 +120,7 @@ class UsuarioControllerIT {
     void recargarSaldo_conUsuarioInexistente_responde404() {
         mvc.post()
                 .uri("/api/v1/usuarios/{id}/saldo", UUID.randomUUID())
+                .header(ApiKeySaldoFilter.HEADER, pagosApiKey)
                 .header("Authorization", "Bearer " + tokenAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"monto\":100.00}")
@@ -113,6 +135,7 @@ class UsuarioControllerIT {
 
         mvc.post()
                 .uri("/api/v1/usuarios/{id}/saldo", usuario.getId())
+                .header(ApiKeySaldoFilter.HEADER, pagosApiKey)
                 .header("Authorization", "Bearer " + tokenAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"monto\":0}")
@@ -126,6 +149,7 @@ class UsuarioControllerIT {
 
         mvc.post()
                 .uri("/api/v1/usuarios/{id}/saldo", usuario.getId())
+                .header(ApiKeySaldoFilter.HEADER, pagosApiKey)
                 .header("Authorization", "Bearer " + tokenAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"monto\":-10.00}")
@@ -139,9 +163,164 @@ class UsuarioControllerIT {
 
         mvc.post()
                 .uri("/api/v1/usuarios/{id}/saldo", usuario.getId())
+                .header(ApiKeySaldoFilter.HEADER, pagosApiKey)
                 .header("Authorization", "Bearer " + tokenAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}")
+                .assertThat()
+                .hasStatus(400);
+    }
+
+    @Test
+    void cargarSaldoPropio_conJwtYApiKeyYTarjetaValida_acreditaSaldoYResponde200() {
+        Usuario usuario = crearUsuario();
+        String jwtUsuario =
+                jwtService.generarToken(usuario.getId(), usuario.getEmail(), RolUsuario.USER);
+        String body =
+                """
+                {
+                  "monto": 300.00,
+                  "numeroTarjeta": "4532123456789010",
+                  "titular": "Juan Perez",
+                  "vencimiento": "12/30",
+                  "codigoSeguridad": "123"
+                }
+                """;
+
+        mvc.post()
+                .uri("/api/v1/usuarios/me/saldo")
+                .header(ApiKeySaldoFilter.HEADER, pagosApiKey)
+                .header("Authorization", "Bearer " + jwtUsuario)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .assertThat()
+                .hasStatus(200)
+                .bodyText()
+                .contains("\"saldoVirtual\":300.00")
+                .contains("\"id\":\"" + usuario.getId() + "\"");
+    }
+
+    @Test
+    void cargarSaldoPropio_sinApiKey_responde401() {
+        Usuario usuario = crearUsuario();
+        String jwtUsuario =
+                jwtService.generarToken(usuario.getId(), usuario.getEmail(), RolUsuario.USER);
+        String body =
+                """
+                {
+                  "monto": 100.00,
+                  "numeroTarjeta": "4532123456789010",
+                  "titular": "Juan Perez",
+                  "vencimiento": "12/30",
+                  "codigoSeguridad": "123"
+                }
+                """;
+
+        mvc.post()
+                .uri("/api/v1/usuarios/me/saldo")
+                .header("Authorization", "Bearer " + jwtUsuario)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .assertThat()
+                .hasStatus(401);
+    }
+
+    @Test
+    void cargarSaldoPropio_conApiKeyInvalida_responde401() {
+        Usuario usuario = crearUsuario();
+        String jwtUsuario =
+                jwtService.generarToken(usuario.getId(), usuario.getEmail(), RolUsuario.USER);
+        String body =
+                """
+                {
+                  "monto": 100.00,
+                  "numeroTarjeta": "4532123456789010",
+                  "titular": "Juan Perez",
+                  "vencimiento": "12/30",
+                  "codigoSeguridad": "123"
+                }
+                """;
+
+        mvc.post()
+                .uri("/api/v1/usuarios/me/saldo")
+                .header(ApiKeySaldoFilter.HEADER, "clave-incorrecta")
+                .header("Authorization", "Bearer " + jwtUsuario)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .assertThat()
+                .hasStatus(401);
+    }
+
+    @Test
+    void cargarSaldoPropio_conApiKeyValidaPeroSinJwt_responde401() {
+        String body =
+                """
+                {
+                  "monto": 100.00,
+                  "numeroTarjeta": "4532123456789010",
+                  "titular": "Juan Perez",
+                  "vencimiento": "12/30",
+                  "codigoSeguridad": "123"
+                }
+                """;
+
+        mvc.post()
+                .uri("/api/v1/usuarios/me/saldo")
+                .header(ApiKeySaldoFilter.HEADER, pagosApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .assertThat()
+                .hasStatus(401);
+    }
+
+    @Test
+    void cargarSaldoPropio_conTarjetaVencida_responde409() {
+        Usuario usuario = crearUsuario();
+        String jwtUsuario =
+                jwtService.generarToken(usuario.getId(), usuario.getEmail(), RolUsuario.USER);
+        String body =
+                """
+                {
+                  "monto": 100.00,
+                  "numeroTarjeta": "4532123456789010",
+                  "titular": "Juan Perez",
+                  "vencimiento": "01/20",
+                  "codigoSeguridad": "123"
+                }
+                """;
+
+        mvc.post()
+                .uri("/api/v1/usuarios/me/saldo")
+                .header(ApiKeySaldoFilter.HEADER, pagosApiKey)
+                .header("Authorization", "Bearer " + jwtUsuario)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .assertThat()
+                .hasStatus(409);
+    }
+
+    @Test
+    void cargarSaldoPropio_conDatosTarjetaInvalidos_responde400() {
+        Usuario usuario = crearUsuario();
+        String jwtUsuario =
+                jwtService.generarToken(usuario.getId(), usuario.getEmail(), RolUsuario.USER);
+        String body =
+                """
+                {
+                  "monto": 100.00,
+                  "numeroTarjeta": "123",
+                  "titular": "J",
+                  "vencimiento": "99/99",
+                  "codigoSeguridad": "1"
+                }
+                """;
+
+        mvc.post()
+                .uri("/api/v1/usuarios/me/saldo")
+                .header(ApiKeySaldoFilter.HEADER, pagosApiKey)
+                .header("Authorization", "Bearer " + jwtUsuario)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
                 .assertThat()
                 .hasStatus(400);
     }
