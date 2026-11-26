@@ -7,11 +7,15 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 
 @Service
 public class PasarelaPagosFakeImpl implements PasarelaPagos {
 
+    private static final Pattern PATRON_TARJETA = Pattern.compile("^\\d{16}$");
+    private static final Pattern PATRON_CVV = Pattern.compile("^\\d{3,4}$");
+    private static final Pattern PATRON_VENCIMIENTO = Pattern.compile("^(0[1-9]|1[0-2])/\\d{2}$");
     private static final DateTimeFormatter FORMATO_VENCIMIENTO =
             DateTimeFormatter.ofPattern("MM/yy");
 
@@ -22,13 +26,14 @@ public class PasarelaPagosFakeImpl implements PasarelaPagos {
         }
         if (tarjeta == null
                 || tarjeta.numeroTarjeta() == null
-                || !tarjeta.numeroTarjeta().matches("^\\d{16}$")) {
+                || !PATRON_TARJETA.matcher(tarjeta.numeroTarjeta()).matches()) {
             throw new PagoRechazadoException("El número de tarjeta debe tener 16 dígitos.");
         }
         if (tarjeta.titular() == null || tarjeta.titular().isBlank()) {
             throw new PagoRechazadoException("El titular de la tarjeta es obligatorio.");
         }
-        if (tarjeta.codigoSeguridad() == null || !tarjeta.codigoSeguridad().matches("^\\d{3,4}$")) {
+        if (tarjeta.codigoSeguridad() == null
+                || !PATRON_CVV.matcher(tarjeta.codigoSeguridad()).matches()) {
             throw new PagoRechazadoException("El código de seguridad debe tener 3 o 4 dígitos.");
         }
         validarVencimiento(tarjeta.vencimiento());
@@ -40,7 +45,7 @@ public class PasarelaPagosFakeImpl implements PasarelaPagos {
     }
 
     private void validarVencimiento(String vencimiento) {
-        if (vencimiento == null || !vencimiento.matches("^(0[1-9]|1[0-2])/\\d{2}$")) {
+        if (vencimiento == null || !PATRON_VENCIMIENTO.matcher(vencimiento).matches()) {
             throw new PagoRechazadoException("El vencimiento debe tener formato MM/AA.");
         }
         try {

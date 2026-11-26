@@ -46,6 +46,12 @@
   color: var(--accent);
 }
 
+.titleActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .kpis {
   margin: 0 0 2rem;
   display: grid;

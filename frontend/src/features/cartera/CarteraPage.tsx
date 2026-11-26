@@ -114,12 +114,8 @@ export function CarteraPage() {
       <main className={styles.container}>
         <div className={styles.titleRow}>
           <h1 className={styles.title}>Mi cartera</h1>
-          <div>
-            <Link
-              to="/cartera/cargar-saldo"
-              className={styles.historialLink}
-              style={{ marginRight: '1rem' }}
-            >
+          <div className={styles.titleActions}>
+            <Link to="/cartera/cargar-saldo" className={styles.historialLink}>
               Cargar saldo →
             </Link>
             <Link to="/cartera/movimientos" className={styles.historialLink}>

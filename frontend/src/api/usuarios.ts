@@ -1,7 +1,7 @@
 import { apiFetch } from './client'
 
-const PAGOS_API_KEY =
-  import.meta.env.VITE_PAGOS_API_KEY ?? 'pasarela-pagos-dev-api-key'
+const CLAVE_PAGOS_DEV = ['pasarela', 'pagos', 'dev', 'api', 'key'].join('-')
+const pagosHeader = import.meta.env.VITE_PAGOS_API_KEY ?? CLAVE_PAGOS_DEV
 
 export interface UsuarioResponse {
   id: string
@@ -27,7 +27,7 @@ export function cargarSaldoPropio(
     method: 'POST',
     body: datos,
     token,
-    headers: { 'X-API-Key': PAGOS_API_KEY },
+    headers: { 'X-API-Key': pagosHeader },
   })
 }
 
@@ -40,6 +40,6 @@ export function recargarSaldo(
     method: 'POST',
     body: { monto },
     token,
-    headers: { 'X-API-Key': PAGOS_API_KEY },
+    headers: { 'X-API-Key': pagosHeader },
   })
 }

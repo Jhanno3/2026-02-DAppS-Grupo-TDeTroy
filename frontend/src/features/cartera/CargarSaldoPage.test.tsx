@@ -128,4 +128,37 @@ describe('CargarSaldoPage', () => {
       'La tarjeta ingresada se encuentra vencida.',
     )
   })
+
+  it('muestra error de validación si vencimiento o CVV son inválidos', async () => {
+    const user = userEvent.setup()
+    renderPagina()
+
+    await user.type(screen.getByLabelText(/Monto a cargar/i), '100')
+    await user.type(
+      screen.getByLabelText(/Número de tarjeta/i),
+      '4532123456789010',
+    )
+    await user.type(
+      screen.getByLabelText(/Titular de la tarjeta/i),
+      'Juan Perez',
+    )
+    await user.type(screen.getByLabelText(/Vencimiento/i), '99/99')
+    await user.type(screen.getByLabelText(/Código de seguridad/i), '123')
+    await user.click(screen.getByRole('button', { name: 'Cargar saldo' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'El vencimiento debe tener formato MM/AA.',
+    )
+
+    await user.clear(screen.getByLabelText(/Vencimiento/i))
+    await user.type(screen.getByLabelText(/Vencimiento/i), '12/30')
+    await user.clear(screen.getByLabelText(/Código de seguridad/i))
+    await user.type(screen.getByLabelText(/Código de seguridad/i), '1')
+    await user.click(screen.getByRole('button', { name: 'Cargar saldo' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'El código de seguridad debe tener 3 o 4 dígitos.',
+    )
+    expect(usuariosApi.cargarSaldoPropio).not.toHaveBeenCalled()
+  })
 })

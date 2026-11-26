@@ -34,19 +34,47 @@ class PasarelaPagosFakeImplTest {
     }
 
     @Test
-    void procesarPago_numeroInvalido_lanzaPagoRechazado() {
-        var tarjeta = new PasarelaPagos.DatosTarjeta("1234", "Juan Perez", "12/30", "123");
+    void procesarPago_numeroInvalidoONull_lanzaPagoRechazado() {
+        var tarjetaCorta = new PasarelaPagos.DatosTarjeta("1234", "Juan Perez", "12/30", "123");
+        var tarjetaNull = new PasarelaPagos.DatosTarjeta(null, "Juan Perez", "12/30", "123");
 
-        assertThatThrownBy(() -> pasarela.procesarPago(new BigDecimal("100.00"), tarjeta))
+        assertThatThrownBy(() -> pasarela.procesarPago(new BigDecimal("100.00"), tarjetaCorta))
+                .isInstanceOf(PagoRechazadoException.class);
+        assertThatThrownBy(() -> pasarela.procesarPago(new BigDecimal("100.00"), tarjetaNull))
+                .isInstanceOf(PagoRechazadoException.class);
+        assertThatThrownBy(() -> pasarela.procesarPago(new BigDecimal("100.00"), null))
                 .isInstanceOf(PagoRechazadoException.class);
     }
 
     @Test
-    void procesarPago_montoInvalido_lanzaPagoRechazado() {
+    void procesarPago_titularCvvOVencimientoInvalidos_lanzaPagoRechazado() {
+        var sinTitular = new PasarelaPagos.DatosTarjeta("4532123456789010", "  ", "12/30", "123");
+        var cvvInvalido =
+                new PasarelaPagos.DatosTarjeta("4532123456789010", "Juan Perez", "12/30", "1");
+        var vencimientoInvalido =
+                new PasarelaPagos.DatosTarjeta("4532123456789010", "Juan Perez", "99/99", "123");
+        var vencimientoNull =
+                new PasarelaPagos.DatosTarjeta("4532123456789010", "Juan Perez", null, "123");
+
+        assertThatThrownBy(() -> pasarela.procesarPago(new BigDecimal("100.00"), sinTitular))
+                .isInstanceOf(PagoRechazadoException.class);
+        assertThatThrownBy(() -> pasarela.procesarPago(new BigDecimal("100.00"), cvvInvalido))
+                .isInstanceOf(PagoRechazadoException.class);
+        assertThatThrownBy(
+                        () -> pasarela.procesarPago(new BigDecimal("100.00"), vencimientoInvalido))
+                .isInstanceOf(PagoRechazadoException.class);
+        assertThatThrownBy(() -> pasarela.procesarPago(new BigDecimal("100.00"), vencimientoNull))
+                .isInstanceOf(PagoRechazadoException.class);
+    }
+
+    @Test
+    void procesarPago_montoInvalidoONull_lanzaPagoRechazado() {
         var tarjeta =
                 new PasarelaPagos.DatosTarjeta("4532123456789010", "Juan Perez", "12/30", "123");
 
         assertThatThrownBy(() -> pasarela.procesarPago(BigDecimal.ZERO, tarjeta))
+                .isInstanceOf(PagoRechazadoException.class);
+        assertThatThrownBy(() -> pasarela.procesarPago(null, tarjeta))
                 .isInstanceOf(PagoRechazadoException.class);
     }
 }
