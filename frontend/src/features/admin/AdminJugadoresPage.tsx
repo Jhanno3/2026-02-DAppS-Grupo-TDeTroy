@@ -89,6 +89,9 @@ export function AdminJugadoresPage() {
           <LinkButton to="/admin/saldo" variant="secondary" small>
             Recargar saldo
           </LinkButton>
+          <LinkButton to="/admin/metricas" variant="secondary" small>
+            Ponderación métricas
+          </LinkButton>
           <Button
             variant="secondary"
             small

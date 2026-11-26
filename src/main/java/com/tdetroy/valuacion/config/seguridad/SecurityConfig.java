@@ -120,6 +120,8 @@ public class SecurityConfig {
 
     @Value("${app.cotizacion.recalculo-api-key:}")
     private String recalculoApiKey;
+    @Value("${app.pagos.api-key:}")
+    private String pagosApiKey;
 
     public SecurityConfig(
             ProblemDetailResponseWriter problemDetailResponseWriter,
@@ -207,6 +209,8 @@ public class SecurityConfig {
                 .addFilterBefore(
                         new ApiKeyRecalculoFilter(recalculoApiKey),
                         UsernamePasswordAuthenticationFilter.class);
+                        new ApiKeySaldoFilter(pagosApiKey, problemDetailResponseWriter),
+                        JwtAuthenticationFilter.class);
 
         return http.build();
     }
@@ -226,7 +230,7 @@ public class SecurityConfig {
                         "Authorization",
                         "Content-Type",
                         CorrelationId.HEADER,
-                        ApiKeyRecalculoFilter.HEADER));
+                        ApiKeySaldoFilter.HEADER));
         configuracion.setExposedHeaders(List.of(CorrelationId.HEADER));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

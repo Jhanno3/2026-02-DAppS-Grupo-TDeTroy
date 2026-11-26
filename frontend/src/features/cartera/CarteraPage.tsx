@@ -114,9 +114,18 @@ export function CarteraPage() {
       <main className={styles.container}>
         <div className={styles.titleRow}>
           <h1 className={styles.title}>Mi cartera</h1>
-          <Link to="/cartera/movimientos" className={styles.historialLink}>
-            Ver historial de movimientos →
-          </Link>
+          <div>
+            <Link
+              to="/cartera/cargar-saldo"
+              className={styles.historialLink}
+              style={{ marginRight: '1rem' }}
+            >
+              Cargar saldo →
+            </Link>
+            <Link to="/cartera/movimientos" className={styles.historialLink}>
+              Ver historial de movimientos →
+            </Link>
+          </div>
         </div>
 
         {isLoading && <p>Cargando cartera…</p>}
