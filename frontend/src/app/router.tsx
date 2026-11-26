@@ -17,6 +17,7 @@ import { AdminRoute } from '../features/admin/AdminRoute'
 import { AdminJugadoresPage } from '../features/admin/AdminJugadoresPage'
 import { JugadorFormularioPage } from '../features/admin/JugadorFormularioPage'
 import { RecargarSaldoPage } from '../features/admin/RecargarSaldoPage'
+import { AdminMetricasPage } from '../features/admin/AdminMetricasPage'
 
 export const router = createBrowserRouter([
   {
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
           { path: 'jugadores/nuevo', element: <JugadorFormularioPage /> },
           { path: 'jugadores/:id/editar', element: <JugadorFormularioPage /> },
           { path: 'saldo', element: <RecargarSaldoPage /> },
+          { path: 'metricas', element: <AdminMetricasPage /> },
         ],
       },
     ],
