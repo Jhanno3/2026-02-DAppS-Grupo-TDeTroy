@@ -120,6 +120,7 @@ public class SecurityConfig {
 
     @Value("${app.cotizacion.recalculo-api-key:}")
     private String recalculoApiKey;
+
     @Value("${app.pagos.api-key:}")
     private String pagosApiKey;
 
@@ -208,7 +209,8 @@ public class SecurityConfig {
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(
                         new ApiKeyRecalculoFilter(recalculoApiKey),
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(
                         new ApiKeySaldoFilter(pagosApiKey, problemDetailResponseWriter),
                         JwtAuthenticationFilter.class);
 
