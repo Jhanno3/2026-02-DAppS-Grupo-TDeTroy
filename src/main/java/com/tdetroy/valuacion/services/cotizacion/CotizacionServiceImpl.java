@@ -20,8 +20,8 @@ import com.tdetroy.valuacion.repositories.cotizacion.CotizacionHistoricaReposito
 import com.tdetroy.valuacion.repositories.cotizacion.PesoMetricaRepository;
 import com.tdetroy.valuacion.repositories.jugador.JugadorRepository;
 import com.tdetroy.valuacion.repositories.rendimiento.RendimientoPartidoRepository;
+import com.tdetroy.valuacion.services.InvalidaRanking;
 import com.tdetroy.valuacion.services.auditoria.AuditoriaService;
-import com.tdetroy.valuacion.services.jugador.InvalidaRanking;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;

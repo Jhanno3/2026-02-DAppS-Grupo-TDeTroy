@@ -5,10 +5,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.tdetroy.valuacion.dto.cotizacion.ActualizarMetricasRequest;
-import com.tdetroy.valuacion.dto.cotizacion.ConfiguracionMetricaResponse;
 import com.tdetroy.valuacion.entity.cotizacion.PesoMetricaEntity;
 import com.tdetroy.valuacion.entity.cotizacion.PesoMetricaId;
+import com.tdetroy.valuacion.model.cotizacion.AjusteMetrica;
+import com.tdetroy.valuacion.model.cotizacion.ConfiguracionMetrica;
 import com.tdetroy.valuacion.model.cotizacion.PesoMetrica;
 import com.tdetroy.valuacion.model.cotizacion.SentidoMetrica;
 import com.tdetroy.valuacion.repositories.cotizacion.PesoMetricaRepository;
@@ -64,10 +64,10 @@ class ConfiguracionMetricaServiceImplTest {
 
         when(pesoMetricaRepository.findAll()).thenReturn(List.of(general, delantero, defensor));
 
-        List<ConfiguracionMetricaResponse> resultado = service.obtenerConfiguracion();
+        List<ConfiguracionMetrica> resultado = service.obtenerConfiguracion();
 
         assertThat(resultado).hasSize(1);
-        ConfiguracionMetricaResponse item = resultado.getFirst();
+        ConfiguracionMetrica item = resultado.getFirst();
         assertThat(item.clave()).isEqualTo("goals");
         assertThat(item.nombreLegible()).isEqualTo("Goles");
         assertThat(item.pesoGeneral()).isEqualByComparingTo("0.5000");
@@ -86,16 +86,15 @@ class ConfiguracionMetricaServiceImplTest {
         when(pesoMetricaRepository.findById(new PesoMetricaId("goals", "Delantero")))
                 .thenReturn(Optional.empty());
 
-        ActualizarMetricasRequest request =
-                new ActualizarMetricasRequest(
-                        List.of(
-                                new ActualizarMetricasRequest.ItemActualizarMetrica(
-                                        "goals",
-                                        new BigDecimal("0.2500"),
-                                        true,
-                                        Map.of("Delantero", new BigDecimal("0.2500")))));
+        List<AjusteMetrica> ajustes =
+                List.of(
+                        new AjusteMetrica(
+                                "goals",
+                                new BigDecimal("0.2500"),
+                                true,
+                                Map.of("Delantero", new BigDecimal("0.2500"))));
 
-        service.actualizarConfiguracion(request, actorId);
+        service.actualizarConfiguracion(ajustes, actorId);
 
         ArgumentCaptor<PesoMetricaEntity> captor = ArgumentCaptor.forClass(PesoMetricaEntity.class);
         verify(pesoMetricaRepository, org.mockito.Mockito.atLeast(2)).save(captor.capture());
@@ -121,6 +120,6 @@ class ConfiguracionMetricaServiceImplTest {
                         eq("PESOS_METRICA"),
                         eq(ConfiguracionMetricaServiceImpl.ENTIDAD_ID),
                         eq(null),
-                        eq(request));
+                        eq(Map.of("metricas", ajustes)));
     }
 }

@@ -1,5 +1,6 @@
 package com.tdetroy.valuacion.dto.cotizacion;
 
+import com.tdetroy.valuacion.model.cotizacion.ConfiguracionMetrica;
 import com.tdetroy.valuacion.model.cotizacion.SentidoMetrica;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -21,4 +22,15 @@ public record ConfiguracionMetricaResponse(
         SentidoMetrica sentido,
         boolean activo,
         BigDecimal pesoGeneral,
-        Map<String, BigDecimal> pesosPorPosicion) {}
+        Map<String, BigDecimal> pesosPorPosicion) {
+
+    public static ConfiguracionMetricaResponse desde(ConfiguracionMetrica configuracion) {
+        return new ConfiguracionMetricaResponse(
+                configuracion.clave(),
+                configuracion.nombreLegible(),
+                configuracion.sentido(),
+                configuracion.activo(),
+                configuracion.pesoGeneral(),
+                configuracion.pesosPorPosicion());
+    }
+}

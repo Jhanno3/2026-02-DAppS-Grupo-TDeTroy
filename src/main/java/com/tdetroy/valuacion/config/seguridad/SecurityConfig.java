@@ -112,23 +112,24 @@ public class SecurityConfig {
     private final ProblemDetailResponseWriter problemDetailResponseWriter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Value("${app.cors.allowed-origins:http://localhost:5173}")
-    private String allowedOriginsCsv;
-
-    @Value("${app.metricas.token:}")
-    private String metricasToken;
-
-    @Value("${app.cotizacion.recalculo-api-key:}")
-    private String recalculoApiKey;
-
-    @Value("${app.pagos.api-key:}")
-    private String pagosApiKey;
+    private final String allowedOriginsCsv;
+    private final String metricasToken;
+    private final String recalculoApiKey;
+    private final String pagosApiKey;
 
     public SecurityConfig(
             ProblemDetailResponseWriter problemDetailResponseWriter,
-            JwtAuthenticationFilter jwtAuthenticationFilter) {
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            @Value("${app.cors.allowed-origins:http://localhost:5173}") String allowedOriginsCsv,
+            @Value("${app.metricas.token:}") String metricasToken,
+            @Value("${app.cotizacion.recalculo-api-key:}") String recalculoApiKey,
+            @Value("${app.pagos.api-key:}") String pagosApiKey) {
         this.problemDetailResponseWriter = problemDetailResponseWriter;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.allowedOriginsCsv = allowedOriginsCsv;
+        this.metricasToken = metricasToken;
+        this.recalculoApiKey = recalculoApiKey;
+        this.pagosApiKey = pagosApiKey;
     }
 
     /** BCrypt (constitution.md §4: "Prohibido almacenar contraseñas en texto plano..."). */

@@ -43,6 +43,8 @@
 		     HTML en Java; no hay nada equivalente ya en el stack. 1.23.2 es la ultima estable
 		     (verificado en repo1.maven.org/maven2/org/jsoup/jsoup/maven-metadata.xml). -->
 		<jsoup.version>1.23.2</jsoup.version>
+		<!-- Tests de arquitectura (entrega 3), ver ArquitecturaTest. -->
+		<archunit.version>1.4.1</archunit.version>
 	</properties>
 	<dependencies>
 		<!-- Health checks y metricas (entrega 3): endpoints expuestos en application.properties, permisos
@@ -200,6 +202,12 @@
 		<dependency>
 			<groupId>org.skyscreamer</groupId>
 			<artifactId>jsonassert</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.tngtech.archunit</groupId>
+			<artifactId>archunit-junit5</artifactId>
+			<version>${archunit.version}</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

@@ -1,7 +1,7 @@
 package com.tdetroy.valuacion.services.cotizacion;
 
-import com.tdetroy.valuacion.dto.cotizacion.ActualizarMetricasRequest;
-import com.tdetroy.valuacion.dto.cotizacion.ConfiguracionMetricaResponse;
+import com.tdetroy.valuacion.model.cotizacion.AjusteMetrica;
+import com.tdetroy.valuacion.model.cotizacion.ConfiguracionMetrica;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,12 +12,11 @@ import java.util.UUID;
 public interface ConfiguracionMetricaService {
 
     /** Obtiene la lista completa de métricas configuradas, sus sentidos y pesos por posición. */
-    List<ConfiguracionMetricaResponse> obtenerConfiguracion();
+    List<ConfiguracionMetrica> obtenerConfiguracion();
 
     /**
      * Actualiza los pesos generales y específicos por posición de las métricas indicadas, dejando
      * traza en auditoría.
      */
-    List<ConfiguracionMetricaResponse> actualizarConfiguracion(
-            ActualizarMetricasRequest request, UUID actorId);
+    List<ConfiguracionMetrica> actualizarConfiguracion(List<AjusteMetrica> ajustes, UUID actorId);
 }

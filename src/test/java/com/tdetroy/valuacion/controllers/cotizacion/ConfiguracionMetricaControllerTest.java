@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.tdetroy.valuacion.config.seguridad.UsuarioPrincipal;
 import com.tdetroy.valuacion.dto.cotizacion.ActualizarMetricasRequest;
 import com.tdetroy.valuacion.dto.cotizacion.ConfiguracionMetricaResponse;
+import com.tdetroy.valuacion.model.cotizacion.ConfiguracionMetrica;
 import com.tdetroy.valuacion.model.cotizacion.SentidoMetrica;
 import com.tdetroy.valuacion.model.usuario.RolUsuario;
 import com.tdetroy.valuacion.services.cotizacion.ConfiguracionMetricaService;
@@ -34,8 +35,8 @@ class ConfiguracionMetricaControllerTest {
 
     @Test
     void obtenerConfiguracion_delegaEnService() {
-        ConfiguracionMetricaResponse item =
-                new ConfiguracionMetricaResponse(
+        ConfiguracionMetrica item =
+                new ConfiguracionMetrica(
                         "goals",
                         "Goles",
                         SentidoMetrica.POSITIVO,
@@ -46,7 +47,7 @@ class ConfiguracionMetricaControllerTest {
 
         List<ConfiguracionMetricaResponse> resultado = controller.obtenerConfiguracion();
 
-        assertThat(resultado).containsExactly(item);
+        assertThat(resultado).containsExactly(ConfiguracionMetricaResponse.desde(item));
         verify(configuracionMetricaService).obtenerConfiguracion();
     }
 
@@ -62,21 +63,21 @@ class ConfiguracionMetricaControllerTest {
                                 new ActualizarMetricasRequest.ItemActualizarMetrica(
                                         "goals", new BigDecimal("0.5"), true, Map.of())));
 
-        ConfiguracionMetricaResponse item =
-                new ConfiguracionMetricaResponse(
+        ConfiguracionMetrica item =
+                new ConfiguracionMetrica(
                         "goals",
                         "Goles",
                         SentidoMetrica.POSITIVO,
                         true,
                         new BigDecimal("0.5"),
                         Map.of());
-        when(configuracionMetricaService.actualizarConfiguracion(request, actorId))
+        when(configuracionMetricaService.actualizarConfiguracion(request.aModelo(), actorId))
                 .thenReturn(List.of(item));
 
         List<ConfiguracionMetricaResponse> resultado =
                 controller.actualizarConfiguracion(request, principal);
 
-        assertThat(resultado).containsExactly(item);
-        verify(configuracionMetricaService).actualizarConfiguracion(request, actorId);
+        assertThat(resultado).containsExactly(ConfiguracionMetricaResponse.desde(item));
+        verify(configuracionMetricaService).actualizarConfiguracion(request.aModelo(), actorId);
     }
 }
