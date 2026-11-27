@@ -1,5 +1,6 @@
 package com.tdetroy.valuacion.dto.cotizacion;
 
+import com.tdetroy.valuacion.model.cotizacion.AjusteMetrica;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -11,6 +12,18 @@ import java.util.Map;
 
 /** Request del administrador para actualizar la ponderación de una o más métricas. */
 public record ActualizarMetricasRequest(@NotEmpty List<@Valid ItemActualizarMetrica> metricas) {
+
+    public List<AjusteMetrica> aModelo() {
+        return metricas.stream()
+                .map(
+                        item ->
+                                new AjusteMetrica(
+                                        item.clave(),
+                                        item.pesoGeneral(),
+                                        item.activo(),
+                                        item.pesosPorPosicion()))
+                .toList();
+    }
 
     public record ItemActualizarMetrica(
             @NotBlank String clave,

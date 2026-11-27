@@ -1,9 +1,9 @@
 package com.tdetroy.valuacion.services.cotizacion;
 
-import com.tdetroy.valuacion.dto.cotizacion.ActualizarMetricasRequest;
-import com.tdetroy.valuacion.dto.cotizacion.ConfiguracionMetricaResponse;
 import com.tdetroy.valuacion.entity.cotizacion.PesoMetricaEntity;
 import com.tdetroy.valuacion.entity.cotizacion.PesoMetricaId;
+import com.tdetroy.valuacion.model.cotizacion.AjusteMetrica;
+import com.tdetroy.valuacion.model.cotizacion.ConfiguracionMetrica;
 import com.tdetroy.valuacion.model.cotizacion.PesoMetrica;
 import com.tdetroy.valuacion.model.cotizacion.SentidoMetrica;
 import com.tdetroy.valuacion.repositories.cotizacion.PesoMetricaRepository;
@@ -51,7 +51,7 @@ public class ConfiguracionMetricaServiceImpl implements ConfiguracionMetricaServ
 
     @Override
     @Transactional(readOnly = true)
-    public List<ConfiguracionMetricaResponse> obtenerConfiguracion() {
+    public List<ConfiguracionMetrica> obtenerConfiguracion() {
         List<PesoMetricaEntity> todas = pesoMetricaRepository.findAll();
         Map<String, List<PesoMetricaEntity>> agrupadas =
                 todas.stream()
@@ -61,7 +61,7 @@ public class ConfiguracionMetricaServiceImpl implements ConfiguracionMetricaServ
                                         LinkedHashMap::new,
                                         Collectors.toList()));
 
-        List<ConfiguracionMetricaResponse> response = new ArrayList<>();
+        List<ConfiguracionMetrica> configuraciones = new ArrayList<>();
         for (Map.Entry<String, List<PesoMetricaEntity>> entry : agrupadas.entrySet()) {
             String clave = entry.getKey();
             List<PesoMetricaEntity> entidades = entry.getValue();
@@ -83,8 +83,8 @@ public class ConfiguracionMetricaServiceImpl implements ConfiguracionMetricaServ
                         .ifPresent(e -> porPosicion.put(pos, e.getPeso()));
             }
 
-            response.add(
-                    new ConfiguracionMetricaResponse(
+            configuraciones.add(
+                    new ConfiguracionMetrica(
                             clave,
                             NOMBRES_LEGIBLES.getOrDefault(clave, clave),
                             general.getSentido(),
@@ -92,13 +92,13 @@ public class ConfiguracionMetricaServiceImpl implements ConfiguracionMetricaServ
                             general.getPeso(),
                             porPosicion));
         }
-        return response;
+        return configuraciones;
     }
 
     @Override
-    public List<ConfiguracionMetricaResponse> actualizarConfiguracion(
-            ActualizarMetricasRequest request, UUID actorId) {
-        for (ActualizarMetricasRequest.ItemActualizarMetrica item : request.metricas()) {
+    public List<ConfiguracionMetrica> actualizarConfiguracion(
+            List<AjusteMetrica> ajustes, UUID actorId) {
+        for (AjusteMetrica item : ajustes) {
             // Actualizar o crear fila GENERAL
             PesoMetricaEntity general =
                     pesoMetricaRepository
@@ -142,7 +142,12 @@ public class ConfiguracionMetricaServiceImpl implements ConfiguracionMetricaServ
         }
 
         auditoriaService.registrar(
-                actorId, ACCION_ACTUALIZACION, ENTIDAD, ENTIDAD_ID, null, request);
+                actorId,
+                ACCION_ACTUALIZACION,
+                ENTIDAD,
+                ENTIDAD_ID,
+                null,
+                Map.of("metricas", ajustes));
 
         return obtenerConfiguracion();
     }

@@ -25,6 +25,7 @@ import com.tdetroy.valuacion.repositories.cotizacion.ValorPorJugadorProjection;
 import com.tdetroy.valuacion.repositories.jugador.JugadorRepository;
 import com.tdetroy.valuacion.repositories.mercado.OfertaP2PRepository;
 import com.tdetroy.valuacion.repositories.usuario.UsuarioRepository;
+import com.tdetroy.valuacion.services.InvalidaRanking;
 import com.tdetroy.valuacion.services.auditoria.AuditoriaService;
 import com.tdetroy.valuacion.services.mercado.SubastaService;
 import java.math.BigDecimal;

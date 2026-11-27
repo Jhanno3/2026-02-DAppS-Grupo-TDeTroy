@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 
 import com.tdetroy.valuacion.config.CacheConfig;
 import com.tdetroy.valuacion.repositories.jugador.JugadorRepository;
+import com.tdetroy.valuacion.services.InvalidaRanking;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -29,7 +29,9 @@ public class ConfiguracionMetricaController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public List<ConfiguracionMetricaResponse> obtenerConfiguracion() {
-        return configuracionMetricaService.obtenerConfiguracion();
+        return configuracionMetricaService.obtenerConfiguracion().stream()
+                .map(ConfiguracionMetricaResponse::desde)
+                .toList();
     }
 
     /** Actualiza la ponderación de las métricas indicadas y audita el cambio. */
@@ -38,7 +40,10 @@ public class ConfiguracionMetricaController {
     public List<ConfiguracionMetricaResponse> actualizarConfiguracion(
             @Valid @RequestBody ActualizarMetricasRequest request,
             @AuthenticationPrincipal UsuarioPrincipal principal) {
-        return configuracionMetricaService.actualizarConfiguracion(
-                request, principal.getUsuarioId());
+        return configuracionMetricaService
+                .actualizarConfiguracion(request.aModelo(), principal.getUsuarioId())
+                .stream()
+                .map(ConfiguracionMetricaResponse::desde)
+                .toList();
     }
 }

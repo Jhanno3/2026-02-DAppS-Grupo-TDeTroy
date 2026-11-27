@@ -15,7 +15,7 @@ import com.tdetroy.valuacion.repositories.cartera.TenenciaTokenRepository;
 import com.tdetroy.valuacion.repositories.cotizacion.CotizacionHistoricaRepository;
 import com.tdetroy.valuacion.repositories.jugador.JugadorRepository;
 import com.tdetroy.valuacion.repositories.usuario.UsuarioRepository;
-import com.tdetroy.valuacion.services.jugador.InvalidaRanking;
+import com.tdetroy.valuacion.services.InvalidaRanking;
 import java.math.BigDecimal;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
