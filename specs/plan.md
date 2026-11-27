@@ -491,6 +491,18 @@ Toda operación que dispare un `Movimiento` de tipo `COMPRA_P2P`/`VENTA_P2P`/`CO
 | Motor de cotización con pesos mal calibrados produce valores poco realistas | Pesos en tabla `PesoMetrica`, ajustables sin deploy; `factorAjuste` acotado a ±20%/semana para evitar saltos extremos mientras se calibra. |
 | Job semanal corriendo sobre un catálogo grande tarda demasiado y bloquea otras operaciones | Cada jugador se calcula en su propia sub-transacción corta (§5), no una transacción global; el job corre fuera de horario pico (03:00). |
 
+### 11.1 SLAs de performance
+
+| Operación | Objetivo |
+|---|---|
+| Consultas (ranking, detalle, historial, cotización por semana, portfolio) | p95 < 300 ms |
+| Login (BCrypt, costoso a propósito) y operaciones (comprar, vender, pujar) | p95 < 500 ms |
+| Errores | < 1 % de las requests |
+
+- Se verifican con la prueba de carga de `carga/` (k6; umbrales = SLAs) y en operación con la alerta `LatenciaAlta` de Prometheus (p95 > 300 ms durante 5 min; excluye la ingesta y el recálculo, procesos batch de admin sin SLA).
+- Índices: `cotizaciones_historicas` es append-only y la tabla que más crece. Además de `(jugador_id, fecha_calculo DESC)` (vigente e historial) y `(jugador_id, estrategia, fecha_calculo DESC)`, V24 agrega `(jugador_id, semana, fecha_calculo DESC)` para la cotización de una semana, la base del recálculo y el valor inicial del ranking.
+- La prueba de carga no corre en CI: depende de la máquina. Resultados medidos en `carga/README.md`.
+
 ---
 
 ## 12. Testing (alineado a constitution §4)

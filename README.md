@@ -42,3 +42,7 @@ docker compose up -d prometheus
 ```
 
 El estado se ve en http://localhost:9090/targets y las alertas en http://localhost:9090/alerts.
+
+### 5. Prueba de carga (opcional)
+
+Ver [carga/README.md](carga/README.md): SLAs, cómo correrla con k6 (Docker) y resultados medidos.
