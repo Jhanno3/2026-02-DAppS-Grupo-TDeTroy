@@ -32,7 +32,6 @@ public class AuditoriaWebAspect {
     static final String NOMBRE_LOGGER = "auditoria.web";
 
     private static final Logger AUDITORIA = LoggerFactory.getLogger(NOMBRE_LOGGER);
-    private static final Logger LOG = LoggerFactory.getLogger(AuditoriaWebAspect.class);
     private static final String ANONIMO = "anonimo";
 
     private final EnmascaradorParametros enmascarador;
@@ -108,7 +107,6 @@ public class AuditoriaWebAspect {
         try {
             return enmascarador.enmascarar(nombre, valor);
         } catch (RuntimeException e) {
-            LOG.warn("No se pudo auditar el parametro {}", nombre);
             return "[no disponible]";
         }
     }
