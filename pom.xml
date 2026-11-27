@@ -57,6 +57,11 @@
 			<artifactId>micrometer-registry-prometheus</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+		<!-- AOP: auditoria de web services, ver AuditoriaWebAspect. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aspectj</artifactId>
+		</dependency>
 		<!-- Cache en memoria del ranking (UC-16), ver CacheConfig. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -223,6 +228,7 @@
 					<systemPropertyVariables>
 						<spring.profiles.active>test</spring.profiles.active>
 						<APP_LOG_FILE>${project.build.directory}/logs/test.json</APP_LOG_FILE>
+						<APP_AUDIT_FILE>${project.build.directory}/logs/test-auditoria.json</APP_AUDIT_FILE>
 					</systemPropertyVariables>
 				</configuration>
 			</plugin>
@@ -233,6 +239,7 @@
 					<systemPropertyVariables>
 						<spring.profiles.active>test</spring.profiles.active>
 						<APP_LOG_FILE>${project.build.directory}/logs/test.json</APP_LOG_FILE>
+						<APP_AUDIT_FILE>${project.build.directory}/logs/test-auditoria.json</APP_AUDIT_FILE>
 					</systemPropertyVariables>
 				</configuration>
 				<executions>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Consola y archivo general: los de Spring Boot, configurados en application.properties. -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+    <include resource="org/springframework/boot/logging/logback/structured-file-appender.xml"/>
+
+    <springProperty name="ARCHIVO_AUDITORIA" source="app.auditoria.archivo" defaultValue="logs/auditoria.json"/>
+
+    <appender name="AUDITORIA" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${ARCHIVO_AUDITORIA}</file>
+        <encoder class="org.springframework.boot.logging.logback.StructuredLogEncoder">
+            <format>ecs</format>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${ARCHIVO_AUDITORIA}.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- additivity=false: la auditoria no se duplica en consola ni en el archivo general. -->
+    <logger name="auditoria.web" level="INFO" additivity="false">
+        <appender-ref ref="AUDITORIA"/>
+    </logger>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>
