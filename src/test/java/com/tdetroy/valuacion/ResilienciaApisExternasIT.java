@@ -12,6 +12,7 @@ import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterAll;
@@ -57,6 +58,7 @@ class ResilienciaApisExternasIT {
         try {
             liberarServidor = new CountDownLatch(1);
             servidorLento = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            servidorLento.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
             servidorLento.createContext(
                     "/",
                     exchange -> {
