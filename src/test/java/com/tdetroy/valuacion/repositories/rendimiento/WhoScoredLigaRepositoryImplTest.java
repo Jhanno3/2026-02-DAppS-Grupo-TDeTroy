@@ -3,14 +3,22 @@ package com.tdetroy.valuacion.repositories.rendimiento;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 
+import com.sun.net.httpserver.HttpServer;
+import com.tdetroy.valuacion.config.WhoScoredLigaProperties;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.net.InetSocketAddress;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.client.RestClient;
 
 /**
  * Test de {@link WhoScoredLigaRepositoryImpl} contra fixtures propios (constitution.md §4), nunca
@@ -140,6 +148,47 @@ class WhoScoredLigaRepositoryImplTest {
         List<JugadorRendimientoLigaCrudo> resultado = repository.obtenerAcumuladoLiga(LIGA);
 
         assertThat(resultado).singleElement().satisfies(c -> assertThat(c.fotoUrl()).isNull());
+    }
+
+    @Test
+    void readTimeout_aislaElFalloYDevuelveListaVaciaSinEsperarDeMas() throws IOException {
+        CountDownLatch liberar = new CountDownLatch(1);
+        HttpServer servidor = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        servidor.createContext(
+                "/",
+                exchange -> {
+                    try {
+                        liberar.await(3, TimeUnit.SECONDS);
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                    }
+                    exchange.close();
+                });
+        servidor.start();
+        try {
+            String fetcherUrl =
+                    "http://127.0.0.1:" + servidor.getAddress().getPort() + "/fetch-liga";
+            WhoScoredLigaProperties propiedades = new WhoScoredLigaProperties();
+            propiedades.setLigaUrls(Map.of(CLAVE_LIGA, URL_LIGA));
+            WhoScoredLigaRepositoryImpl repoConTimeout =
+                    new WhoScoredLigaRepositoryImpl(
+                            RestClient.builder(),
+                            propiedades,
+                            fetcherUrl,
+                            IMAGENES_URL,
+                            200L,
+                            100L);
+
+            Instant inicio = Instant.now();
+            List<JugadorRendimientoLigaCrudo> resultado = repoConTimeout.obtenerAcumuladoLiga(LIGA);
+            Duration duracion = Duration.between(inicio, Instant.now());
+
+            assertThat(resultado).isEmpty();
+            assertThat(duracion).isLessThan(Duration.ofSeconds(2));
+        } finally {
+            liberar.countDown();
+            servidor.stop(0);
+        }
     }
 
     private static WhoScoredLigaRepositoryImpl repositorio(
