@@ -8,13 +8,13 @@ import com.tdetroy.valuacion.config.seguridad.JwtService;
 import com.tdetroy.valuacion.model.usuario.RolUsuario;
 import com.tdetroy.valuacion.services.rendimiento.RendimientoService;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -50,36 +50,44 @@ class ResilienciaApisExternasIT {
         this.mvc = create(mockMvc);
     }
 
-    @BeforeAll
-    static void iniciarServidorLento() throws IOException {
-        liberarServidor = new CountDownLatch(1);
-        servidorLento = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        servidorLento.createContext(
-                "/",
-                exchange -> {
-                    llamadasExternas.incrementAndGet();
-                    try {
-                        liberarServidor.await(3, TimeUnit.SECONDS);
-                    } catch (InterruptedException ignored) {
-                        Thread.currentThread().interrupt();
-                    }
-                    exchange.close();
-                });
-        servidorLento.start();
+    private static synchronized void asegurarServidorIniciado() {
+        if (servidorLento != null) {
+            return;
+        }
+        try {
+            liberarServidor = new CountDownLatch(1);
+            servidorLento = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            servidorLento.createContext(
+                    "/",
+                    exchange -> {
+                        llamadasExternas.incrementAndGet();
+                        try {
+                            liberarServidor.await(3, TimeUnit.SECONDS);
+                        } catch (InterruptedException ignored) {
+                            Thread.currentThread().interrupt();
+                        }
+                        exchange.close();
+                    });
+            servidorLento.start();
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
     }
 
     @AfterAll
-    static void detenerServidorLento() {
+    static synchronized void detenerServidorLento() {
         if (liberarServidor != null) {
             liberarServidor.countDown();
         }
         if (servidorLento != null) {
             servidorLento.stop(0);
+            servidorLento = null;
         }
     }
 
     @DynamicPropertySource
     static void configurarApisExternasLentas(DynamicPropertyRegistry registry) {
+        asegurarServidorIniciado();
         int port = servidorLento.getAddress().getPort();
         String baseUrl = "http://127.0.0.1:" + port;
         registry.add("app.football-data.base-url", () -> baseUrl);
@@ -94,6 +102,7 @@ class ResilienciaApisExternasIT {
     void sistemaSigueOperandoCuandoApisExternasExcedenTimeout() {
         String tokenAdmin =
                 jwtService.generarToken(UUID.randomUUID(), "admin@example.com", RolUsuario.ADMIN);
+        String nombre = "Jugador Resiliencia " + UUID.randomUUID();
         assertThat(
                         mvc.post()
                                 .uri("/api/v1/jugadores")
@@ -101,9 +110,10 @@ class ResilienciaApisExternasIT {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
-                                        {"nombre":"Pedri","club":"FC Barcelona","posicion":"Mediocampista",\
+                                        {"nombre":"%s","club":"FC Barcelona","posicion":"Mediocampista",\
                                         "fechaNacimiento":"2002-11-25","nacionalidad":"España","liga":"La Liga"}
-                                        """))
+                                        """
+                                                .formatted(nombre)))
                 .hasStatus(201);
 
         int llamadasAntes = llamadasExternas.get();
