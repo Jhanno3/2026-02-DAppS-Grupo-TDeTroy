@@ -88,12 +88,20 @@ public class OfertaServiceImpl implements OfertaService {
         }
 
         TenenciaToken tenencia = obtenerOAbrirTenencia(vendedorId, jugadorId);
+        int reservadaAntes = tenencia.getCantidadReservada();
         tenencia.reservar(cantidad);
         tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenencia));
 
         OfertaP2P oferta =
                 OfertaP2P.publicar(vendedorId, jugadorId, cantidad, precioUnitario, horasLimite);
         ofertaP2PRepository.save(OfertaP2PEntity.desde(oferta));
+        auditoriaService.registrar(
+                vendedorId,
+                "PUBLICAR_OFERTA",
+                ENTIDAD_OFERTA,
+                oferta.getId(),
+                new ReservaOfertaAuditoria(EstadoOferta.ABIERTA, reservadaAntes),
+                new ReservaOfertaAuditoria(EstadoOferta.ABIERTA, tenencia.getCantidadReservada()));
         return oferta;
     }
 
@@ -126,9 +134,14 @@ public class OfertaServiceImpl implements OfertaService {
         BigDecimal precioUnitario = oferta.getPrecioUnitario();
         BigDecimal montoTotal = oferta.montoPor(cantidad);
 
+        BigDecimal saldoCompradorAntes = comprador.getSaldoVirtual();
         comprador.debitarSaldo(montoTotal);
         UUID vendedorId = oferta.getVendedorId();
         Usuario vendedor = obtenerUsuario(vendedorId);
+        BigDecimal saldoVendedorAntes = vendedor.getSaldoVirtual();
+        var antes =
+                new EjecucionOfertaEstado(
+                        saldoCompradorAntes, saldoVendedorAntes, oferta.getCantidadDisponible());
         vendedor.acreditarSaldo(montoTotal);
 
         TenenciaToken tenenciaVendedor = obtenerOAbrirTenencia(vendedorId, oferta.getJugadorId());
@@ -167,8 +180,15 @@ public class OfertaServiceImpl implements OfertaService {
                 ACCION_EJECUCION,
                 ENTIDAD_OFERTA,
                 ofertaId,
-                null,
-                new EjecucionOfertaAuditoria(vendedorId, compradorId, cantidad, montoTotal));
+                antes,
+                new EjecucionOfertaAuditoria(
+                        vendedorId,
+                        compradorId,
+                        cantidad,
+                        montoTotal,
+                        comprador.getSaldoVirtual(),
+                        vendedor.getSaldoVirtual(),
+                        oferta.getCantidadDisponible()));
 
         return movimientoComprador;
     }
@@ -224,11 +244,19 @@ public class OfertaServiceImpl implements OfertaService {
     private void liberarReservaYCancelar(OfertaP2P oferta) {
         TenenciaToken tenencia =
                 obtenerOAbrirTenencia(oferta.getVendedorId(), oferta.getJugadorId());
+        var antes = new ReservaOfertaAuditoria(oferta.getEstado(), tenencia.getCantidadReservada());
         tenencia.liberarReserva(oferta.getCantidadDisponible());
         tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenencia));
 
         oferta.cancelar();
         ofertaP2PRepository.save(OfertaP2PEntity.desde(oferta));
+        auditoriaService.registrar(
+                oferta.getVendedorId(),
+                "CANCELAR_OFERTA",
+                ENTIDAD_OFERTA,
+                oferta.getId(),
+                antes,
+                new ReservaOfertaAuditoria(oferta.getEstado(), tenencia.getCantidadReservada()));
     }
 
     private OfertaP2P obtenerOfertaBajoLock(UUID ofertaId) {
@@ -274,6 +302,17 @@ public class OfertaServiceImpl implements OfertaService {
                 .aModelo();
     }
 
+    private record EjecucionOfertaEstado(
+            BigDecimal saldoComprador, BigDecimal saldoVendedor, int cantidadDisponible) {}
+
     private record EjecucionOfertaAuditoria(
-            UUID vendedorId, UUID compradorId, int cantidad, BigDecimal montoTotal) {}
+            UUID vendedorId,
+            UUID compradorId,
+            int cantidad,
+            BigDecimal montoTotal,
+            BigDecimal saldoComprador,
+            BigDecimal saldoVendedor,
+            int cantidadDisponible) {}
+
+    private record ReservaOfertaAuditoria(EstadoOferta estado, int cantidadReservada) {}
 }
