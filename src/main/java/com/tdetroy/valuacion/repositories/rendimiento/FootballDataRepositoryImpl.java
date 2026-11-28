@@ -1,6 +1,7 @@
 package com.tdetroy.valuacion.repositories.rendimiento;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -8,7 +9,9 @@ import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -33,12 +36,31 @@ public class FootballDataRepositoryImpl implements FixtureRepository {
 
     private final RestClient restClient;
 
+    @Autowired
     public FootballDataRepositoryImpl(
             RestClient.Builder restClientBuilder,
             @Value("${app.football-data.base-url}") String baseUrl,
-            @Value("${app.football-data.api-key}") String apiKey) {
+            @Value("${app.football-data.api-key}") String apiKey,
+            @Value("${app.football-data.connect-timeout-ms:5000}") long connectTimeoutMs,
+            @Value("${app.football-data.read-timeout-ms:10000}") long readTimeoutMs) {
+        this(
+                configurarTimeouts(restClientBuilder, connectTimeoutMs, readTimeoutMs),
+                baseUrl,
+                apiKey);
+    }
+
+    FootballDataRepositoryImpl(
+            RestClient.Builder restClientBuilder, String baseUrl, String apiKey) {
         this.restClient =
                 restClientBuilder.baseUrl(baseUrl).defaultHeader("X-Auth-Token", apiKey).build();
+    }
+
+    private static RestClient.Builder configurarTimeouts(
+            RestClient.Builder builder, long connectTimeoutMs, long readTimeoutMs) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
+        factory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
+        return builder.requestFactory(factory);
     }
 
     @Override

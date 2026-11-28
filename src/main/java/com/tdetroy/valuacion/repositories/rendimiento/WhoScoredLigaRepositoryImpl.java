@@ -5,6 +5,7 @@ import com.tdetroy.valuacion.common.CorrelationId;
 import com.tdetroy.valuacion.common.Textos;
 import com.tdetroy.valuacion.config.WhoScoredLigaProperties;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -78,7 +80,21 @@ public class WhoScoredLigaRepositoryImpl implements RendimientoLigaExternoReposi
             RestClient.Builder restClientBuilder,
             WhoScoredLigaProperties ligaProperties,
             @Value("${app.whoscored.fetcher-liga-url:}") String fetcherLigaUrl,
-            @Value("${app.whoscored.imagenes-url}") String imagenesUrl) {
+            @Value("${app.whoscored.imagenes-url}") String imagenesUrl,
+            @Value("${app.whoscored.connect-timeout-ms:5000}") long connectTimeoutMs,
+            @Value("${app.whoscored.read-timeout-ms:30000}") long readTimeoutMs) {
+        this(
+                configurarTimeouts(restClientBuilder, connectTimeoutMs, readTimeoutMs),
+                ligaProperties,
+                fetcherLigaUrl,
+                imagenesUrl);
+    }
+
+    WhoScoredLigaRepositoryImpl(
+            RestClient.Builder restClientBuilder,
+            WhoScoredLigaProperties ligaProperties,
+            String fetcherLigaUrl,
+            String imagenesUrl) {
         this(
                 ligaProperties.getLigaUrls(),
                 construirClienteScraper(
@@ -87,6 +103,14 @@ public class WhoScoredLigaRepositoryImpl implements RendimientoLigaExternoReposi
                                 .build(),
                         fetcherLigaUrl),
                 imagenesUrl);
+    }
+
+    private static RestClient.Builder configurarTimeouts(
+            RestClient.Builder builder, long connectTimeoutMs, long readTimeoutMs) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
+        factory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
+        return builder.requestFactory(factory);
     }
 
     WhoScoredLigaRepositoryImpl(

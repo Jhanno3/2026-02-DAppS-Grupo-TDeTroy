@@ -9,8 +9,15 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import com.sun.net.httpserver.HttpServer;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpMethod;
@@ -138,5 +145,40 @@ class FootballDataRepositoryImplTest {
                         () ->
                                 repository.obtenerPartidosDisputados(
                                         LocalDate.of(2026, 2, 15), LocalDate.of(2026, 2, 9)));
+    }
+
+    @Test
+    void readTimeout_aislaElFalloYDevuelveListaVaciaSinEsperarDeMas() throws IOException {
+        CountDownLatch liberar = new CountDownLatch(1);
+        HttpServer servidor = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        servidor.createContext(
+                "/",
+                exchange -> {
+                    try {
+                        liberar.await(3, TimeUnit.SECONDS);
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                    }
+                    exchange.close();
+                });
+        servidor.start();
+        try {
+            String baseUrl = "http://127.0.0.1:" + servidor.getAddress().getPort();
+            FootballDataRepositoryImpl repoConTimeout =
+                    new FootballDataRepositoryImpl(
+                            RestClient.builder(), baseUrl, API_KEY, 200L, 100L);
+
+            Instant inicio = Instant.now();
+            List<PartidoCrudo> partidos =
+                    repoConTimeout.obtenerPartidosDisputados(
+                            LocalDate.of(2026, 2, 9), LocalDate.of(2026, 2, 15));
+            Duration duracion = Duration.between(inicio, Instant.now());
+
+            assertThat(partidos).isEmpty();
+            assertThat(duracion).isLessThan(Duration.ofSeconds(2));
+        } finally {
+            liberar.countDown();
+            servidor.stop(0);
+        }
     }
 }
