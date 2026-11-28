@@ -103,6 +103,7 @@ public class SubastaServiceImpl implements SubastaService {
         }
 
         TenenciaToken tenencia = obtenerOAbrirTenencia(vendedorId, jugadorId);
+        int reservadaAntes = tenencia.getCantidadReservada();
         tenencia.reservar(cantidad);
         tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenencia));
 
@@ -115,6 +116,13 @@ public class SubastaServiceImpl implements SubastaService {
                         Duration.ofMinutes(duracionMinutos),
                         Instant.now());
         subastaRepository.save(SubastaEntity.desde(subasta));
+        auditoriaService.registrar(
+                vendedorId,
+                "CREAR_SUBASTA",
+                ENTIDAD_SUBASTA,
+                subasta.getId(),
+                new ReservaSubastaAuditoria(EstadoSubasta.ACTIVA, reservadaAntes),
+                new ReservaSubastaAuditoria(EstadoSubasta.ACTIVA, tenencia.getCantidadReservada()));
         return subasta;
     }
 
@@ -156,12 +164,14 @@ public class SubastaServiceImpl implements SubastaService {
         Subasta subasta = obtenerBajoLock(subastaId);
         UUID postorAnteriorId = subasta.getMejorPostorId();
         BigDecimal montoAnterior = subasta.montoComprometido();
+        BigDecimal precioAntes = subasta.getPrecioActual();
 
         Instant ahora = Instant.now();
         BigDecimal nuevoPrecio = subasta.pujar(postorId, incremento, ahora);
         BigDecimal nuevoMonto = subasta.montoTotal(nuevoPrecio);
 
         Usuario postor = obtenerUsuario(postorId);
+        BigDecimal saldoPostorAntes = postor.getSaldoVirtual();
         postor.debitarSaldo(nuevoMonto);
         usuarioRepository.save(UsuarioEntity.desde(postor));
 
@@ -173,6 +183,13 @@ public class SubastaServiceImpl implements SubastaService {
         pujaSubastaRepository.save(
                 PujaSubastaEntity.desde(
                         PujaSubasta.registrar(subastaId, postorId, nuevoPrecio, ahora)));
+        auditoriaService.registrar(
+                postorId,
+                "PUJA_SUBASTA",
+                ENTIDAD_SUBASTA,
+                subastaId,
+                new PujaAuditoria(precioAntes, postorAnteriorId, saldoPostorAntes),
+                new PujaAuditoria(nuevoPrecio, postorId, postor.getSaldoVirtual()));
         return subasta;
     }
 
@@ -291,12 +308,20 @@ public class SubastaServiceImpl implements SubastaService {
     private void cancelarYDevolver(Subasta subasta) {
         UUID mejorPostorId = subasta.getMejorPostorId();
         BigDecimal montoComprometido = subasta.montoComprometido();
+        EstadoSubasta estadoAntes = subasta.getEstado();
         subasta.cancelar();
         liberarTokens(subasta);
         if (mejorPostorId != null) {
             devolverSaldo(mejorPostorId, montoComprometido);
         }
         subastaRepository.save(SubastaEntity.desde(subasta));
+        auditoriaService.registrar(
+                subasta.getVendedorId(),
+                "CANCELAR_SUBASTA",
+                ENTIDAD_SUBASTA,
+                subasta.getId(),
+                new CancelacionSubastaAuditoria(estadoAntes, mejorPostorId, montoComprometido),
+                new CancelacionSubastaAuditoria(subasta.getEstado(), null, BigDecimal.ZERO));
     }
 
     private void liberarTokens(Subasta subasta) {
@@ -359,4 +384,11 @@ public class SubastaServiceImpl implements SubastaService {
             int cantidad,
             BigDecimal precioUnitario,
             BigDecimal montoTotal) {}
+
+    private record ReservaSubastaAuditoria(EstadoSubasta estado, int cantidadReservada) {}
+
+    private record PujaAuditoria(BigDecimal precio, UUID mejorPostorId, BigDecimal saldoPostor) {}
+
+    private record CancelacionSubastaAuditoria(
+            EstadoSubasta estado, UUID mejorPostorId, BigDecimal montoDevuelto) {}
 }

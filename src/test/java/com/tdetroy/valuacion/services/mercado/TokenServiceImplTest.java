@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -30,6 +31,7 @@ import com.tdetroy.valuacion.repositories.cartera.TenenciaTokenRepository;
 import com.tdetroy.valuacion.repositories.cotizacion.CotizacionHistoricaRepository;
 import com.tdetroy.valuacion.repositories.jugador.JugadorRepository;
 import com.tdetroy.valuacion.repositories.usuario.UsuarioRepository;
+import com.tdetroy.valuacion.services.auditoria.AuditoriaService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -65,6 +67,7 @@ class TokenServiceImplTest {
     @Mock private TenenciaTokenRepository tenenciaTokenRepository;
     @Mock private CotizacionHistoricaRepository cotizacionHistoricaRepository;
     @Mock private MovimientoRepository movimientoRepository;
+    @Mock private AuditoriaService auditoriaService;
 
     private UUID usuarioId;
     private UUID jugadorId;
@@ -81,6 +84,7 @@ class TokenServiceImplTest {
                         tenenciaTokenRepository,
                         cotizacionHistoricaRepository,
                         movimientoRepository,
+                        auditoriaService,
                         VALOR_INICIAL,
                         DESCUENTO_VENTA_SISTEMA);
     }
@@ -306,6 +310,14 @@ class TokenServiceImplTest {
         ArgumentCaptor<JugadorEntity> jugadorCaptor = ArgumentCaptor.forClass(JugadorEntity.class);
         verify(jugadorRepository).save(jugadorCaptor.capture());
         assertThat(jugadorCaptor.getValue().aModelo().getTokensEmitidos()).isEqualTo(6);
+        verify(auditoriaService)
+                .registrar(
+                        eq(usuarioId),
+                        eq("VENTA_TOKEN"),
+                        eq("Usuario"),
+                        eq(usuarioId),
+                        any(),
+                        any());
     }
 
     @Test

@@ -16,6 +16,7 @@ import com.tdetroy.valuacion.repositories.cotizacion.CotizacionHistoricaReposito
 import com.tdetroy.valuacion.repositories.jugador.JugadorRepository;
 import com.tdetroy.valuacion.repositories.usuario.UsuarioRepository;
 import com.tdetroy.valuacion.services.InvalidaRanking;
+import com.tdetroy.valuacion.services.auditoria.AuditoriaService;
 import java.math.BigDecimal;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +35,7 @@ public class TokenServiceImpl implements TokenService {
     private final TenenciaTokenRepository tenenciaTokenRepository;
     private final CotizacionHistoricaRepository cotizacionHistoricaRepository;
     private final MovimientoRepository movimientoRepository;
+    private final AuditoriaService auditoriaService;
     private final BigDecimal valorInicial;
     private final BigDecimal descuentoVentaSistema;
 
@@ -43,6 +45,7 @@ public class TokenServiceImpl implements TokenService {
             TenenciaTokenRepository tenenciaTokenRepository,
             CotizacionHistoricaRepository cotizacionHistoricaRepository,
             MovimientoRepository movimientoRepository,
+            AuditoriaService auditoriaService,
             @Value("${app.cotizacion.valor-inicial}") BigDecimal valorInicial,
             @Value("${app.token.descuento-venta-sistema}") BigDecimal descuentoVentaSistema) {
         this.usuarioRepository = usuarioRepository;
@@ -50,6 +53,7 @@ public class TokenServiceImpl implements TokenService {
         this.tenenciaTokenRepository = tenenciaTokenRepository;
         this.cotizacionHistoricaRepository = cotizacionHistoricaRepository;
         this.movimientoRepository = movimientoRepository;
+        this.auditoriaService = auditoriaService;
         this.valorInicial = valorInicial;
         this.descuentoVentaSistema = descuentoVentaSistema;
     }
@@ -64,16 +68,29 @@ public class TokenServiceImpl implements TokenService {
                 Movimiento.compraSistema(
                         usuarioId, jugadorId, cantidad, cotizacionVigenteDe(jugadorId));
 
+        BigDecimal saldoAntes = usuario.getSaldoVirtual();
+        int tokensEmitidosAntes = jugador.getTokensEmitidos();
+
         usuario.debitarSaldo(compra.getMontoTotal());
         jugador.emitirTokens(cantidad);
         TenenciaToken tenencia = obtenerOAbrirTenencia(usuarioId, jugadorId);
+        var antes =
+                new TokenOperacionAuditoria(
+                        jugadorId,
+                        cantidad,
+                        saldoAntes,
+                        tokensEmitidosAntes,
+                        tenencia.getCantidad());
         tenencia.acreditar(cantidad, compra.getPrecioUnitario());
 
         usuarioRepository.save(UsuarioEntity.desde(usuario));
         jugadorRepository.save(JugadorEntity.desde(jugador));
         tenenciaTokenRepository.save(TenenciaTokenEntity.desde(tenencia));
 
-        return guardar(compra);
+        Movimiento guardada = guardar(compra);
+        registrarAuditoria(
+                "COMPRA_TOKEN", usuarioId, jugadorId, cantidad, antes, usuario, jugador, tenencia);
+        return guardada;
     }
 
     @Override
@@ -85,6 +102,14 @@ public class TokenServiceImpl implements TokenService {
         TenenciaToken tenencia = obtenerOAbrirTenencia(usuarioId, jugadorId);
 
         tenencia.validarDebito(cantidad);
+        var antes =
+                new TokenOperacionAuditoria(
+                        jugadorId,
+                        cantidad,
+                        usuario.getSaldoVirtual(),
+                        jugador.getTokensEmitidos(),
+                        tenencia.getCantidad());
+
         // El descuento de venta al sistema lo aplica Movimiento#ventaSistema (UC-10).
         Movimiento venta =
                 Movimiento.ventaSistema(
@@ -101,8 +126,37 @@ public class TokenServiceImpl implements TokenService {
         usuarioRepository.save(UsuarioEntity.desde(usuario));
         jugadorRepository.save(JugadorEntity.desde(jugador));
 
-        return guardar(venta);
+        Movimiento guardada = guardar(venta);
+        registrarAuditoria(
+                "VENTA_TOKEN", usuarioId, jugadorId, cantidad, antes, usuario, jugador, tenencia);
+        return guardada;
     }
+
+    private void registrarAuditoria(
+            String accion,
+            UUID usuarioId,
+            UUID jugadorId,
+            int cantidad,
+            TokenOperacionAuditoria antes,
+            Usuario usuario,
+            Jugador jugador,
+            TenenciaToken tenencia) {
+        var despues =
+                new TokenOperacionAuditoria(
+                        jugadorId,
+                        cantidad,
+                        usuario.getSaldoVirtual(),
+                        jugador.getTokensEmitidos(),
+                        tenencia.getCantidad());
+        auditoriaService.registrar(usuarioId, accion, ENTIDAD_USUARIO, usuarioId, antes, despues);
+    }
+
+    private record TokenOperacionAuditoria(
+            UUID jugadorId,
+            int cantidad,
+            BigDecimal saldoVirtual,
+            int tokensEmitidos,
+            int cantidadTenencia) {}
 
     private Movimiento guardar(Movimiento movimiento) {
         return movimientoRepository.save(MovimientoEntity.desde(movimiento)).aModelo();
